@@ -1,0 +1,46 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="230" fill="#1e5c2a"/>
+  <!-- Trunk -->
+  <rect x="490" y="660" width="44" height="220" rx="22" fill="#6b3f1f"/>
+  <!-- Trunk texture -->
+  <line x1="500" y1="680" x2="520" y2="710" stroke="#4a2a10" stroke-width="4" opacity="0.4"/>
+  <line x1="500" y1="730" x2="520" y2="760" stroke="#4a2a10" stroke-width="4" opacity="0.4"/>
+  <line x1="500" y1="780" x2="520" y2="810" stroke="#4a2a10" stroke-width="4" opacity="0.4"/>
+  <!-- Leaves -->
+  <path d="M512,645 Q360,490 230,300" stroke="#4caf6e" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <path d="M512,645 Q380,440 340,220" stroke="#3d9e5e" stroke-width="24" fill="none" stroke-linecap="round"/>
+  <path d="M512,645 Q440,380 425,170" stroke="#4caf6e" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <path d="M512,645 Q512,360 512,140" stroke="#3d9e5e" stroke-width="24" fill="none" stroke-linecap="round"/>
+  <path d="M512,645 Q584,380 599,170" stroke="#4caf6e" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <path d="M512,645 Q644,440 684,220" stroke="#3d9e5e" stroke-width="24" fill="none" stroke-linecap="round"/>
+  <path d="M512,645 Q664,490 794,300" stroke="#4caf6e" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <!-- Leaf tips -->
+  <circle cx="230" cy="300" r="14" fill="#4caf6e"/>
+  <circle cx="340" cy="220" r="12" fill="#3d9e5e"/>
+  <circle cx="425" cy="170" r="10" fill="#4caf6e"/>
+  <circle cx="512" cy="140" r="12" fill="#3d9e5e"/>
+  <circle cx="599" cy="170" r="10" fill="#4caf6e"/>
+  <circle cx="684" cy="220" r="12" fill="#3d9e5e"/>
+  <circle cx="794" cy="300" r="14" fill="#4caf6e"/>
+  <!-- Date stems -->
+  <path d="M512,645 Q478,628 440,638" stroke="#5a3010" stroke-width="8" fill="none"/>
+  <path d="M512,645 Q492,626 468,642" stroke="#5a3010" stroke-width="8" fill="none"/>
+  <path d="M512,645 Q512,624 512,648" stroke="#5a3010" stroke-width="8" fill="none"/>
+  <path d="M512,645 Q532,626 556,642" stroke="#5a3010" stroke-width="8" fill="none"/>
+  <path d="M512,645 Q546,628 584,638" stroke="#5a3010" stroke-width="8" fill="none"/>
+  <!-- Dates -->
+  <ellipse cx="432" cy="658" rx="42" ry="58" fill="#7a1e00"/>
+  <ellipse cx="432" cy="648" rx="20" ry="20" fill="#9b2a00" opacity="0.4"/>
+  <ellipse cx="468" cy="672" rx="42" ry="58" fill="#8B2500"/>
+  <ellipse cx="468" cy="662" rx="20" ry="20" fill="#a83200" opacity="0.4"/>
+  <ellipse cx="512" cy="676" rx="42" ry="58" fill="#7a1e00"/>
+  <ellipse cx="512" cy="666" rx="20" ry="20" fill="#9b2a00" opacity="0.4"/>
+  <ellipse cx="556" cy="672" rx="42" ry="58" fill="#8B2500"/>
+  <ellipse cx="556" cy="662" rx="20" ry="20" fill="#a83200" opacity="0.4"/>
+  <ellipse cx="592" cy="658" rx="42" ry="58" fill="#7a1e00"/>
+  <ellipse cx="592" cy="648" rx="20" ry="20" fill="#9b2a00" opacity="0.4"/>
+  <!-- Gold accent dot -->
+  <circle cx="794" cy="178" r="44" fill="#c8a951"/>
+  <!-- Inner subtle ring -->
+  <rect x="30" y="30" width="964" height="964" rx="205" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="4"/>
+</svg>

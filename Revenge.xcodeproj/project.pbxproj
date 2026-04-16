@@ -1,0 +1,809 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		960AF5362F8D9A4900670759 /* Adhan in Frameworks */ = {isa = PBXBuildFile; productRef = 960AF5352F8D9A4900670759 /* Adhan */; };
+		960AF5492F8DAC9C00670759 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 960AF5482F8DAC9C00670759 /* WidgetKit.framework */; };
+		960AF54B2F8DAC9C00670759 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 960AF54A2F8DAC9C00670759 /* SwiftUI.framework */; };
+		960AF55D2F8DAF0000670759 /* KheirWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 960AF5462F8DAC9C00670759 /* KheirWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		960AF55E2F8DAF0000670759 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 963A93762F33A02500BB5584 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 960AF5452F8DAC9C00670759;
+			remoteInfo = KheirWidgetExtension;
+		};
+		963A938C2F33A02700BB5584 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 963A93762F33A02500BB5584 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 963A937D2F33A02500BB5584;
+			remoteInfo = Revenge;
+		};
+		963A93962F33A02700BB5584 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 963A93762F33A02500BB5584 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 963A937D2F33A02500BB5584;
+			remoteInfo = Revenge;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		960AF5602F8DAF0000670759 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				960AF55D2F8DAF0000670759 /* KheirWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		960AF5462F8DAC9C00670759 /* KheirWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KheirWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		960AF5482F8DAC9C00670759 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		960AF54A2F8DAC9C00670759 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		960AF55C2F8DAE2100670759 /* KheirWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KheirWidgetExtension.entitlements; sourceTree = "<group>"; };
+		963A937E2F33A02500BB5584 /* Revenge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Revenge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		963A938B2F33A02700BB5584 /* RevengeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RevengeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		963A93952F33A02700BB5584 /* RevengeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RevengeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		960AF5562F8DAC9D00670759 /* Exceptions for "KheirWidget" folder in "KheirWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 960AF5452F8DAC9C00670759 /* KheirWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		960AF54C2F8DAC9C00670759 /* KheirWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				960AF5562F8DAC9D00670759 /* Exceptions for "KheirWidget" folder in "KheirWidgetExtension" target */,
+			);
+			path = KheirWidget;
+			sourceTree = "<group>";
+		};
+		963A93802F33A02500BB5584 /* Revenge */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Revenge;
+			sourceTree = "<group>";
+		};
+		963A938E2F33A02700BB5584 /* RevengeTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RevengeTests;
+			sourceTree = "<group>";
+		};
+		963A93982F33A02700BB5584 /* RevengeUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = RevengeUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		960AF5432F8DAC9C00670759 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				960AF54B2F8DAC9C00670759 /* SwiftUI.framework in Frameworks */,
+				960AF5492F8DAC9C00670759 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A937B2F33A02500BB5584 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				960AF5362F8D9A4900670759 /* Adhan in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A93882F33A02700BB5584 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A93922F33A02700BB5584 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		960AF5472F8DAC9C00670759 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				960AF5482F8DAC9C00670759 /* WidgetKit.framework */,
+				960AF54A2F8DAC9C00670759 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		963A93752F33A02500BB5584 = {
+			isa = PBXGroup;
+			children = (
+				960AF55C2F8DAE2100670759 /* KheirWidgetExtension.entitlements */,
+				963A93802F33A02500BB5584 /* Revenge */,
+				963A938E2F33A02700BB5584 /* RevengeTests */,
+				963A93982F33A02700BB5584 /* RevengeUITests */,
+				960AF54C2F8DAC9C00670759 /* KheirWidget */,
+				960AF5472F8DAC9C00670759 /* Frameworks */,
+				963A937F2F33A02500BB5584 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		963A937F2F33A02500BB5584 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				963A937E2F33A02500BB5584 /* Revenge.app */,
+				963A938B2F33A02700BB5584 /* RevengeTests.xctest */,
+				963A93952F33A02700BB5584 /* RevengeUITests.xctest */,
+				960AF5462F8DAC9C00670759 /* KheirWidgetExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		960AF5452F8DAC9C00670759 /* KheirWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 960AF5572F8DAC9D00670759 /* Build configuration list for PBXNativeTarget "KheirWidgetExtension" */;
+			buildPhases = (
+				960AF5422F8DAC9C00670759 /* Sources */,
+				960AF5432F8DAC9C00670759 /* Frameworks */,
+				960AF5442F8DAC9C00670759 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				960AF54C2F8DAC9C00670759 /* KheirWidget */,
+			);
+			name = KheirWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = KheirWidgetExtension;
+			productReference = 960AF5462F8DAC9C00670759 /* KheirWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		963A937D2F33A02500BB5584 /* Revenge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 963A939F2F33A02700BB5584 /* Build configuration list for PBXNativeTarget "Revenge" */;
+			buildPhases = (
+				963A937A2F33A02500BB5584 /* Sources */,
+				963A937B2F33A02500BB5584 /* Frameworks */,
+				963A937C2F33A02500BB5584 /* Resources */,
+				960AF5602F8DAF0000670759 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				960AF55F2F8DAF0000670759 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				963A93802F33A02500BB5584 /* Revenge */,
+			);
+			name = Revenge;
+			packageProductDependencies = (
+				960AF5352F8D9A4900670759 /* Adhan */,
+			);
+			productName = Revenge;
+			productReference = 963A937E2F33A02500BB5584 /* Revenge.app */;
+			productType = "com.apple.product-type.application";
+		};
+		963A938A2F33A02700BB5584 /* RevengeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 963A93A22F33A02700BB5584 /* Build configuration list for PBXNativeTarget "RevengeTests" */;
+			buildPhases = (
+				963A93872F33A02700BB5584 /* Sources */,
+				963A93882F33A02700BB5584 /* Frameworks */,
+				963A93892F33A02700BB5584 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				963A938D2F33A02700BB5584 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				963A938E2F33A02700BB5584 /* RevengeTests */,
+			);
+			name = RevengeTests;
+			packageProductDependencies = (
+			);
+			productName = RevengeTests;
+			productReference = 963A938B2F33A02700BB5584 /* RevengeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		963A93942F33A02700BB5584 /* RevengeUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 963A93A52F33A02700BB5584 /* Build configuration list for PBXNativeTarget "RevengeUITests" */;
+			buildPhases = (
+				963A93912F33A02700BB5584 /* Sources */,
+				963A93922F33A02700BB5584 /* Frameworks */,
+				963A93932F33A02700BB5584 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				963A93972F33A02700BB5584 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				963A93982F33A02700BB5584 /* RevengeUITests */,
+			);
+			name = RevengeUITests;
+			packageProductDependencies = (
+			);
+			productName = RevengeUITests;
+			productReference = 963A93952F33A02700BB5584 /* RevengeUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		963A93762F33A02500BB5584 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					960AF5452F8DAC9C00670759 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					963A937D2F33A02500BB5584 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
+					963A938A2F33A02700BB5584 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 963A937D2F33A02500BB5584;
+					};
+					963A93942F33A02700BB5584 = {
+						CreatedOnToolsVersion = 26.0.1;
+						TestTargetID = 963A937D2F33A02500BB5584;
+					};
+				};
+			};
+			buildConfigurationList = 963A93792F33A02500BB5584 /* Build configuration list for PBXProject "Revenge" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 963A93752F33A02500BB5584;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				960AF5342F8D99C900670759 /* XCRemoteSwiftPackageReference "adhan-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 963A937F2F33A02500BB5584 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				963A937D2F33A02500BB5584 /* Revenge */,
+				963A938A2F33A02700BB5584 /* RevengeTests */,
+				963A93942F33A02700BB5584 /* RevengeUITests */,
+				960AF5452F8DAC9C00670759 /* KheirWidgetExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		960AF5442F8DAC9C00670759 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A937C2F33A02500BB5584 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A93892F33A02700BB5584 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A93932F33A02700BB5584 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		960AF5422F8DAC9C00670759 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A937A2F33A02500BB5584 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A93872F33A02700BB5584 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		963A93912F33A02700BB5584 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		960AF55F2F8DAF0000670759 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 960AF5452F8DAC9C00670759 /* KheirWidgetExtension */;
+			targetProxy = 960AF55E2F8DAF0000670759 /* PBXContainerItemProxy */;
+		};
+		963A938D2F33A02700BB5584 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 963A937D2F33A02500BB5584 /* Revenge */;
+			targetProxy = 963A938C2F33A02700BB5584 /* PBXContainerItemProxy */;
+		};
+		963A93972F33A02700BB5584 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 963A937D2F33A02500BB5584 /* Revenge */;
+			targetProxy = 963A93962F33A02700BB5584 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		960AF5582F8DAC9D00670759 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = KheirWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5FVTJZXNS5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KheirWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = KheirWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.Kheir.KheirWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		960AF5592F8DAC9D00670759 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = KheirWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5FVTJZXNS5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KheirWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = KheirWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.Kheir.KheirWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		963A939D2F33A02700BB5584 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		963A939E2F33A02700BB5584 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		963A93A02F33A02700BB5584 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = Revenge/Revenge.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5FVTJZXNS5;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_BGTaskSchedulerPermittedIdentifiers = com.nurapp.prayerRefresh;
+				INFOPLIST_KEY_CFBundleDisplayName = Kheir;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Kheir uses your location to provide prayer time notifications even when the app is in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Kheir needs your location to calculate accurate prayer times, find the Qibla direction, and locate nearby mosques.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Kheir uses device motion sensors to show the compass and Qibla direction accurately.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes = "audio fetch processing";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.Kheir;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		963A93A12F33A02700BB5584 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = Revenge/Revenge.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5FVTJZXNS5;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_BGTaskSchedulerPermittedIdentifiers = com.nurapp.prayerRefresh;
+				INFOPLIST_KEY_CFBundleDisplayName = Kheir;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Kheir uses your location to provide prayer time notifications even when the app is in the background.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Kheir needs your location to calculate accurate prayer times, find the Qibla direction, and locate nearby mosques.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "Kheir uses device motion sensors to show the compass and Qibla direction accurately.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes = "audio fetch processing";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.Kheir;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		963A93A32F33A02700BB5584 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.RevengeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Revenge.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Revenge";
+			};
+			name = Debug;
+		};
+		963A93A42F33A02700BB5584 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.RevengeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Revenge.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Revenge";
+			};
+			name = Release;
+		};
+		963A93A62F33A02700BB5584 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.RevengeUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Revenge;
+			};
+			name = Debug;
+		};
+		963A93A72F33A02700BB5584 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.RevengeUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Revenge;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		960AF5572F8DAC9D00670759 /* Build configuration list for PBXNativeTarget "KheirWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				960AF5582F8DAC9D00670759 /* Debug */,
+				960AF5592F8DAC9D00670759 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		963A93792F33A02500BB5584 /* Build configuration list for PBXProject "Revenge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				963A939D2F33A02700BB5584 /* Debug */,
+				963A939E2F33A02700BB5584 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		963A939F2F33A02700BB5584 /* Build configuration list for PBXNativeTarget "Revenge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				963A93A02F33A02700BB5584 /* Debug */,
+				963A93A12F33A02700BB5584 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		963A93A22F33A02700BB5584 /* Build configuration list for PBXNativeTarget "RevengeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				963A93A32F33A02700BB5584 /* Debug */,
+				963A93A42F33A02700BB5584 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		963A93A52F33A02700BB5584 /* Build configuration list for PBXNativeTarget "RevengeUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				963A93A62F33A02700BB5584 /* Debug */,
+				963A93A72F33A02700BB5584 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		960AF5342F8D99C900670759 /* XCRemoteSwiftPackageReference "adhan-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/batoulapps/adhan-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		960AF5352F8D9A4900670759 /* Adhan */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 960AF5342F8D99C900670759 /* XCRemoteSwiftPackageReference "adhan-swift" */;
+			productName = Adhan;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 963A93762F33A02500BB5584 /* Project object */;
+}
