@@ -1,0 +1,19 @@
+{
+  "id": "bea547b4-89ef-492a-98c2-01442c37d961",
+  "type": "Approval",
+  "from": {
+    "agent": "QAAgent",
+    "team": "medium"
+  },
+  "to": {
+    "agent": "TechLeadAgent",
+    "team": "medium"
+  },
+  "timestamp": "2026-04-20T15:31:32.334758Z",
+  "parent_id": "75dba564-ba82-4e5f-995b-aba4d25942cb",
+  "payload": {
+    "task_id": "TASK-049",
+    "stage": "qa",
+    "reason": "All criteria met. VoiceOver reads correctly."
+  }
+}

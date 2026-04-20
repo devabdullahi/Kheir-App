@@ -255,6 +255,35 @@ final class CacheManager {
     func loadDailyHadith(for date: String) -> DailyHadith? {
         load(DailyHadith.self, filename: "daily_hadith_\(date).json")
     }
+
+    // MARK: - Streak Cache
+
+    /// Persists the user's streak data. The memory cache is updated immediately;
+    /// disk I/O is dispatched asynchronously on `ioQueue`.
+    func saveStreak(_ data: StreakData) {
+        save(data, filename: "streak_data.json")
+    }
+
+    /// Returns the persisted `StreakData`, or `nil` if the user has never opened the app
+    /// on a day that called `saveStreak`.
+    func loadStreak() -> StreakData? {
+        load(StreakData.self, filename: "streak_data.json")
+    }
+
+    // MARK: - Routine Cache
+
+    /// Persists a `DailyRoutine` including its current `completedSteps` progress.
+    /// The filename encodes both the routine type and the calendar date so morning
+    /// and evening routines are stored independently.
+    func saveRoutine(_ routine: DailyRoutine) {
+        save(routine, filename: "routine_\(routine.type.rawValue)_\(routine.dateString).json")
+    }
+
+    /// Returns the cached `DailyRoutine` for the given type and date, or `nil` if
+    /// no routine has been generated or saved yet.
+    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine? {
+        load(DailyRoutine.self, filename: "routine_\(type.rawValue)_\(date).json")
+    }
 }
 
 // MARK: - Ayah Bookmarks

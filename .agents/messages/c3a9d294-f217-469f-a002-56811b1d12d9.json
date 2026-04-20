@@ -1,0 +1,33 @@
+{
+  "id": "c3a9d294-f217-469f-a002-56811b1d12d9",
+  "type": "TaskAssignment",
+  "from": {
+    "agent": "TechLeadAgent",
+    "team": "high"
+  },
+  "to": {
+    "agent": "DeveloperAgent-1",
+    "team": "high"
+  },
+  "timestamp": "2026-04-20T15:31:32.329965Z",
+  "parent_id": null,
+  "payload": {
+    "task_id": "TASK-048",
+    "title": "Implement StreakService with persistence",
+    "description": "Create a StreakService that tracks consecutive days of app usage. Must persist across app launches and handle timezone changes.",
+    "acceptance_criteria": [
+      "Streak increments on first app open each day",
+      "Streak resets if a day is missed",
+      "Persists via CacheManager",
+      "Handles timezone changes gracefully",
+      "Unit tests cover all edge cases"
+    ],
+    "files_affected": [
+      "Services/StreakService.swift",
+      "Models/StreakData.swift"
+    ],
+    "priority": "high",
+    "depends_on": [],
+    "deadline": "2026-04-21T17:00:00Z"
+  }
+}

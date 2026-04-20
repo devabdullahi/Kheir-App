@@ -48,6 +48,46 @@ protocol CacheManaging: AnyObject {
     func removeHadithBookmark(id: UUID)
     func isHadithBookmarked(text: String, source: String) -> Bool
     func loadHadithBookmarks() -> [BookmarkedHadith]
+
+    // Streak persistence
+    func saveStreak(_ data: StreakData)
+    func loadStreak() -> StreakData?
+
+    // Routine persistence
+    func saveRoutine(_ routine: DailyRoutine)
+    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine?
+}
+
+// MARK: - Routine Providing Protocol
+
+/// Abstracts routine generation and progress persistence used by RoutineViewModel.
+/// Conforming types: `RoutineService` (production), mock stubs (tests).
+protocol RoutineProviding: AnyObject {
+    /// Returns a previously persisted routine, or `nil` if one has not been generated yet.
+    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine?
+
+    /// Persists the current progress of `routine` (i.e. its `completedSteps` set).
+    func saveRoutineProgress(_ routine: DailyRoutine)
+
+    /// Generates a brand-new routine for the given type and date, persists it, and returns it.
+    func generateRoutine(type: RoutineType, for date: String) -> DailyRoutine
+}
+
+// MARK: - Streak Tracking Protocol
+
+/// Abstracts app-open streak computation. Conforming types: `StreakService` (production),
+/// mock stubs (tests).
+protocol StreakTracking: AnyObject {
+    /// Records that the app was opened today and returns the updated `StreakData`.
+    /// Safe to call multiple times per day — idempotent when `lastOpenedDate` equals today.
+    func recordAppOpen() -> StreakData
+
+    /// Returns the currently persisted `StreakData`, or `nil` if the user has never
+    /// triggered `recordAppOpen()`.
+    func loadStreak() -> StreakData?
+
+    /// Wipes the persisted streak. Intended for debugging and user-facing reset flows.
+    func resetStreak()
 }
 
 // MARK: - APIService Conformances
@@ -59,3 +99,11 @@ extension APIService: PrayerTimesFetching {}
 // MARK: - CacheManager Conformance
 
 extension CacheManager: CacheManaging {}
+
+// MARK: - StreakService Conformance
+
+extension StreakService: StreakTracking {}
+
+// MARK: - RoutineService Conformance
+
+extension RoutineService: RoutineProviding {}
