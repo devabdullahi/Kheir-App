@@ -1,0 +1,19 @@
+{
+  "id": "f05fcb7a-7c39-4fd3-8c49-3c735c41c7a8",
+  "type": "Approval",
+  "from": {
+    "agent": "QAAgent",
+    "team": "high"
+  },
+  "to": {
+    "agent": "TechLeadAgent",
+    "team": "high"
+  },
+  "timestamp": "2026-04-20T15:31:32.333118Z",
+  "parent_id": "ebd313a6-8a2d-41ca-bdcf-72c5d60d18f9",
+  "payload": {
+    "task_id": "TASK-048",
+    "stage": "qa",
+    "reason": "All 5 acceptance criteria verified. Edge cases pass."
+  }
+}

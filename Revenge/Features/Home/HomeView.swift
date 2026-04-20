@@ -5,6 +5,7 @@ struct HomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showShareSheet = false
     @State private var shareText = ""
+    @State private var shareCardData: ShareCardData?
 
     var body: some View {
         NavigationStack {
@@ -13,6 +14,20 @@ struct HomeView: View {
                     // MARK: - Date Header
                     dateHeader
                         .scrollReveal(delay: 0)
+
+                    // MARK: - Streak Card
+                    if let streakData = viewModel.streakData {
+                        StreakCardView(streakData: streakData)
+                            .scrollReveal(delay: 0.05)
+                    }
+
+                    // MARK: - Routine Card
+                    RoutineCardView(
+                        routineType: viewModel.currentRoutineType,
+                        progress: viewModel.routineProgress
+                    )
+                    .scrollReveal(delay: 0.08)
+                    .onAppear { viewModel.refreshRoutineProgress() }
 
                     // MARK: - Prayer Countdown
                     prayerCountdown
@@ -90,6 +105,9 @@ struct HomeView: View {
             .onDisappear { viewModel.onDisappear() }
             .sheet(isPresented: $showShareSheet) {
                 ShareSheet(text: shareText)
+            }
+            .sheet(item: $shareCardData) { cardData in
+                ShareSheetView(data: cardData)
             }
         }
     }
@@ -182,8 +200,13 @@ struct HomeView: View {
                 .accessibilityLabel(viewModel.isAyahBookmarked ? "Remove ayah bookmark" : "Bookmark ayah")
 
                 Button {
-                    shareText = viewModel.shareAyahText()
-                    showShareSheet = true
+                    shareCardData = ShareCardData(
+                        content: ayah.translationText,
+                        arabicText: ayah.arabicText,
+                        reference: "\(ayah.surahEnglishName) (\(ayah.surahNumber):\(ayah.ayahNumber))",
+                        template: .minimal,
+                        type: .ayah
+                    )
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundStyle(Color.adaptivePrimary(colorScheme))
@@ -244,8 +267,13 @@ struct HomeView: View {
                 .accessibilityLabel(viewModel.isHadithBookmarked ? "Remove hadith bookmark" : "Bookmark hadith")
 
                 Button {
-                    shareText = viewModel.shareHadithText()
-                    showShareSheet = true
+                    shareCardData = ShareCardData(
+                        content: hadith.text,
+                        arabicText: nil,
+                        reference: hadith.source,
+                        template: .minimal,
+                        type: .hadith
+                    )
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundStyle(Color.adaptivePrimary(colorScheme))

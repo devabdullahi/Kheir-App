@@ -26,6 +26,11 @@ final class HomeViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var ayahState: ContentLoadState = .loading
     @Published var hadithState: ContentLoadState = .loading
+    @Published var streakData: StreakData?
+
+    // MARK: - Routine State
+    @Published var currentRoutineType: RoutineType = RoutineTimeHelper.currentRoutineType()
+    @Published var routineProgress: Double = 0
 
     private var timer: Timer?
     private var midnightObserver: NSObjectProtocol?
@@ -33,6 +38,8 @@ final class HomeViewModel: ObservableObject {
     private let apiService: any AyahFetching & HadithFetching
     private let locationService: LocationService
     private let prayerTimesService: PrayerTimesService
+    private let streakService: any StreakTracking
+    private let routineService: any RoutineProviding
     private let settings: AppSettings
 
     init(
@@ -40,12 +47,16 @@ final class HomeViewModel: ObservableObject {
         cacheManager: any CacheManaging = CacheManager.shared,
         locationService: LocationService = .shared,
         prayerTimesService: PrayerTimesService = .shared,
+        streakService: any StreakTracking = StreakService.shared,
+        routineService: any RoutineProviding = RoutineService.shared,
         settings: AppSettings = .shared
     ) {
         self.apiService = apiService
         self.cache = cacheManager
         self.locationService = locationService
         self.prayerTimesService = prayerTimesService
+        self.streakService = streakService
+        self.routineService = routineService
         self.settings = settings
         let today = Date()
         gregorianDate = today.gregorianString
@@ -57,6 +68,31 @@ final class HomeViewModel: ObservableObject {
         loadPrayerCountdown()
         startCountdownTimer()
         subscribeMidnightRollover()
+        recordStreak()
+        refreshRoutineProgress()
+    }
+
+    // MARK: - Routine Progress
+
+    /// Reads the persisted progress for today's contextual routine and updates
+    /// `routineProgress` so the card's ring reflects the current completion.
+    func refreshRoutineProgress() {
+        currentRoutineType = RoutineTimeHelper.currentRoutineType()
+        let today = currentDayKey()
+        if let routine = routineService.loadRoutine(type: currentRoutineType, for: today) {
+            routineProgress = routine.completionPercentage
+        } else {
+            routineProgress = 0
+        }
+    }
+
+    // MARK: - Streak
+
+    private func recordStreak() {
+        let data = streakService.recordAppOpen()
+        if data.currentStreak > 0 {
+            streakData = data
+        }
     }
 
     func onDisappear() {

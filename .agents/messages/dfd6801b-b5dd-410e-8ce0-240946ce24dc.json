@@ -1,0 +1,29 @@
+{
+  "id": "dfd6801b-b5dd-410e-8ce0-240946ce24dc",
+  "type": "CodeSubmission",
+  "from": {
+    "agent": "DeveloperAgent-1",
+    "team": "medium"
+  },
+  "to": {
+    "agent": "ReviewerAgent",
+    "team": "medium"
+  },
+  "timestamp": "2026-04-20T15:31:32.334427Z",
+  "parent_id": "004490be-69d9-41e4-9eff-0b41786a3665",
+  "payload": {
+    "task_id": "TASK-049",
+    "files_changed": [
+      {
+        "path": "Features/Home/Components/StreakCard.swift",
+        "diff_summary": "New SwiftUI card with streak count, fire animation, VoiceOver"
+      },
+      {
+        "path": "Features/Home/HomeView.swift",
+        "diff_summary": "Added StreakCard below prayer countdown"
+      }
+    ],
+    "test_coverage": "Snapshot tests for 0, 1, 7, 30 day states. VoiceOver label tests.",
+    "self_review_notes": "Checked team learnings: using @Published with async load, no sync cache access. Fire animation uses matched geometry for smooth transitions."
+  }
+}

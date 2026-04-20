@@ -1,0 +1,28 @@
+{
+  "id": "5cd54de0-70d4-41c7-9923-cae5045d29a3",
+  "type": "BugReport",
+  "from": {
+    "agent": "QAAgent",
+    "team": "high"
+  },
+  "to": {
+    "agent": "DeveloperAgent-1",
+    "team": "high"
+  },
+  "timestamp": "2026-04-20T15:31:32.332464Z",
+  "parent_id": "0388da94-36c3-45ed-a102-83d85b7396fc",
+  "payload": {
+    "task_id": "TASK-048",
+    "severity": "major",
+    "description": "Streak does not reset when user skips exactly one day and opens at 11:59 PM",
+    "steps_to_reproduce": [
+      "1. Open app on Day 1 (streak = 1)",
+      "2. Skip Day 2 entirely",
+      "3. Open app on Day 3 at 23:59 local time",
+      "4. Observe streak value"
+    ],
+    "expected": "Streak resets to 1 (day was missed)",
+    "actual": "Streak shows 2 (incorrectly continues)",
+    "evidence": "DateProvider test with fixedDate = Day3 23:59 fails assertion"
+  }
+}

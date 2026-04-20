@@ -71,6 +71,8 @@ final class MockCacheManager: CacheManaging {
     private var dailyHadithStore: [String: DailyHadith] = [:]
     private var ayahBookmarks: [BookmarkedAyah] = []
     private var hadithBookmarks: [BookmarkedHadith] = []
+    private var streakStore: StreakData?
+    private var routineStore: [String: DailyRoutine] = [:]
 
     // MARK: Call counts
     private(set) var cacheDailyAyahCallCount = 0
@@ -156,5 +158,74 @@ final class MockCacheManager: CacheManaging {
 
     func loadHadithBookmarks() -> [BookmarkedHadith] {
         hadithBookmarks
+    }
+
+    // MARK: CacheManaging — Streak
+
+    func saveStreak(_ data: StreakData) {
+        streakStore = data
+    }
+
+    func loadStreak() -> StreakData? {
+        streakStore
+    }
+
+    // MARK: CacheManaging — Routines
+
+    func saveRoutine(_ routine: DailyRoutine) {
+        routineStore["\(routine.type.rawValue)_\(routine.dateString)"] = routine
+    }
+
+    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine? {
+        routineStore["\(type.rawValue)_\(date)"]
+    }
+}
+
+// MARK: - MockRoutineService
+
+final class MockRoutineService: RoutineProviding {
+
+    // MARK: In-memory stores
+    private var store: [String: DailyRoutine] = [:]
+
+    // MARK: Call counts
+    private(set) var generateCallCount = 0
+    private(set) var saveProgressCallCount = 0
+
+    // MARK: Seeding helper (for test setup)
+
+    func seed(_ routine: DailyRoutine) {
+        store["\(routine.type.rawValue)_\(routine.dateString)"] = routine
+    }
+
+    // MARK: RoutineProviding
+
+    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine? {
+        store["\(type.rawValue)_\(date)"]
+    }
+
+    func saveRoutineProgress(_ routine: DailyRoutine) {
+        saveProgressCallCount += 1
+        store["\(routine.type.rawValue)_\(routine.dateString)"] = routine
+    }
+
+    func generateRoutine(type: RoutineType, for date: String) -> DailyRoutine {
+        generateCallCount += 1
+        if let existing = store["\(type.rawValue)_\(date)"] {
+            return existing
+        }
+        // Return a minimal 6-step routine so tests that check step count work correctly.
+        let steps = (0..<6).map { i in
+            RoutineStep(
+                type: i == 0 ? .dua : (i == 1 ? (type == .morning ? .ayah : .hadith) : (i < 5 ? .dhikr : .reflection)),
+                title: "Step \(i + 1)",
+                content: "Content for step \(i + 1)",
+                arabicText: i < 3 ? "عربي \(i + 1)" : nil,
+                reference: "Reference \(i + 1)"
+            )
+        }
+        let routine = DailyRoutine(type: type, dateString: date, steps: steps)
+        store["\(type.rawValue)_\(date)"] = routine
+        return routine
     }
 }

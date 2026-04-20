@@ -1,0 +1,28 @@
+{
+  "id": "ebd313a6-8a2d-41ca-bdcf-72c5d60d18f9",
+  "type": "ReviewFeedback",
+  "from": {
+    "agent": "ReviewerAgent",
+    "team": "high"
+  },
+  "to": {
+    "agent": "DeveloperAgent-1",
+    "team": "high"
+  },
+  "timestamp": "2026-04-20T15:31:32.332975Z",
+  "parent_id": "d46d4e3c-c1c7-481a-85ea-b99a42543bc0",
+  "payload": {
+    "task_id": "TASK-048",
+    "decision": "approve",
+    "scores": {
+      "correctness": 5,
+      "readability": 5,
+      "scalability": 4,
+      "security": 4,
+      "maintainability": 5
+    },
+    "average": 4.6,
+    "comments": [],
+    "blocking_issues": []
+  }
+}
