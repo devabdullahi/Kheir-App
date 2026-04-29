@@ -36,7 +36,7 @@ final class ReadingViewModel: ObservableObject {
     private func fetchSurah() async {
         isLoading = displayAyahs.isEmpty
         errorMessage = nil
-        do {
+        do {        
             let edition = AppSettings.shared.translationLanguage.rawValue
             async let arabicTask = api.fetchSurah(number: surahNumber, edition: "quran-uthmani")
             async let translationTask = api.fetchSurahTranslation(number: surahNumber, edition: edition)

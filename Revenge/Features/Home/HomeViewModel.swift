@@ -1,26 +1,13 @@
 import Foundation
 import Combine
-import CoreLocation
 import SwiftUI
 import UIKit
 import WidgetKit
-
-// MARK: - Load State
-
-enum ContentLoadState {
-    case loading
-    case loaded
-    case failed
-    case offline
-}
 
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var dailyAyah: DailyAyah?
     @Published var dailyHadith: DailyHadith?
-    @Published var nextPrayerName: String = ""
-    @Published var nextPrayerTime: Date?
-    @Published var countdownText: String = "--:--:--"
     @Published var hijriDate: String = ""
     @Published var gregorianDate: String = ""
     @Published var isLoading = false
@@ -32,12 +19,10 @@ final class HomeViewModel: ObservableObject {
     @Published var currentRoutineType: RoutineType = RoutineTimeHelper.currentRoutineType()
     @Published var routineProgress: Double = 0
 
-    private var timer: Timer?
     private var midnightObserver: NSObjectProtocol?
     private let cache: any CacheManaging
     private let apiService: any AyahFetching & HadithFetching
     private let locationService: LocationService
-    private let prayerTimesService: PrayerTimesService
     private let streakService: any StreakTracking
     private let routineService: any RoutineProviding
     private let settings: AppSettings
@@ -46,7 +31,6 @@ final class HomeViewModel: ObservableObject {
         apiService: any AyahFetching & HadithFetching = APIService.shared,
         cacheManager: any CacheManaging = CacheManager.shared,
         locationService: LocationService = .shared,
-        prayerTimesService: PrayerTimesService = .shared,
         streakService: any StreakTracking = StreakService.shared,
         routineService: any RoutineProviding = RoutineService.shared,
         settings: AppSettings = .shared
@@ -54,7 +38,6 @@ final class HomeViewModel: ObservableObject {
         self.apiService = apiService
         self.cache = cacheManager
         self.locationService = locationService
-        self.prayerTimesService = prayerTimesService
         self.streakService = streakService
         self.routineService = routineService
         self.settings = settings
@@ -65,8 +48,6 @@ final class HomeViewModel: ObservableObject {
 
     func onAppear() {
         Task { await loadDailyContent() }
-        loadPrayerCountdown()
-        startCountdownTimer()
         subscribeMidnightRollover()
         recordStreak()
         refreshRoutineProgress()
@@ -96,7 +77,6 @@ final class HomeViewModel: ObservableObject {
     }
 
     func onDisappear() {
-        timer?.invalidate()
         if let observer = midnightObserver {
             NotificationCenter.default.removeObserver(observer)
             midnightObserver = nil
@@ -194,11 +174,19 @@ final class HomeViewModel: ObservableObject {
         }
         hadithState = .loading
         do {
-            let (entry, collection, sectionName) = try await apiService.fetchRandomHadith()
+            let (entry, collection, sectionName, section) = try await apiService.fetchRandomHadith()
+
+            // Try to fetch the Arabic text for the same hadith from the Arabic edition
+            var arabicText = ""
+            if let arabicResponse = try? await apiService.fetchHadithSection(editionRaw: collection.arabicEdition, section: section),
+               let arabicEntry = arabicResponse.hadiths.first(where: { $0.hadithNumber == entry.hadithNumber }) {
+                arabicText = arabicEntry.text
+            }
 
             let grade = entry.grades.first?.grade ?? "Unknown"
             let hadith = DailyHadith(
                 text: entry.text,
+                arabicText: arabicText,
                 source: collection.displayName,
                 chapter: sectionName,
                 narrator: "",
@@ -225,54 +213,6 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Prayer Countdown
-    private func loadPrayerCountdown() {
-        guard let location = locationService.currentLocation else {
-            // Try loading after a delay
-            Task {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                if let loc = locationService.currentLocation {
-                    await updateNextPrayer(location: loc)
-                }
-            }
-            return
-        }
-        Task {
-            await updateNextPrayer(location: location)
-        }
-    }
-
-    private func updateNextPrayer(location: CLLocationCoordinate2D) async {
-        guard let times = await prayerTimesService.fetchPrayerTimes(
-            coordinate: location,
-            method: settings.calculationMethod,
-            madhab: settings.madhab
-        ) else { return }
-
-        let now = Date()
-        let allTimes = times.all
-        if let next = allTimes.first(where: { $0.time > now }) {
-            nextPrayerName = next.name
-            nextPrayerTime = next.time
-        } else {
-            // All prayers passed, show next Fajr
-            nextPrayerName = "Fajr"
-            nextPrayerTime = Calendar.current.date(byAdding: .day, value: 1, to: times.fajr)
-        }
-    }
-
-    private func startCountdownTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self = self, let target = self.nextPrayerTime else { return }
-                self.countdownText = Date().timeRemaining(to: target)
-                if target <= Date() {
-                    self.loadPrayerCountdown()
-                }
-            }
-        }
-    }
-
     // MARK: - Midnight Rollover
 
     /// Subscribes to significant time changes (DST, date rollover at device-local midnight).
@@ -292,7 +232,6 @@ final class HomeViewModel: ObservableObject {
                 self.dailyAyah = nil
                 self.dailyHadith = nil
                 await self.loadDailyContent()
-                self.loadPrayerCountdown()
             }
         }
     }

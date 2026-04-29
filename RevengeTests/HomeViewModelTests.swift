@@ -49,7 +49,6 @@ struct HomeViewModelTests {
             apiService: api,
             cacheManager: cache,
             locationService: .shared,
-            prayerTimesService: .shared,
             settings: .shared
         )
     }

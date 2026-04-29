@@ -16,7 +16,7 @@ import CoreLocation
 import Adhan
 #endif
 
-final class PrayerTimesService {
+final class PrayerTimesService: @unchecked Sendable {
     static let shared = PrayerTimesService()
     private init() {}
 

@@ -13,7 +13,8 @@ protocol AyahFetching: Sendable {
 
 /// Abstracts random-hadith fetching used by HomeViewModel.
 protocol HadithFetching: Sendable {
-    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String)
+    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int)
+    func fetchHadithSection(editionRaw: String, section: Int) async throws -> HadithSectionResponse
 }
 
 // MARK: - Prayer Times Fetching Protocol
@@ -23,40 +24,60 @@ protocol PrayerTimesFetching: Sendable {
     func fetchPrayerTimes(latitude: Double, longitude: Double, method: Int) async throws -> AladhanData
 }
 
-// MARK: - Cache Managing Protocol
+// MARK: - Daily Content Caching
 
-/// Abstracts daily-content and bookmark persistence used by HomeViewModel and bookmark screens.
-/// NOTE: CacheManager is intentionally NOT an actor for now.
-/// TODO(phase2): race when Home + Bookmarks mutate concurrently; convert to actor with widget App Group work
-protocol CacheManaging: AnyObject {
-    // Daily content
+/// Abstracts caching and loading of the daily ayah and hadith content.
+protocol DailyContentCaching: AnyObject {
     func cacheDailyAyah(_ ayah: DailyAyah)
     func loadDailyAyah(for date: String) -> DailyAyah?
     func cacheDailyHadith(_ hadith: DailyHadith)
     func loadDailyHadith(for date: String) -> DailyHadith?
+}
 
-    // Ayah bookmarks
+// MARK: - Ayah Bookmark Managing
+
+/// Abstracts saving, removing, querying, and loading bookmarked ayahs.
+protocol AyahBookmarkManaging: AnyObject {
     func saveAyahBookmark(_ bookmark: BookmarkedAyah)
     func removeAyahBookmark(surah: Int, ayah: Int)
     func removeAyahBookmark(id: UUID)
     func isAyahBookmarked(surah: Int, ayah: Int) -> Bool
     func loadAyahBookmarks() -> [BookmarkedAyah]
+}
 
-    // Hadith bookmarks
+// MARK: - Hadith Bookmark Managing
+
+/// Abstracts saving, removing, querying, and loading bookmarked hadiths.
+protocol HadithBookmarkManaging: AnyObject {
     func saveHadithBookmark(_ bookmark: BookmarkedHadith)
     func removeHadithBookmark(text: String, source: String)
     func removeHadithBookmark(id: UUID)
     func isHadithBookmarked(text: String, source: String) -> Bool
     func loadHadithBookmarks() -> [BookmarkedHadith]
+}
 
-    // Streak persistence
+// MARK: - Streak Persisting
+
+/// Abstracts raw persistence of `StreakData` (read/write only, no business logic).
+protocol StreakPersisting: AnyObject {
     func saveStreak(_ data: StreakData)
     func loadStreak() -> StreakData?
+}
 
-    // Routine persistence
+// MARK: - Routine Persisting
+
+/// Abstracts raw persistence of a `DailyRoutine` for a given type and date.
+protocol RoutinePersisting: AnyObject {
     func saveRoutine(_ routine: DailyRoutine)
     func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine?
 }
+
+// MARK: - Cache Managing Protocol
+
+/// Composes all cache sub-protocols into a single conformance point.
+/// Abstracts daily-content and bookmark persistence used by HomeViewModel and bookmark screens.
+/// NOTE: CacheManager is intentionally NOT an actor for now.
+protocol CacheManaging: DailyContentCaching, AyahBookmarkManaging, HadithBookmarkManaging, StreakPersisting, RoutinePersisting {}
 
 // MARK: - Routine Providing Protocol
 

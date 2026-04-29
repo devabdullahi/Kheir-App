@@ -5,12 +5,22 @@ import Foundation
 
 final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
 
+    // MARK: Lock
+
+    private let lock = NSLock()
+
     // MARK: Configurable results
-    var ayahResult: Result<Ayah, Error> = .success(
+
+    private var _ayahResult: Result<Ayah, Error> = .success(
         Ayah(number: 1, text: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
              numberInSurah: 1, juz: 1, page: 1, hizbQuarter: 1)
     )
-    var ayahTranslationResult: Result<AyahDetailData, Error> = .success(
+    var ayahResult: Result<Ayah, Error> {
+        get { lock.lock(); defer { lock.unlock() }; return _ayahResult }
+        set { lock.lock(); defer { lock.unlock() }; _ayahResult = newValue }
+    }
+
+    private var _ayahTranslationResult: Result<AyahDetailData, Error> = .success(
         AyahDetailData(
             number: 1,
             text: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
@@ -23,7 +33,12 @@ final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
             )
         )
     )
-    var hadithResult: Result<(entry: HadithAPIEntry, collection: HadithCollection, sectionName: String), Error> = .success(
+    var ayahTranslationResult: Result<AyahDetailData, Error> {
+        get { lock.lock(); defer { lock.unlock() }; return _ayahTranslationResult }
+        set { lock.lock(); defer { lock.unlock() }; _ayahTranslationResult = newValue }
+    }
+
+    private var _hadithResult: Result<(entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int), Error> = .success(
         (
             entry: HadithAPIEntry(
                 hadithNumber: 1,
@@ -33,14 +48,40 @@ final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
                 reference: HadithReference(book: 1, hadith: 1)
             ),
             collection: .bukhari,
-            sectionName: "Revelation"
+            sectionName: "Revelation",
+            section: 1
         )
     )
+    var hadithResult: Result<(entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int), Error> {
+        get { lock.lock(); defer { lock.unlock() }; return _hadithResult }
+        set { lock.lock(); defer { lock.unlock() }; _hadithResult = newValue }
+    }
+
+    private var _hadithSectionResult: Result<HadithSectionResponse, Error>?
+    var hadithSectionResult: Result<HadithSectionResponse, Error>? {
+        get { lock.lock(); defer { lock.unlock() }; return _hadithSectionResult }
+        set { lock.lock(); defer { lock.unlock() }; _hadithSectionResult = newValue }
+    }
 
     // MARK: Call counts
-    private(set) var fetchAyahCallCount = 0
-    private(set) var fetchAyahTranslationCallCount = 0
-    private(set) var fetchHadithCallCount = 0
+
+    private var _fetchAyahCallCount = 0
+    private(set) var fetchAyahCallCount: Int {
+        get { lock.lock(); defer { lock.unlock() }; return _fetchAyahCallCount }
+        set { lock.lock(); defer { lock.unlock() }; _fetchAyahCallCount = newValue }
+    }
+
+    private var _fetchAyahTranslationCallCount = 0
+    private(set) var fetchAyahTranslationCallCount: Int {
+        get { lock.lock(); defer { lock.unlock() }; return _fetchAyahTranslationCallCount }
+        set { lock.lock(); defer { lock.unlock() }; _fetchAyahTranslationCallCount = newValue }
+    }
+
+    private var _fetchHadithCallCount = 0
+    private(set) var fetchHadithCallCount: Int {
+        get { lock.lock(); defer { lock.unlock() }; return _fetchHadithCallCount }
+        set { lock.lock(); defer { lock.unlock() }; _fetchHadithCallCount = newValue }
+    }
 
     // MARK: AyahFetching
 
@@ -56,9 +97,27 @@ final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
 
     // MARK: HadithFetching
 
-    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String) {
+    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int) {
         fetchHadithCallCount += 1
         return try hadithResult.get()
+    }
+
+    func fetchHadithSection(editionRaw: String, section: Int) async throws -> HadithSectionResponse {
+        if let result = hadithSectionResult {
+            return try result.get()
+        }
+        // Default: return a matching Arabic entry so the language toggle works in tests
+        let arabicEntry = HadithAPIEntry(
+            hadithNumber: 1,
+            arabicNumber: 1,
+            text: "إنما الأعمال بالنيات",
+            grades: [HadithGradeEntry(name: "Sahih al-Bukhari", grade: "Sahih")],
+            reference: HadithReference(book: 1, hadith: 1)
+        )
+        return HadithSectionResponse(
+            metadata: HadithMetadata(name: "", section: nil, sectionDetail: nil),
+            hadiths: [arabicEntry]
+        )
     }
 }
 

@@ -29,6 +29,11 @@ final class CacheManager {
     /// Both targets must declare this group under Signing & Capabilities → App Groups.
     static let appGroupIdentifier = "group.com.kheir.shared"
 
+    // MARK: - Cached Coders
+
+    private static let encoder = JSONEncoder()
+    private static let decoder = JSONDecoder()
+
     // MARK: - Private State
 
     private let fileManager = FileManager.default
@@ -149,7 +154,7 @@ final class CacheManager {
     /// asynchronously on `ioQueue` so the calling thread (including @MainActor ViewModels) is
     /// never blocked by file writing.
     func save<T: Encodable>(_ object: T, filename: String) {
-        guard let data = try? JSONEncoder().encode(object) else {
+        guard let data = try? Self.encoder.encode(object) else {
             print("CacheManager: failed to encode \(T.self) for '\(filename)'")
             return
         }
@@ -175,14 +180,14 @@ final class CacheManager {
     func load<T: Decodable>(_ type: T.Type, filename: String) -> T? {
         // Fast path: memory hit — no disk I/O, no queue hop.
         if let box = memoryCache.object(forKey: filename as NSString) {
-            return try? JSONDecoder().decode(type, from: box.data)
+            return try? Self.decoder.decode(type, from: box.data)
         }
 
         // Slow path: evicted from memory, must read from disk.
         return ioQueue.sync { [self] in
             // Double-check after acquiring queue — another thread may have warmed the cache.
             if let box = memoryCache.object(forKey: filename as NSString) {
-                return try? JSONDecoder().decode(type, from: box.data)
+                return try? Self.decoder.decode(type, from: box.data)
             }
 
             let url = cacheDirectory.appendingPathComponent(filename)
@@ -190,7 +195,7 @@ final class CacheManager {
 
             // Re-insert into memory cache so the next call is fast.
             memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
-            return try? JSONDecoder().decode(type, from: data)
+            return try? Self.decoder.decode(type, from: data)
         }
     }
 

@@ -2,6 +2,7 @@ import Foundation
 import CoreLocation
 import Combine
 
+@MainActor
 final class LocationService: NSObject, ObservableObject, CLLocationManagerDelegate {
     static let shared = LocationService()
 
@@ -43,18 +44,27 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
 
     // MARK: - CLLocationManagerDelegate
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        currentLocation = locations.last?.coordinate
+        let coordinate = locations.last?.coordinate
+        DispatchQueue.main.async {
+            self.currentLocation = coordinate
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        heading = newHeading
-        headingAccuracy = newHeading.headingAccuracy
+        let accuracy = newHeading.headingAccuracy
+        DispatchQueue.main.async {
+            self.heading = newHeading
+            self.headingAccuracy = accuracy
+        }
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorizationStatus = manager.authorizationStatus
-        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
-            startUpdating()
+        let status = manager.authorizationStatus
+        DispatchQueue.main.async {
+            self.authorizationStatus = status
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                self.startUpdating()
+            }
         }
     }
 

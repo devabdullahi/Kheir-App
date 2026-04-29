@@ -7,7 +7,7 @@ import Foundation
 /// All date arithmetic uses the "yyyy-MM-dd" key format so comparisons are
 /// calendar-day based and independent of clock time — consistent with the
 /// `dayKeyFormatter` used in `HomeViewModel`.
-struct StreakData: Codable, Equatable {
+struct StreakData: Codable, Equatable, Sendable {
 
     /// Number of consecutive days the app has been opened, counting today.
     var currentStreak: Int

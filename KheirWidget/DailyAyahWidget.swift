@@ -50,7 +50,7 @@ struct DailyAyahProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<DailyAyahEntry>) -> Void) {
         let entry = entryForToday()
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date().addingTimeInterval(86400)
         let nextMidnight = Calendar.current.startOfDay(for: tomorrow)
         let timeline = Timeline(entries: [entry], policy: .after(nextMidnight))
         completion(timeline)

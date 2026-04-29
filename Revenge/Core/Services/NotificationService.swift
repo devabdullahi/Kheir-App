@@ -2,7 +2,7 @@ import Foundation
 import UserNotifications
 import CoreLocation
 
-final class NotificationService {
+final class NotificationService: @unchecked Sendable {
     static let shared = NotificationService()
     private init() {}
 

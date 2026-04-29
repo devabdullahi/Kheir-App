@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Share Template
 
-enum ShareTemplate: String, CaseIterable, Identifiable {
+enum ShareTemplate: String, CaseIterable, Identifiable, Sendable {
     case minimal
     case geometric
     case calligraphy
@@ -31,14 +31,14 @@ enum ShareTemplate: String, CaseIterable, Identifiable {
 
 // MARK: - Share Content Type
 
-enum ShareContentType {
+enum ShareContentType: Sendable {
     case ayah
     case hadith
 }
 
 // MARK: - Share Card Size
 
-enum ShareCardSize: String, CaseIterable {
+enum ShareCardSize: String, CaseIterable, Sendable {
     case story  = "Story (9:16)"
     case square = "Square (1:1)"
 
@@ -52,7 +52,7 @@ enum ShareCardSize: String, CaseIterable {
 
 // MARK: - Share Card Data
 
-struct ShareCardData: Identifiable {
+struct ShareCardData: Identifiable, Sendable {
     let id: UUID
     let content: String
     let arabicText: String?

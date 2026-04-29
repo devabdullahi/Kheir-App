@@ -1,6 +1,6 @@
 import Foundation
 
-struct PrayerTime: Identifiable {
+struct PrayerTime: Identifiable, Sendable {
     let id = UUID()
     let name: String
     let time: Date
@@ -14,7 +14,7 @@ struct PrayerTime: Identifiable {
     }
 }
 
-struct DayPrayerTimes {
+struct DayPrayerTimes: Sendable {
     let fajr: Date
     let sunrise: Date
     let dhuhr: Date
@@ -35,17 +35,17 @@ struct DayPrayerTimes {
 }
 
 // MARK: - Aladhan API Fallback Response
-struct AladhanResponse: Codable {
+struct AladhanResponse: Codable, Sendable {
     let code: Int
     let data: AladhanData
 }
 
-struct AladhanData: Codable {
+struct AladhanData: Codable, Sendable {
     let timings: AladhanTimings
     let date: AladhanDate
 }
 
-struct AladhanTimings: Codable {
+struct AladhanTimings: Codable, Sendable {
     let Fajr: String
     let Sunrise: String
     let Dhuhr: String
@@ -54,18 +54,18 @@ struct AladhanTimings: Codable {
     let Isha: String
 }
 
-struct AladhanDate: Codable {
+struct AladhanDate: Codable, Sendable {
     let hijri: HijriDate
 }
 
-struct HijriDate: Codable {
+struct HijriDate: Codable, Sendable {
     let date: String
     let day: String
     let month: HijriMonth
     let year: String
 }
 
-struct HijriMonth: Codable {
+struct HijriMonth: Codable, Sendable {
     let number: Int
     let en: String
     let ar: String
