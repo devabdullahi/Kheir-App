@@ -8,7 +8,7 @@ final class SurahListViewModel: ObservableObject {
     @Published var searchText: String = ""
     @Published var isLoading = false
 
-    private let cache = CacheManager.shared
+    private let cache: any CacheManaging = CacheManager.shared
     private var searchCancellable: AnyCancellable?
 
     var lastReadSurah: Int { AppSettings.shared.lastReadSurah }
@@ -24,11 +24,13 @@ final class SurahListViewModel: ObservableObject {
     }
 
     func onAppear() {
-        if let cached = cache.loadSurahList() {
-            surahs = cached
-            filteredSurahs = cached
+        Task {
+            if let cached = await cache.loadSurahList() {
+                surahs = cached
+                filteredSurahs = cached
+            }
+            await fetchSurahs()
         }
-        Task { await fetchSurahs() }
     }
 
     private func fetchSurahs() async {
@@ -38,7 +40,7 @@ final class SurahListViewModel: ObservableObject {
             let list = try await APIService.shared.fetchSurahList()
             surahs = list
             filteredSurahs = list
-            cache.cacheSurahList(list)
+            await cache.cacheSurahList(list)
         } catch {
             print("Surah list error: \(error)")
         }

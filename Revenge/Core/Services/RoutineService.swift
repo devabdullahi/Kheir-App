@@ -47,17 +47,17 @@ final class RoutineService {
 
 extension RoutineService {
 
-    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine? {
-        cache.loadRoutine(type: type, for: date)
+    func loadRoutine(type: RoutineType, for date: String) async -> DailyRoutine? {
+        await cache.loadRoutine(type: type, for: date)
     }
 
-    func saveRoutineProgress(_ routine: DailyRoutine) {
-        cache.saveRoutine(routine)
+    func saveRoutineProgress(_ routine: DailyRoutine) async {
+        await cache.saveRoutine(routine)
     }
 
-    func generateRoutine(type: RoutineType, for date: String) -> DailyRoutine {
+    func generateRoutine(type: RoutineType, for date: String) async -> DailyRoutine {
         // If a routine already exists for this type+date, return it so progress is preserved.
-        if let existing = cache.loadRoutine(type: type, for: date) {
+        if let existing = await cache.loadRoutine(type: type, for: date) {
             return existing
         }
 
@@ -74,7 +74,7 @@ extension RoutineService {
             dateString: date,
             steps: steps
         )
-        cache.saveRoutine(routine)
+        await cache.saveRoutine(routine)
         return routine
     }
 }

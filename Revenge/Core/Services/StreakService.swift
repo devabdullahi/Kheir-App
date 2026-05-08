@@ -101,11 +101,11 @@ extension StreakService {
     /// After computing the new streak, `longestStreak` is updated if the current
     /// value exceeds the stored all-time best. The result is persisted and returned.
     @discardableResult
-    func recordAppOpen() -> StreakData {
+    func recordAppOpen() async -> StreakData {
         let todayKey = dateKey(for: Date())
 
         // Load existing data — may be nil on first launch.
-        if var existing = cache.loadStreak() {
+        if var existing = await cache.loadStreak() {
             // Rule 1: already recorded today, nothing to do.
             if existing.lastOpenedDate == todayKey {
                 return existing
@@ -129,20 +129,20 @@ extension StreakService {
                 existing.longestStreak = existing.currentStreak
             }
 
-            cache.saveStreak(existing)
+            await cache.saveStreak(existing)
             return existing
         } else {
             // Rule 4: first ever open.
             let fresh = StreakData(currentStreak: 1, lastOpenedDate: todayKey, longestStreak: 1)
-            cache.saveStreak(fresh)
+            await cache.saveStreak(fresh)
             return fresh
         }
     }
 
     /// Returns the currently persisted `StreakData`, or `nil` if the user has never
     /// triggered `recordAppOpen()`.
-    func loadStreak() -> StreakData? {
-        cache.loadStreak()
+    func loadStreak() async -> StreakData? {
+        await cache.loadStreak()
     }
 
     /// Wipes the persisted streak. Subsequent calls to `recordAppOpen()` will treat
@@ -154,8 +154,8 @@ extension StreakService {
     /// because the empty string cannot be parsed — causing the streak to reset to 1 on
     /// the next launch. `loadStreak()` returns this zeroed struct; callers should treat
     /// `currentStreak == 0` as "no streak established yet".
-    func resetStreak() {
+    func resetStreak() async {
         let zeroed = StreakData(currentStreak: 0, lastOpenedDate: "", longestStreak: 0)
-        cache.saveStreak(zeroed)
+        await cache.saveStreak(zeroed)
     }
 }

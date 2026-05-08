@@ -3,20 +3,16 @@ import Foundation
 // MARK: - CacheManager
 //
 // Design decisions:
-//   - A private serial DispatchQueue (`ioQueue`) replaces NSRecursiveLock for thread safety.
-//     A serial queue guarantees that only one task executes at a time, which eliminates the
-//     deadlock class that arose because bookmark methods called load() which also acquired
-//     the recursive lock — they now simply enqueue work items that run serially.
-//   - Reads use `ioQueue.sync` so callers that require a return value block only as long as
-//     the in-flight write ahead of them finishes, then hit the memory layer.
-//   - Writes update the in-memory NSCache synchronously (on whatever thread the caller is on,
-//     before dispatch) and then persist to disk asynchronously via `ioQueue.async`. This means
-//     the data is immediately visible to the next in-memory read without waiting for disk I/O,
-//     and the main thread is never blocked.
-//   - The class stays a `final class` (not an actor) so it can conform to `CacheManaging: AnyObject`
-//     and be injected as a protocol-typed dependency without existential boxing overhead.
+//   - CacheManager is a Swift actor. All mutable state is protected by the actor's
+//     implicit serial executor, which guarantees that read-modify-write cycles
+//     (e.g. load bookmarks → insert → save) are atomic without manual locking.
+//   - NSCache is used as an in-memory layer. It is thread-safe for concurrent
+//     get/set calls, so no extra synchronisation is required on the memory layer.
+//   - Disk I/O runs inline within the actor's executor. Because actors use a
+//     cooperative thread pool, this never blocks the main thread.
+//   - All public methods are async. Callers (ViewModels on @MainActor) use `await`.
 
-final class CacheManager {
+actor CacheManager {
 
     // MARK: - Shared Instance
 
@@ -41,12 +37,6 @@ final class CacheManager {
     /// Root cache directory — either inside the shared App Group container or the Documents
     /// directory fallback when the capability has not yet been configured.
     private let cacheDirectory: URL
-
-    /// All disk operations are serialised through this queue. Using a serial queue rather than
-    /// NSRecursiveLock eliminates re-entrancy deadlocks: when a write method previously called
-    /// a read method that also tried to acquire the lock, the recursive lock hid the double-enter.
-    /// With a serial queue, nested dispatches are simply enqueued and run in order.
-    private let ioQueue = DispatchQueue(label: "com.kheir.cache.io", qos: .utility)
 
     /// In-memory store keyed by filename. NSCache evicts automatically under memory pressure and
     /// is thread-safe for concurrent get/set calls, so no extra synchronisation is required on
@@ -149,54 +139,39 @@ final class CacheManager {
 
     // MARK: - Generic Save / Load
 
-    /// Encodes `object` and persists it.
-    /// The memory cache is updated immediately on the caller's thread; disk I/O is dispatched
-    /// asynchronously on `ioQueue` so the calling thread (including @MainActor ViewModels) is
-    /// never blocked by file writing.
+    /// Encodes `object` and persists it to both the in-memory cache and disk.
+    /// The actor's serial executor ensures this entire operation is atomic.
     func save<T: Encodable>(_ object: T, filename: String) {
         guard let data = try? Self.encoder.encode(object) else {
             print("CacheManager: failed to encode \(T.self) for '\(filename)'")
             return
         }
-        // Write memory cache synchronously so the next read is instant regardless of
-        // whether the disk write has finished.
         memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
 
-        // Capture both the data and the target URL before crossing the dispatch boundary.
         let url = cacheDirectory.appendingPathComponent(filename)
-        ioQueue.async { [weak self] in
-            guard self != nil else { return }
-            do {
-                try data.write(to: url, options: .atomic)
-            } catch {
-                print("CacheManager: disk write error for '\(filename)': \(error)")
-            }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            print("CacheManager: disk write error for '\(filename)': \(error)")
         }
     }
 
     /// Decodes and returns a value of `type` from cache.
-    /// Checks the memory layer first; falls back to disk inside `ioQueue.sync` only when the
-    /// value has been evicted by NSCache under memory pressure.
+    /// Checks the memory layer first; falls back to disk when NSCache has evicted the entry.
+    /// The actor guarantees no concurrent access, so no queue synchronisation is needed.
     func load<T: Decodable>(_ type: T.Type, filename: String) -> T? {
-        // Fast path: memory hit — no disk I/O, no queue hop.
+        // Fast path: memory hit.
         if let box = memoryCache.object(forKey: filename as NSString) {
             return try? Self.decoder.decode(type, from: box.data)
         }
 
-        // Slow path: evicted from memory, must read from disk.
-        return ioQueue.sync { [self] in
-            // Double-check after acquiring queue — another thread may have warmed the cache.
-            if let box = memoryCache.object(forKey: filename as NSString) {
-                return try? Self.decoder.decode(type, from: box.data)
-            }
+        // Slow path: evicted from memory, read from disk.
+        let url = cacheDirectory.appendingPathComponent(filename)
+        guard let data = try? Data(contentsOf: url) else { return nil }
 
-            let url = cacheDirectory.appendingPathComponent(filename)
-            guard let data = try? Data(contentsOf: url) else { return nil }
-
-            // Re-insert into memory cache so the next call is fast.
-            memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
-            return try? Self.decoder.decode(type, from: data)
-        }
+        // Re-insert into memory cache so the next call is fast.
+        memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
+        return try? Self.decoder.decode(type, from: data)
     }
 
     /// Returns `true` when a file with `filename` exists in the cache directory.
@@ -210,9 +185,7 @@ final class CacheManager {
     func delete(filename: String) {
         memoryCache.removeObject(forKey: filename as NSString)
         let url = cacheDirectory.appendingPathComponent(filename)
-        ioQueue.async { [weak self] in
-            try? self?.fileManager.removeItem(at: url)
-        }
+        try? fileManager.removeItem(at: url)
     }
 
     // MARK: - Surah Cache

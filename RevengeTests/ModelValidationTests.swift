@@ -130,7 +130,7 @@ final class ModelValidationTests: XCTestCase {
 
     // MARK: - MockCacheManager (isolated daily content round-trips)
 
-    func test_mockCache_dailyAyah_roundTrip() {
+    func test_mockCache_dailyAyah_roundTrip() async {
         let cache = MockCacheManager()
         let ayah = DailyAyah(
             surahNumber: 3, surahName: "آل عمران", surahEnglishName: "Al-Imran",
@@ -139,8 +139,8 @@ final class ModelValidationTests: XCTestCase {
             dateString: "2026-04-26"
         )
 
-        cache.cacheDailyAyah(ayah)
-        let loaded = cache.loadDailyAyah(for: "2026-04-26")
+        await cache.cacheDailyAyah(ayah)
+        let loaded = await cache.loadDailyAyah(for: "2026-04-26")
 
         XCTAssertNotNil(loaded)
         XCTAssertEqual(loaded?.arabicText, ayah.arabicText)
@@ -149,7 +149,7 @@ final class ModelValidationTests: XCTestCase {
         XCTAssertEqual(cache.loadDailyAyahCallCount, 1)
     }
 
-    func test_mockCache_dailyAyah_differentDateKeys_areSeparate() {
+    func test_mockCache_dailyAyah_differentDateKeys_areSeparate() async {
         let cache = MockCacheManager()
         let ayah1 = DailyAyah(surahNumber: 1, surahName: "a", surahEnglishName: "b",
                                ayahNumber: 1, arabicText: "first", translationText: "f",
@@ -158,19 +158,22 @@ final class ModelValidationTests: XCTestCase {
                                ayahNumber: 2, arabicText: "second", translationText: "s",
                                transliteration: "", dateString: "2026-04-26")
 
-        cache.cacheDailyAyah(ayah1)
-        cache.cacheDailyAyah(ayah2)
+        await cache.cacheDailyAyah(ayah1)
+        await cache.cacheDailyAyah(ayah2)
 
-        XCTAssertEqual(cache.loadDailyAyah(for: "2026-04-25")?.arabicText, "first")
-        XCTAssertEqual(cache.loadDailyAyah(for: "2026-04-26")?.arabicText, "second")
+        let loaded1 = await cache.loadDailyAyah(for: "2026-04-25")
+        XCTAssertEqual(loaded1?.arabicText, "first")
+        let loaded2 = await cache.loadDailyAyah(for: "2026-04-26")
+        XCTAssertEqual(loaded2?.arabicText, "second")
     }
 
-    func test_mockCache_dailyAyah_returnsNil_forUnknownKey() {
+    func test_mockCache_dailyAyah_returnsNil_forUnknownKey() async {
         let cache = MockCacheManager()
-        XCTAssertNil(cache.loadDailyAyah(for: "2000-01-01"))
+        let loaded = await cache.loadDailyAyah(for: "2000-01-01")
+        XCTAssertNil(loaded)
     }
 
-    func test_mockCache_dailyHadith_roundTrip() {
+    func test_mockCache_dailyHadith_roundTrip() async {
         let cache = MockCacheManager()
         let hadith = DailyHadith(
             text: "Mock hadith text.",
@@ -182,8 +185,8 @@ final class ModelValidationTests: XCTestCase {
             dateString: "2026-04-26"
         )
 
-        cache.cacheDailyHadith(hadith)
-        let loaded = cache.loadDailyHadith(for: "2026-04-26")
+        await cache.cacheDailyHadith(hadith)
+        let loaded = await cache.loadDailyHadith(for: "2026-04-26")
 
         XCTAssertNotNil(loaded)
         XCTAssertEqual(loaded?.text, hadith.text)
@@ -191,14 +194,14 @@ final class ModelValidationTests: XCTestCase {
         XCTAssertEqual(cache.cacheDailyHadithCallCount, 1)
     }
 
-    func test_mockCache_seedDailyAyah_loadableByDate() {
+    func test_mockCache_seedDailyAyah_loadableByDate() async {
         let cache = MockCacheManager()
         let ayah = DailyAyah(surahNumber: 5, surahName: "a", surahEnglishName: "b",
                               ayahNumber: 3, arabicText: "seeded", translationText: "t",
                               transliteration: "", dateString: "2026-04-26")
         cache.seedDailyAyah(ayah)
 
-        let loaded = cache.loadDailyAyah(for: "2026-04-26")
+        let loaded = await cache.loadDailyAyah(for: "2026-04-26")
         XCTAssertEqual(loaded?.arabicText, "seeded")
         XCTAssertEqual(cache.cacheDailyAyahCallCount, 0)
     }

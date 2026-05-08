@@ -14,7 +14,7 @@ final class ReadingViewModel: ObservableObject {
     let surahNumber: Int
     let scrollToAyah: Int?
 
-    private let cache = CacheManager.shared
+    private let cache: any CacheManaging = CacheManager.shared
     private let api = APIService.shared
     let audioPlayer = AudioPlayerService.shared
     private var savePositionTask: Task<Void, Never>?
@@ -26,11 +26,13 @@ final class ReadingViewModel: ObservableObject {
     }
 
     func onAppear() {
-        if let cached = cache.loadCachedSurah(surahNumber) {
-            buildDisplay(arabic: cached.arabicAyahs, translation: cached.translationAyahs, transliteration: cached.transliterationAyahs)
+        Task {
+            if let cached = await cache.loadCachedSurah(surahNumber) {
+                buildDisplay(arabic: cached.arabicAyahs, translation: cached.translationAyahs, transliteration: cached.transliterationAyahs)
+            }
+            await loadBookmarkStates()
+            await fetchSurah()
         }
-        loadBookmarkStates()
-        Task { await fetchSurah() }
     }
 
     private func fetchSurah() async {
@@ -63,7 +65,7 @@ final class ReadingViewModel: ObservableObject {
                 transliterationAyahs: transliteration,
                 cachedDate: Date()
             )
-            cache.cacheSurah(cached)
+            await cache.cacheSurah(cached)
 
             audioPlayer.configure(surah: surahNumber, totalAyahs: arabic.ayahs.count)
         } catch {
@@ -107,8 +109,8 @@ final class ReadingViewModel: ObservableObject {
 
     @Published var bookmarkedAyahs: Set<Int> = []
 
-    func loadBookmarkStates() {
-        let bookmarks = cache.loadAyahBookmarks()
+    func loadBookmarkStates() async {
+        let bookmarks = await cache.loadAyahBookmarks()
         bookmarkedAyahs = Set(
             bookmarks
                 .filter { $0.surahNumber == surahNumber }
@@ -122,9 +124,10 @@ final class ReadingViewModel: ObservableObject {
 
     func toggleBookmark(_ ayah: DisplayAyah) {
         if bookmarkedAyahs.contains(ayah.numberInSurah) {
-            cache.removeAyahBookmark(surah: surahNumber, ayah: ayah.numberInSurah)
             bookmarkedAyahs.remove(ayah.numberInSurah)
+            Task { await cache.removeAyahBookmark(surah: surahNumber, ayah: ayah.numberInSurah) }
         } else {
+            bookmarkedAyahs.insert(ayah.numberInSurah)
             let bookmark = BookmarkedAyah(
                 surahNumber: surahNumber,
                 surahName: surahEnglishName,
@@ -132,8 +135,7 @@ final class ReadingViewModel: ObservableObject {
                 arabicText: ayah.arabicText,
                 translationText: ayah.translationText
             )
-            cache.saveAyahBookmark(bookmark)
-            bookmarkedAyahs.insert(ayah.numberInSurah)
+            Task { await cache.saveAyahBookmark(bookmark) }
         }
     }
 

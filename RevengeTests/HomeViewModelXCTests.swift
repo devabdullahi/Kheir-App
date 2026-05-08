@@ -16,12 +16,12 @@ final class MockStreakService: StreakTracking, @unchecked Sendable {
     )
     private(set) var recordCallCount = 0
 
-    func recordAppOpen() -> StreakData {
+    func recordAppOpen() async -> StreakData {
         recordCallCount += 1
         return recordResult
     }
-    func loadStreak() -> StreakData? { recordResult }
-    func resetStreak() {}
+    func loadStreak() async -> StreakData? { recordResult }
+    func resetStreak() async {}
 }
 
 // MARK: - Fixture Helpers
@@ -291,7 +291,8 @@ final class HomeViewModelXCTests: XCTestCase {
         vm.toggleAyahBookmark()
 
         XCTAssertTrue(vm.isAyahBookmarked)
-        XCTAssertTrue(cache.isAyahBookmarked(surah: ayah.surahNumber, ayah: ayah.ayahNumber))
+        let isBookmarked = await cache.isAyahBookmarked(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
+        XCTAssertTrue(isBookmarked)
     }
 
     func test_toggleAyahBookmark_removesBookmark_onSecondCall() async throws {
@@ -306,14 +307,16 @@ final class HomeViewModelXCTests: XCTestCase {
         vm.toggleAyahBookmark()
 
         XCTAssertFalse(vm.isAyahBookmarked)
-        XCTAssertFalse(cache.isAyahBookmarked(surah: ayah.surahNumber, ayah: ayah.ayahNumber))
+        let isBookmarked = await cache.isAyahBookmarked(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
+        XCTAssertFalse(isBookmarked)
     }
 
-    func test_toggleAyahBookmark_noOp_whenAyahNil() {
+    func test_toggleAyahBookmark_noOp_whenAyahNil() async {
         let cache = MockCacheManager()
         let vm = makeVM(cache: cache)
         vm.toggleAyahBookmark()
-        XCTAssertTrue(cache.loadAyahBookmarks().isEmpty)
+        let bookmarks = await cache.loadAyahBookmarks()
+        XCTAssertTrue(bookmarks.isEmpty)
     }
 
     // MARK: - Hadith Bookmark Toggle
@@ -329,7 +332,8 @@ final class HomeViewModelXCTests: XCTestCase {
         vm.toggleHadithBookmark()
 
         XCTAssertTrue(vm.isHadithBookmarked)
-        XCTAssertTrue(cache.isHadithBookmarked(text: hadith.text, source: hadith.source))
+        let isBookmarked = await cache.isHadithBookmarked(text: hadith.text, source: hadith.source)
+        XCTAssertTrue(isBookmarked)
     }
 
     func test_toggleHadithBookmark_removesBookmark_onSecondCall() async throws {
@@ -344,14 +348,16 @@ final class HomeViewModelXCTests: XCTestCase {
         vm.toggleHadithBookmark()
 
         XCTAssertFalse(vm.isHadithBookmarked)
-        XCTAssertFalse(cache.isHadithBookmarked(text: hadith.text, source: hadith.source))
+        let isBookmarked = await cache.isHadithBookmarked(text: hadith.text, source: hadith.source)
+        XCTAssertFalse(isBookmarked)
     }
 
-    func test_toggleHadithBookmark_noOp_whenHadithNil() {
+    func test_toggleHadithBookmark_noOp_whenHadithNil() async {
         let cache = MockCacheManager()
         let vm = makeVM(cache: cache)
         vm.toggleHadithBookmark()
-        XCTAssertTrue(cache.loadHadithBookmarks().isEmpty)
+        let bookmarks = await cache.loadHadithBookmarks()
+        XCTAssertTrue(bookmarks.isEmpty)
     }
 
     // MARK: - checkBookmarkStates
@@ -365,12 +371,12 @@ final class HomeViewModelXCTests: XCTestCase {
             return XCTFail("Content must be loaded")
         }
 
-        cache.saveAyahBookmark(BookmarkedAyah(
+        await cache.saveAyahBookmark(BookmarkedAyah(
             surahNumber: ayah.surahNumber, surahName: ayah.surahEnglishName,
             ayahNumber: ayah.ayahNumber, arabicText: ayah.arabicText,
             translationText: ayah.translationText
         ))
-        cache.saveHadithBookmark(BookmarkedHadith(
+        await cache.saveHadithBookmark(BookmarkedHadith(
             text: hadith.text, source: hadith.source,
             narrator: hadith.narrator, grade: hadith.grade
         ))
@@ -435,36 +441,36 @@ final class HomeViewModelXCTests: XCTestCase {
 
     // MARK: - Routine Progress
 
-    func test_refreshRoutineProgress_isZero_whenNoRoutineExists() {
+    func test_refreshRoutineProgress_isZero_whenNoRoutineExists() async {
         let vm = makeVM(routine: MockRoutineService())
-        vm.refreshRoutineProgress()
+        await vm.refreshRoutineProgress()
         XCTAssertEqual(vm.routineProgress, 0)
     }
 
-    func test_refreshRoutineProgress_isGreaterThanZero_forPartialCompletion() {
+    func test_refreshRoutineProgress_isGreaterThanZero_forPartialCompletion() async {
         let routineService = MockRoutineService()
         let routineType = RoutineTimeHelper.currentRoutineType()
-        var routine = routineService.generateRoutine(type: routineType, for: todayKey)
+        var routine = await routineService.generateRoutine(type: routineType, for: todayKey)
         routine.completedSteps.insert(routine.steps[0].id)
         routine.completedSteps.insert(routine.steps[1].id)
         routineService.seed(routine)
 
         let vm = makeVM(routine: routineService)
-        vm.refreshRoutineProgress()
+        await vm.refreshRoutineProgress()
 
         XCTAssertGreaterThan(vm.routineProgress, 0)
         XCTAssertLessThan(vm.routineProgress, 1.0)
     }
 
-    func test_refreshRoutineProgress_isOne_forFullCompletion() {
+    func test_refreshRoutineProgress_isOne_forFullCompletion() async {
         let routineService = MockRoutineService()
         let routineType = RoutineTimeHelper.currentRoutineType()
-        var routine = routineService.generateRoutine(type: routineType, for: todayKey)
+        var routine = await routineService.generateRoutine(type: routineType, for: todayKey)
         for step in routine.steps { routine.completedSteps.insert(step.id) }
         routineService.seed(routine)
 
         let vm = makeVM(routine: routineService)
-        vm.refreshRoutineProgress()
+        await vm.refreshRoutineProgress()
 
         XCTAssertEqual(vm.routineProgress, 1.0, accuracy: 0.001)
     }

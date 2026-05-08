@@ -29,7 +29,7 @@ struct HomeView: View {
                         progress: viewModel.routineProgress
                     )
                     .scrollReveal(delay: 0.08)
-                    .onAppear { viewModel.refreshRoutineProgress() }
+                    .task { await viewModel.refreshRoutineProgress() }
 
                     // MARK: - Prayer Countdown
                     prayerCountdown

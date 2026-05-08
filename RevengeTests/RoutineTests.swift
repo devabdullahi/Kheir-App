@@ -22,92 +22,92 @@ struct RoutineTests {
     // MARK: Step count
 
     @Test("Morning routine generates exactly 6 steps")
-    func morningRoutineHasSixSteps() {
+    func morningRoutineHasSixSteps() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .morning, for: testDate)
+        let routine = await service.generateRoutine(type: .morning, for: testDate)
         #expect(routine.steps.count == 6)
     }
 
     @Test("Evening routine generates exactly 6 steps")
-    func eveningRoutineHasSixSteps() {
+    func eveningRoutineHasSixSteps() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .evening, for: testDate)
+        let routine = await service.generateRoutine(type: .evening, for: testDate)
         #expect(routine.steps.count == 6)
     }
 
     // MARK: Step type ordering
 
     @Test("Morning routine first step is a dua")
-    func morningFirstStepIsDua() {
+    func morningFirstStepIsDua() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .morning, for: testDate)
+        let routine = await service.generateRoutine(type: .morning, for: testDate)
         #expect(routine.steps.first?.type == .dua)
     }
 
     @Test("Morning routine second step is an ayah")
-    func morningSecondStepIsAyah() {
+    func morningSecondStepIsAyah() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .morning, for: testDate)
+        let routine = await service.generateRoutine(type: .morning, for: testDate)
         #expect(routine.steps[1].type == .ayah)
     }
 
     @Test("Evening routine first step is a dua")
-    func eveningFirstStepIsDua() {
+    func eveningFirstStepIsDua() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .evening, for: testDate)
+        let routine = await service.generateRoutine(type: .evening, for: testDate)
         #expect(routine.steps.first?.type == .dua)
     }
 
     @Test("Evening routine second step is a hadith")
-    func eveningSecondStepIsHadith() {
+    func eveningSecondStepIsHadith() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .evening, for: testDate)
+        let routine = await service.generateRoutine(type: .evening, for: testDate)
         #expect(routine.steps[1].type == .hadith)
     }
 
     @Test("Morning routine last step is a reflection")
-    func morningLastStepIsReflection() {
+    func morningLastStepIsReflection() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .morning, for: testDate)
+        let routine = await service.generateRoutine(type: .morning, for: testDate)
         #expect(routine.steps.last?.type == .reflection)
     }
 
     @Test("Evening routine last step is a reflection")
-    func eveningLastStepIsReflection() {
+    func eveningLastStepIsReflection() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .evening, for: testDate)
+        let routine = await service.generateRoutine(type: .evening, for: testDate)
         #expect(routine.steps.last?.type == .reflection)
     }
 
     // MARK: Initial state
 
     @Test("Newly generated routine has no completed steps")
-    func newRoutineHasNoCompletedSteps() {
+    func newRoutineHasNoCompletedSteps() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .morning, for: testDate)
+        let routine = await service.generateRoutine(type: .morning, for: testDate)
         #expect(routine.completedSteps.isEmpty)
     }
 
     @Test("Newly generated routine isCompleted is false")
-    func newRoutineIsNotCompleted() {
+    func newRoutineIsNotCompleted() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .morning, for: testDate)
+        let routine = await service.generateRoutine(type: .morning, for: testDate)
         #expect(!routine.isCompleted)
     }
 
     @Test("Newly generated routine completionPercentage is 0")
-    func newRoutineCompletionIsZero() {
+    func newRoutineCompletionIsZero() async {
         let (service, _) = makeService()
-        let routine = service.generateRoutine(type: .morning, for: testDate)
+        let routine = await service.generateRoutine(type: .morning, for: testDate)
         #expect(routine.completionPercentage == 0)
     }
 
     // MARK: Step completion tracking
 
     @Test("Marking all steps complete sets isCompleted to true")
-    func markingAllStepsCompletesRoutine() {
+    func markingAllStepsCompletesRoutine() async {
         let (service, _) = makeService()
-        var routine = service.generateRoutine(type: .morning, for: testDate)
+        var routine = await service.generateRoutine(type: .morning, for: testDate)
         for step in routine.steps {
             routine.completedSteps.insert(step.id)
         }
@@ -115,9 +115,9 @@ struct RoutineTests {
     }
 
     @Test("completionPercentage reflects partial completion")
-    func partialCompletionPercentage() {
+    func partialCompletionPercentage() async {
         let (service, _) = makeService()
-        var routine = service.generateRoutine(type: .morning, for: testDate)
+        var routine = await service.generateRoutine(type: .morning, for: testDate)
         // Mark 3 of 6 steps complete.
         let first3 = routine.steps.prefix(3)
         for step in first3 {
@@ -127,9 +127,9 @@ struct RoutineTests {
     }
 
     @Test("completionPercentage is 1.0 when all steps are marked")
-    func fullCompletionPercentage() {
+    func fullCompletionPercentage() async {
         let (service, _) = makeService()
-        var routine = service.generateRoutine(type: .morning, for: testDate)
+        var routine = await service.generateRoutine(type: .morning, for: testDate)
         for step in routine.steps {
             routine.completedSteps.insert(step.id)
         }
@@ -137,9 +137,9 @@ struct RoutineTests {
     }
 
     @Test("Marking a step and un-marking it returns to previous completionPercentage")
-    func toggleStepCompletionRoundTrip() {
+    func toggleStepCompletionRoundTrip() async {
         let (service, _) = makeService()
-        var routine = service.generateRoutine(type: .morning, for: testDate)
+        var routine = await service.generateRoutine(type: .morning, for: testDate)
         let stepID = routine.steps[0].id
 
         routine.completedSteps.insert(stepID)
@@ -155,45 +155,45 @@ struct RoutineTests {
     // MARK: Persistence round-trip
 
     @Test("saveRoutineProgress persists routine to cache")
-    func persistenceRoundTrip() {
+    func persistenceRoundTrip() async {
         let (service, cache) = makeService()
-        var routine = service.generateRoutine(type: .morning, for: testDate)
+        var routine = await service.generateRoutine(type: .morning, for: testDate)
 
         // Complete first step and save.
         routine.completedSteps.insert(routine.steps[0].id)
-        service.saveRoutineProgress(routine)
+        await service.saveRoutineProgress(routine)
 
         // Load from cache directly.
-        let loaded = cache.loadRoutine(type: .morning, for: testDate)
+        let loaded = await cache.loadRoutine(type: .morning, for: testDate)
         #expect(loaded != nil)
         #expect(loaded?.completedSteps.count == 1)
         #expect(loaded?.completedSteps.contains(routine.steps[0].id) == true)
     }
 
     @Test("generateRoutine returns existing routine when one is already persisted")
-    func generateReturnsExistingRoutineWhenPresent() {
+    func generateReturnsExistingRoutineWhenPresent() async {
         let (service, _) = makeService()
 
         // Generate once — establishes the cached version.
-        let first = service.generateRoutine(type: .morning, for: testDate)
+        let first = await service.generateRoutine(type: .morning, for: testDate)
 
         // Generate again — should return the same routine (same id).
-        let second = service.generateRoutine(type: .morning, for: testDate)
+        let second = await service.generateRoutine(type: .morning, for: testDate)
         #expect(first.id == second.id)
     }
 
     @Test("loadRoutine returns nil when no routine has been generated")
-    func loadRoutineReturnsNilWhenAbsent() {
+    func loadRoutineReturnsNilWhenAbsent() async {
         let (service, _) = makeService()
-        let loaded = service.loadRoutine(type: .morning, for: testDate)
+        let loaded = await service.loadRoutine(type: .morning, for: testDate)
         #expect(loaded == nil)
     }
 
     @Test("loadRoutine returns saved routine after generation")
-    func loadRoutineReturnsSavedRoutine() {
+    func loadRoutineReturnsSavedRoutine() async {
         let (service, _) = makeService()
-        service.generateRoutine(type: .evening, for: testDate)
-        let loaded = service.loadRoutine(type: .evening, for: testDate)
+        _ = await service.generateRoutine(type: .evening, for: testDate)
+        let loaded = await service.loadRoutine(type: .evening, for: testDate)
         #expect(loaded != nil)
         #expect(loaded?.type == .evening)
     }
@@ -201,10 +201,10 @@ struct RoutineTests {
     // MARK: Morning and evening are stored independently
 
     @Test("Morning and evening routines for the same date are stored independently")
-    func morningAndEveningAreIndependent() {
+    func morningAndEveningAreIndependent() async {
         let (service, _) = makeService()
-        let morning = service.generateRoutine(type: .morning, for: testDate)
-        let evening = service.generateRoutine(type: .evening, for: testDate)
+        let morning = await service.generateRoutine(type: .morning, for: testDate)
+        let evening = await service.generateRoutine(type: .evening, for: testDate)
         #expect(morning.id != evening.id)
         #expect(morning.type == .morning)
         #expect(evening.type == .evening)
@@ -245,7 +245,7 @@ struct RoutineViewModelTests {
     func loadRoutinePopulatesCurrentRoutine() async {
         let service = MockRoutineService()
         let vm = RoutineViewModel(routineService: service)
-        vm.loadRoutine(type: .morning)
+        await vm.loadRoutine(type: .morning)
         #expect(vm.currentRoutine != nil)
     }
 
@@ -253,7 +253,7 @@ struct RoutineViewModelTests {
     func loadRoutineGeneratesSixSteps() async {
         let service = MockRoutineService()
         let vm = RoutineViewModel(routineService: service)
-        vm.loadRoutine(type: .morning)
+        await vm.loadRoutine(type: .morning)
         #expect(vm.currentRoutine?.steps.count == 6)
     }
 
@@ -261,7 +261,7 @@ struct RoutineViewModelTests {
     func markStepCompleteTogglesCompletion() async {
         let service = MockRoutineService()
         let vm = RoutineViewModel(routineService: service)
-        vm.loadRoutine(type: .morning)
+        await vm.loadRoutine(type: .morning)
 
         guard let routine = vm.currentRoutine else {
             Issue.record("currentRoutine should not be nil")
@@ -279,7 +279,7 @@ struct RoutineViewModelTests {
     func markStepCompleteTogglesOff() async {
         let service = MockRoutineService()
         let vm = RoutineViewModel(routineService: service)
-        vm.loadRoutine(type: .morning)
+        await vm.loadRoutine(type: .morning)
 
         vm.markStepComplete(index: 0)
         vm.markStepComplete(index: 0)  // toggle back off
@@ -290,7 +290,7 @@ struct RoutineViewModelTests {
     func completionPercentageUpdates() async {
         let service = MockRoutineService()
         let vm = RoutineViewModel(routineService: service)
-        vm.loadRoutine(type: .morning)
+        await vm.loadRoutine(type: .morning)
 
         #expect(vm.completionPercentage == 0)
         vm.markStepComplete(index: 0)
@@ -301,7 +301,7 @@ struct RoutineViewModelTests {
     func showCelebrationWhenAllComplete() async {
         let service = MockRoutineService()
         let vm = RoutineViewModel(routineService: service)
-        vm.loadRoutine(type: .morning)
+        await vm.loadRoutine(type: .morning)
 
         guard let stepCount = vm.currentRoutine?.steps.count else {
             Issue.record("currentRoutine should not be nil")
@@ -318,7 +318,7 @@ struct RoutineViewModelTests {
     func resetRoutineClearsCompletion() async {
         let service = MockRoutineService()
         let vm = RoutineViewModel(routineService: service)
-        vm.loadRoutine(type: .morning)
+        await vm.loadRoutine(type: .morning)
 
         vm.markStepComplete(index: 0)
         vm.markStepComplete(index: 1)
@@ -332,7 +332,7 @@ struct RoutineViewModelTests {
     func saveProgressCalledOnMarkStep() async {
         let service = MockRoutineService()
         let vm = RoutineViewModel(routineService: service)
-        vm.loadRoutine(type: .morning)
+        await vm.loadRoutine(type: .morning)
 
         vm.markStepComplete(index: 0)
         #expect(service.saveProgressCallCount == 1)

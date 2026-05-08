@@ -47,20 +47,22 @@ final class HomeViewModel: ObservableObject {
     }
 
     func onAppear() {
-        Task { await loadDailyContent() }
+        Task {
+            await loadDailyContent()
+            await refreshRoutineProgress()
+            await recordStreak()
+        }
         subscribeMidnightRollover()
-        recordStreak()
-        refreshRoutineProgress()
     }
 
     // MARK: - Routine Progress
 
     /// Reads the persisted progress for today's contextual routine and updates
     /// `routineProgress` so the card's ring reflects the current completion.
-    func refreshRoutineProgress() {
+    func refreshRoutineProgress() async {
         currentRoutineType = RoutineTimeHelper.currentRoutineType()
         let today = currentDayKey()
-        if let routine = routineService.loadRoutine(type: currentRoutineType, for: today) {
+        if let routine = await routineService.loadRoutine(type: currentRoutineType, for: today) {
             routineProgress = routine.completionPercentage
         } else {
             routineProgress = 0
@@ -69,8 +71,8 @@ final class HomeViewModel: ObservableObject {
 
     // MARK: - Streak
 
-    private func recordStreak() {
-        let data = streakService.recordAppOpen()
+    private func recordStreak() async {
+        let data = await streakService.recordAppOpen()
         if data.currentStreak > 0 {
             streakData = data
         }
@@ -114,12 +116,12 @@ final class HomeViewModel: ObservableObject {
         let today = currentDayKey()
 
         // Load cached first — update state immediately if available
-        if let cached = cache.loadDailyAyah(for: today) {
+        if let cached = await cache.loadDailyAyah(for: today) {
             dailyAyah = cached
             ayahState = .loaded
             syncAyahToWidget(cached)
         }
-        if let cached = cache.loadDailyHadith(for: today) {
+        if let cached = await cache.loadDailyHadith(for: today) {
             dailyHadith = cached
             hadithState = .loaded
         }
@@ -159,7 +161,7 @@ final class HomeViewModel: ObservableObject {
             )
             dailyAyah = ayah
             ayahState = .loaded
-            cache.cacheDailyAyah(ayah)
+            await cache.cacheDailyAyah(ayah)
             syncAyahToWidget(ayah)
         } catch {
             print("Daily Ayah fetch error: \(error)")
@@ -195,7 +197,7 @@ final class HomeViewModel: ObservableObject {
             )
             dailyHadith = hadith
             hadithState = .loaded
-            cache.cacheDailyHadith(hadith)
+            await cache.cacheDailyHadith(hadith)
         } catch {
             print("Daily Hadith fetch error: \(error). Using fallback.")
             let fallbackHadiths = [
@@ -209,7 +211,7 @@ final class HomeViewModel: ObservableObject {
             let hadith = fallbackHadiths[dayOfYear % fallbackHadiths.count]
             dailyHadith = hadith
             hadithState = .offline
-            cache.cacheDailyHadith(hadith)
+            await cache.cacheDailyHadith(hadith)
         }
     }
 
@@ -255,45 +257,51 @@ final class HomeViewModel: ObservableObject {
     @Published var isHadithBookmarked = false
 
     func checkBookmarkStates() {
-        if let ayah = dailyAyah {
-            isAyahBookmarked = cache.isAyahBookmarked(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
-        }
-        if let hadith = dailyHadith {
-            isHadithBookmarked = cache.isHadithBookmarked(text: hadith.text, source: hadith.source)
+        Task {
+            if let ayah = dailyAyah {
+                isAyahBookmarked = await cache.isAyahBookmarked(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
+            }
+            if let hadith = dailyHadith {
+                isHadithBookmarked = await cache.isHadithBookmarked(text: hadith.text, source: hadith.source)
+            }
         }
     }
 
     func toggleAyahBookmark() {
         guard let ayah = dailyAyah else { return }
-        if isAyahBookmarked {
-            cache.removeAyahBookmark(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
-        } else {
-            let bookmark = BookmarkedAyah(
-                surahNumber: ayah.surahNumber,
-                surahName: ayah.surahEnglishName,
-                ayahNumber: ayah.ayahNumber,
-                arabicText: ayah.arabicText,
-                translationText: ayah.translationText
-            )
-            cache.saveAyahBookmark(bookmark)
-        }
         isAyahBookmarked.toggle()
+        Task {
+            if !isAyahBookmarked {
+                await cache.removeAyahBookmark(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
+            } else {
+                let bookmark = BookmarkedAyah(
+                    surahNumber: ayah.surahNumber,
+                    surahName: ayah.surahEnglishName,
+                    ayahNumber: ayah.ayahNumber,
+                    arabicText: ayah.arabicText,
+                    translationText: ayah.translationText
+                )
+                await cache.saveAyahBookmark(bookmark)
+            }
+        }
     }
 
     func toggleHadithBookmark() {
         guard let hadith = dailyHadith else { return }
-        if isHadithBookmarked {
-            cache.removeHadithBookmark(text: hadith.text, source: hadith.source)
-        } else {
-            let bookmark = BookmarkedHadith(
-                text: hadith.text,
-                source: hadith.source,
-                narrator: hadith.narrator,
-                grade: hadith.grade
-            )
-            cache.saveHadithBookmark(bookmark)
-        }
         isHadithBookmarked.toggle()
+        Task {
+            if !isHadithBookmarked {
+                await cache.removeHadithBookmark(text: hadith.text, source: hadith.source)
+            } else {
+                let bookmark = BookmarkedHadith(
+                    text: hadith.text,
+                    source: hadith.source,
+                    narrator: hadith.narrator,
+                    grade: hadith.grade
+                )
+                await cache.saveHadithBookmark(bookmark)
+            }
+        }
     }
 
     // MARK: - Share
