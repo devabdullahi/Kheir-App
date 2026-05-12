@@ -4,7 +4,7 @@ import Combine
 
 @MainActor
 class AppSettings: ObservableObject {
-    static let shared = AppSettings()
+    nonisolated static let shared = AppSettings()
 
     // MARK: - Display
     @AppStorage("appTheme") var appTheme: AppTheme = .system
