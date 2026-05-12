@@ -14,15 +14,27 @@ final class ReadingViewModel: ObservableObject {
     let surahNumber: Int
     let scrollToAyah: Int?
 
-    private let cache: any CacheManaging = CacheManager.shared
-    private let api = APIService.shared
-    let audioPlayer = AudioPlayerService.shared
+    private let cache: any CacheManaging
+    private let api: APIService
+    let audioPlayer: AudioPlayerService
+    private let settings: AppSettings
     private var savePositionTask: Task<Void, Never>?
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "ReadingViewModel")
 
-    init(surahNumber: Int, scrollToAyah: Int? = nil) {
+    init(
+        surahNumber: Int,
+        scrollToAyah: Int? = nil,
+        cache: any CacheManaging = CacheManager.shared,
+        api: APIService = .shared,
+        audioPlayer: AudioPlayerService = .shared,
+        settings: AppSettings = .shared
+    ) {
         self.surahNumber = surahNumber
         self.scrollToAyah = scrollToAyah
+        self.cache = cache
+        self.api = api
+        self.audioPlayer = audioPlayer
+        self.settings = settings
     }
 
     func onAppear() {
@@ -39,7 +51,7 @@ final class ReadingViewModel: ObservableObject {
         isLoading = displayAyahs.isEmpty
         errorMessage = nil
         do {        
-            let edition = AppSettings.shared.translationLanguage.rawValue
+            let edition = settings.translationLanguage.rawValue
             async let arabicTask = api.fetchSurah(number: surahNumber, edition: "quran-uthmani")
             async let translationTask = api.fetchSurahTranslation(number: surahNumber, edition: edition)
 
@@ -50,7 +62,7 @@ final class ReadingViewModel: ObservableObject {
             surahEnglishName = arabic.englishName
 
             var transliteration: [Ayah]? = nil
-            if AppSettings.shared.showTransliteration {
+            if settings.showTransliteration {
                 if let translit = try? await api.fetchSurahTranslation(number: surahNumber, edition: "en.transliteration") {
                     transliteration = translit.ayahs
                 }
@@ -90,7 +102,7 @@ final class ReadingViewModel: ObservableObject {
                 translationText: index < translation.count ? translation[index].text : "",
                 transliteration: transliteration.flatMap { index < $0.count ? $0[index].text : nil } ?? "",
                 audioURL: {
-                    let q = Qari.resolve(AppSettings.shared.selectedQari)
+                    let q = Qari.resolve(settings.selectedQari)
                     return api.audioURL(qari: q.identifier, surah: surahNumber, ayah: arabicAyah.numberInSurah, bitrate: q.bitrate)
                 }()
             )
@@ -102,8 +114,8 @@ final class ReadingViewModel: ObservableObject {
         savePositionTask = Task {
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
-            AppSettings.shared.lastReadSurah = surahNumber
-            AppSettings.shared.lastReadAyah = ayah
+            settings.lastReadSurah = surahNumber
+            settings.lastReadAyah = ayah
         }
     }
 

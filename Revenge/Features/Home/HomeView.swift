@@ -217,6 +217,7 @@ struct HomeView: View {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundStyle(Color.adaptivePrimary(colorScheme))
                 }
+                .accessibilityLabel("Share ayah")
             }
             .scrollReveal(delay: 0.55)
         }
@@ -287,10 +288,33 @@ struct HomeView: View {
         }
         .scrollReveal(delay: 0.45)
 
-        // Bookmarks and share row remain unchanged...
         HStack {
             Spacer()
-            // ...
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.toggleHadithBookmark()
+                }
+            } label: {
+                Image(systemName: viewModel.isHadithBookmarked ? "bookmark.fill" : "bookmark")
+                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .accessibilityLabel(viewModel.isHadithBookmarked ? "Remove hadith bookmark" : "Bookmark hadith")
+
+            Button {
+                shareCardData = ShareCardData(
+                    content: hadith.text,
+                    arabicText: hadith.arabicText,
+                    reference: hadith.source,
+                    template: .minimal,
+                    type: .hadith
+                )
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+            }
+            .accessibilityLabel("Share hadith")
         }
         .scrollReveal(delay: 0.55)
     }

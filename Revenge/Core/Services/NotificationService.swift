@@ -1,16 +1,18 @@
 import Foundation
 import UserNotifications
 import CoreLocation
+import os
 
-final class NotificationService: @unchecked Sendable {
+final class NotificationService: Sendable {
     static let shared = NotificationService()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "NotificationService")
     private init() {}
 
     func requestPermission() async -> Bool {
         do {
             return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
-            print("Notification permission error: \(error)")
+            logger.error("Notification permission error: \(error.localizedDescription)")
             return false
         }
     }
@@ -46,7 +48,7 @@ final class NotificationService: @unchecked Sendable {
 
             center.add(request) { error in
                 if let error = error {
-                    print("Failed to schedule \(prayer.name): \(error)")
+                    self.logger.error("Failed to schedule \(prayer.name): \(error.localizedDescription)")
                 }
             }
         }
@@ -99,7 +101,7 @@ final class NotificationService: @unchecked Sendable {
         )
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Test notification error: \(error)")
+                self.logger.error("Test notification error: \(error.localizedDescription)")
             }
         }
     }

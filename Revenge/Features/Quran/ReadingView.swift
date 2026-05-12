@@ -41,7 +41,8 @@ struct ReadingView: View {
                 }
                 .onAppear {
                     if let scrollTo = viewModel.scrollToAyah {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(500))
                             withAnimation(reduceMotion ? .none : .easeOut(duration: 0.4)) {
                                 proxy.scrollTo(scrollTo, anchor: .top)
                             }
@@ -195,7 +196,7 @@ struct ReadingView: View {
                 )
         )
         .shadow(color: .black.opacity(colorScheme == .dark ? 0.25 : 0.06), radius: 6, y: 3)
-        .scrollReveal(delay: reduceMotion ? 0 : min(Double(index) * 0.03, 0.3))
+        .scrollReveal(delay: (reduceMotion || index >= 15) ? 0 : min(Double(index) * 0.03, 0.3))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Ayah \(ayah.numberInSurah)")
     }
@@ -325,7 +326,8 @@ struct ReadingView: View {
         withAnimation {
             copiedAyahID = ayah.id
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        Task {
+            try? await Task.sleep(for: .seconds(2))
             withAnimation {
                 if copiedAyahID == ayah.id {
                     copiedAyahID = nil

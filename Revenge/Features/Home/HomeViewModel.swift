@@ -3,6 +3,7 @@ import Combine
 import SwiftUI
 import UIKit
 import WidgetKit
+import os
 
 @MainActor
 final class HomeViewModel: ObservableObject {
@@ -26,6 +27,7 @@ final class HomeViewModel: ObservableObject {
     private let streakService: any StreakTracking
     private let routineService: any RoutineProviding
     private let settings: AppSettings
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "HomeViewModel")
 
     init(
         apiService: any AyahFetching & HadithFetching = APIService.shared,
@@ -164,7 +166,7 @@ final class HomeViewModel: ObservableObject {
             await cache.cacheDailyAyah(ayah)
             syncAyahToWidget(ayah)
         } catch {
-            print("Daily Ayah fetch error: \(error)")
+            logger.error("Daily Ayah fetch error: \(error.localizedDescription)")
             ayahState = dailyAyah != nil ? .offline : .failed
         }
     }
@@ -199,7 +201,7 @@ final class HomeViewModel: ObservableObject {
             hadithState = .loaded
             await cache.cacheDailyHadith(hadith)
         } catch {
-            print("Daily Hadith fetch error: \(error). Using fallback.")
+            logger.error("Daily Hadith fetch error: \(error.localizedDescription). Using fallback.")
             let fallbackHadiths = [
                 DailyHadith(text: "The best among you are those who have the best manners and character.", source: "Sahih al-Bukhari", chapter: "Good Manners", narrator: "Abdullah ibn Amr", grade: "Sahih", dateString: dateKey),
                 DailyHadith(text: "None of you truly believes until he loves for his brother what he loves for himself.", source: "Sahih al-Bukhari", chapter: "Faith", narrator: "Anas ibn Malik", grade: "Sahih", dateString: dateKey),

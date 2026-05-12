@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 // MARK: - CacheManager
 //
@@ -33,6 +34,7 @@ actor CacheManager {
     // MARK: - Private State
 
     private let fileManager = FileManager.default
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "CacheManager")
 
     /// Root cache directory — either inside the shared App Group container or the Documents
     /// directory fallback when the capability has not yet been configured.
@@ -42,6 +44,9 @@ actor CacheManager {
     /// is thread-safe for concurrent get/set calls, so no extra synchronisation is required on
     /// the memory layer itself.
     private let memoryCache = NSCache<NSString, CacheBox>()
+
+    /// O(1) lookup index for ayah bookmarks. Rebuilt from disk on first access.
+    private var ayahBookmarkIndex: Set<AyahBookmarkKey> = []
 
     // MARK: - Filename Constants
 
@@ -73,6 +78,7 @@ actor CacheManager {
         warmMemoryCache(filename: journalFile,          type: [JournalEntry].self)
 
         migrateToAppGroupIfNeeded()
+        evictStaleDailyContent()
     }
 
     // MARK: - Memory Cache Helpers
@@ -137,13 +143,38 @@ actor CacheManager {
         fileManager.createFile(atPath: markerURL.path, contents: nil)
     }
 
+    // MARK: - Cache Eviction
+
+    /// Removes daily content files (daily_ayah_*, daily_hadith_*, routine_*) older than 30 days.
+    /// Runs once at init to prevent unbounded cache growth (~730 files/year without eviction).
+    private func evictStaleDailyContent() {
+        let maxAge: TimeInterval = 30 * 24 * 60 * 60 // 30 days
+        let cutoff = Date().addingTimeInterval(-maxAge)
+        let prefixes = ["daily_ayah_", "daily_hadith_", "routine_"]
+
+        guard let files = try? fileManager.contentsOfDirectory(
+            at: cacheDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: .skipsHiddenFiles
+        ) else { return }
+
+        for fileURL in files {
+            let name = fileURL.lastPathComponent
+            guard prefixes.contains(where: { name.hasPrefix($0) }) else { continue }
+            guard let attrs = try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]),
+                  let modified = attrs.contentModificationDate,
+                  modified < cutoff else { continue }
+            try? fileManager.removeItem(at: fileURL)
+        }
+    }
+
     // MARK: - Generic Save / Load
 
     /// Encodes `object` and persists it to both the in-memory cache and disk.
     /// The actor's serial executor ensures this entire operation is atomic.
     func save<T: Encodable>(_ object: T, filename: String) {
         guard let data = try? Self.encoder.encode(object) else {
-            print("CacheManager: failed to encode \(T.self) for '\(filename)'")
+            logger.error("CacheManager: failed to encode \(String(describing: T.self)) for '\(filename)'")
             return
         }
         memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
@@ -152,7 +183,7 @@ actor CacheManager {
         do {
             try data.write(to: url, options: .atomic)
         } catch {
-            print("CacheManager: disk write error for '\(filename)': \(error)")
+            logger.error("CacheManager: disk write error for '\(filename)': \(error.localizedDescription)")
         }
     }
 
@@ -264,22 +295,38 @@ actor CacheManager {
     }
 }
 
+// MARK: - Bookmark Index Key
+
+private struct AyahBookmarkKey: Hashable {
+    let surah: Int
+    let ayah: Int
+}
+
 // MARK: - Ayah Bookmarks
 
 extension CacheManager {
 
+    /// Rebuilds the O(1) lookup index from the full bookmark list.
+    private func rebuildAyahIndex(_ bookmarks: [BookmarkedAyah]) {
+        ayahBookmarkIndex = Set(bookmarks.map { AyahBookmarkKey(surah: $0.surahNumber, ayah: $0.ayahNumber) })
+    }
+
     /// Returns all saved Ayah bookmarks, newest first.
     /// Reads from the memory cache; hits disk only when NSCache has evicted the entry.
     func loadAyahBookmarks() -> [BookmarkedAyah] {
-        load([BookmarkedAyah].self, filename: ayahBookmarksFile) ?? []
+        let bookmarks = load([BookmarkedAyah].self, filename: ayahBookmarksFile) ?? []
+        if ayahBookmarkIndex.isEmpty && !bookmarks.isEmpty {
+            rebuildAyahIndex(bookmarks)
+        }
+        return bookmarks
     }
 
     /// Inserts `bookmark` at the front of the list and persists asynchronously.
     func saveAyahBookmark(_ bookmark: BookmarkedAyah) {
-        // Mutate the current list, update memory, queue disk write — all without locking.
         var bookmarks = loadAyahBookmarks()
         bookmarks.insert(bookmark, at: 0)
         save(bookmarks, filename: ayahBookmarksFile)
+        ayahBookmarkIndex.insert(AyahBookmarkKey(surah: bookmark.surahNumber, ayah: bookmark.ayahNumber))
     }
 
     /// Removes the bookmark matching the given surah / ayah coordinate.
@@ -287,18 +334,24 @@ extension CacheManager {
         var bookmarks = loadAyahBookmarks()
         bookmarks.removeAll { $0.surahNumber == surah && $0.ayahNumber == ayah }
         save(bookmarks, filename: ayahBookmarksFile)
+        ayahBookmarkIndex.remove(AyahBookmarkKey(surah: surah, ayah: ayah))
     }
 
     /// Removes the bookmark with the given stable `id`.
     func removeAyahBookmark(id: UUID) {
         var bookmarks = loadAyahBookmarks()
+        let removed = bookmarks.filter { $0.id == id }
         bookmarks.removeAll { $0.id == id }
         save(bookmarks, filename: ayahBookmarksFile)
+        for b in removed {
+            ayahBookmarkIndex.remove(AyahBookmarkKey(surah: b.surahNumber, ayah: b.ayahNumber))
+        }
     }
 
     /// Returns `true` when an Ayah at the given position is in the bookmark list.
+    /// Uses the in-memory bookmark index for O(1) lookup instead of scanning the full list.
     func isAyahBookmarked(surah: Int, ayah: Int) -> Bool {
-        loadAyahBookmarks().contains { $0.surahNumber == surah && $0.ayahNumber == ayah }
+        ayahBookmarkIndex.contains(AyahBookmarkKey(surah: surah, ayah: ayah))
     }
 }
 

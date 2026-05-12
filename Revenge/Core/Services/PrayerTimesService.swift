@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import os
 
 // MARK: - Adhan Integration
 //
@@ -16,8 +17,9 @@ import CoreLocation
 import Adhan
 #endif
 
-final class PrayerTimesService: @unchecked Sendable {
+final class PrayerTimesService: Sendable {
     static let shared = PrayerTimesService()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "PrayerTimesService")
     private init() {}
 
     /// Fetches prayer times for the given coordinate and date.
@@ -40,7 +42,7 @@ final class PrayerTimesService: @unchecked Sendable {
             )
             return parsePrayerTimes(data.timings, date: date)
         } catch {
-            print("Prayer times API error: \(error)")
+            logger.error("Prayer times API error: \(error.localizedDescription)")
             return calculateOfflinePrayerTimes(coordinate: coordinate, date: date, method: method, madhab: madhab)
         }
     }

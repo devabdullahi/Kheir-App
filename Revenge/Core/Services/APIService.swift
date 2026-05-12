@@ -28,9 +28,14 @@ final class APIService: @unchecked Sendable {
         let (data, response) = try await session.data(from: url)
         guard let httpResponse = response as? HTTPURLResponse,
               200..<300 ~= httpResponse.statusCode else {
-            throw APIError.serverError
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIError.serverError(statusCode: statusCode)
         }
-        return try Self.decoder.decode(type, from: data)
+        do {
+            return try Self.decoder.decode(type, from: data)
+        } catch let error as DecodingError {
+            throw APIError.decodingError(underlying: error)
+        }
     }
 
     // MARK: - Surah List
@@ -108,18 +113,18 @@ final class APIService: @unchecked Sendable {
         // Pick a random collection and section for variety
         let collections: [HadithCollection] = [.bukhari, .muslim, .abuDawud, .tirmidhi, .nasai, .ibnMajah]
         guard let collection = collections.randomElement() else {
-            throw APIError.serverError
+            throw APIError.serverError(statusCode: -1)
         }
         let section = Int.random(in: 1...collection.totalSections)
 
         let response = try await fetchHadithSection(edition: collection, section: section)
 
         guard !response.hadiths.isEmpty else {
-            throw APIError.serverError
+            throw APIError.serverError(statusCode: -1)
         }
 
         guard let hadith = response.hadiths.randomElement() else {
-            throw APIError.serverError
+            throw APIError.serverError(statusCode: -1)
         }
         let sectionName = response.metadata.section?["\(section)"] ?? "General"
 
@@ -142,14 +147,17 @@ final class APIService: @unchecked Sendable {
 // MARK: - Errors
 enum APIError: LocalizedError {
     case invalidURL
-    case serverError
-    case decodingError
+    case serverError(statusCode: Int)
+    case decodingError(underlying: DecodingError)
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "Invalid URL"
-        case .serverError: return "Server error"
-        case .decodingError: return "Failed to decode response"
+        case .invalidURL:
+            return "Invalid URL"
+        case .serverError(let statusCode):
+            return "Server error (HTTP \(statusCode))"
+        case .decodingError(let underlying):
+            return "Failed to decode response: \(underlying.localizedDescription)"
         }
     }
 }

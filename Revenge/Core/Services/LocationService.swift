@@ -1,12 +1,14 @@
 import Foundation
 import CoreLocation
 import Combine
+import os
 
 @MainActor
 final class LocationService: NSObject, ObservableObject, CLLocationManagerDelegate {
     static let shared = LocationService()
 
     private let manager = CLLocationManager()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "LocationService")
 
     @Published var currentLocation: CLLocationCoordinate2D?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -69,17 +71,19 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("Location error: \(error.localizedDescription)")
+        logger.error("Location error: \(error.localizedDescription)")
     }
 
     // MARK: - Geocoding
     func geocodeCity(_ city: String) async -> CLLocationCoordinate2D? {
+        let trimmed = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return nil }
         let geocoder = CLGeocoder()
         do {
-            let placemarks = try await geocoder.geocodeAddressString(city)
+            let placemarks = try await geocoder.geocodeAddressString(trimmed)
             return placemarks.first?.location?.coordinate
         } catch {
-            print("Geocoding error: \(error)")
+            logger.error("Geocoding error: \(error.localizedDescription)")
             return nil
         }
     }

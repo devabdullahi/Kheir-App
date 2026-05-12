@@ -1,11 +1,13 @@
 import Foundation
 
 struct PrayerTime: Identifiable, Sendable {
-    let id = UUID()
     let name: String
     let time: Date
     let icon: String
     var isNext: Bool = false
+
+    /// Stable identity based on prayer name — prevents SwiftUI diffing issues in ForEach.
+    var id: String { name }
 
     var timeString: String {
         let formatter = DateFormatter()
