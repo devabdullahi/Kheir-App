@@ -10,11 +10,9 @@ struct PlayerBar: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        // Only render when something is loaded into the player
-        guard let nowPlaying = service.nowPlaying else {
-            return AnyView(EmptyView())
+        if let nowPlaying = service.nowPlaying {
+            playerContent(nowPlaying: nowPlaying)
         }
-        return AnyView(playerContent(nowPlaying: nowPlaying))
     }
 
     // MARK: - Main content

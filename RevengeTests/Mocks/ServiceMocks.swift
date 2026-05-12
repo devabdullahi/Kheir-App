@@ -5,12 +5,22 @@ import Foundation
 
 final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
 
+    // MARK: Lock
+
+    private let lock = NSLock()
+
     // MARK: Configurable results
-    var ayahResult: Result<Ayah, Error> = .success(
+
+    private var _ayahResult: Result<Ayah, Error> = .success(
         Ayah(number: 1, text: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
              numberInSurah: 1, juz: 1, page: 1, hizbQuarter: 1)
     )
-    var ayahTranslationResult: Result<AyahDetailData, Error> = .success(
+    var ayahResult: Result<Ayah, Error> {
+        get { lock.lock(); defer { lock.unlock() }; return _ayahResult }
+        set { lock.lock(); defer { lock.unlock() }; _ayahResult = newValue }
+    }
+
+    private var _ayahTranslationResult: Result<AyahDetailData, Error> = .success(
         AyahDetailData(
             number: 1,
             text: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
@@ -23,7 +33,12 @@ final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
             )
         )
     )
-    var hadithResult: Result<(entry: HadithAPIEntry, collection: HadithCollection, sectionName: String), Error> = .success(
+    var ayahTranslationResult: Result<AyahDetailData, Error> {
+        get { lock.lock(); defer { lock.unlock() }; return _ayahTranslationResult }
+        set { lock.lock(); defer { lock.unlock() }; _ayahTranslationResult = newValue }
+    }
+
+    private var _hadithResult: Result<(entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int), Error> = .success(
         (
             entry: HadithAPIEntry(
                 hadithNumber: 1,
@@ -33,14 +48,40 @@ final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
                 reference: HadithReference(book: 1, hadith: 1)
             ),
             collection: .bukhari,
-            sectionName: "Revelation"
+            sectionName: "Revelation",
+            section: 1
         )
     )
+    var hadithResult: Result<(entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int), Error> {
+        get { lock.lock(); defer { lock.unlock() }; return _hadithResult }
+        set { lock.lock(); defer { lock.unlock() }; _hadithResult = newValue }
+    }
+
+    private var _hadithSectionResult: Result<HadithSectionResponse, Error>?
+    var hadithSectionResult: Result<HadithSectionResponse, Error>? {
+        get { lock.lock(); defer { lock.unlock() }; return _hadithSectionResult }
+        set { lock.lock(); defer { lock.unlock() }; _hadithSectionResult = newValue }
+    }
 
     // MARK: Call counts
-    private(set) var fetchAyahCallCount = 0
-    private(set) var fetchAyahTranslationCallCount = 0
-    private(set) var fetchHadithCallCount = 0
+
+    private var _fetchAyahCallCount = 0
+    private(set) var fetchAyahCallCount: Int {
+        get { lock.lock(); defer { lock.unlock() }; return _fetchAyahCallCount }
+        set { lock.lock(); defer { lock.unlock() }; _fetchAyahCallCount = newValue }
+    }
+
+    private var _fetchAyahTranslationCallCount = 0
+    private(set) var fetchAyahTranslationCallCount: Int {
+        get { lock.lock(); defer { lock.unlock() }; return _fetchAyahTranslationCallCount }
+        set { lock.lock(); defer { lock.unlock() }; _fetchAyahTranslationCallCount = newValue }
+    }
+
+    private var _fetchHadithCallCount = 0
+    private(set) var fetchHadithCallCount: Int {
+        get { lock.lock(); defer { lock.unlock() }; return _fetchHadithCallCount }
+        set { lock.lock(); defer { lock.unlock() }; _fetchHadithCallCount = newValue }
+    }
 
     // MARK: AyahFetching
 
@@ -56,9 +97,27 @@ final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
 
     // MARK: HadithFetching
 
-    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String) {
+    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int) {
         fetchHadithCallCount += 1
         return try hadithResult.get()
+    }
+
+    func fetchHadithSection(editionRaw: String, section: Int) async throws -> HadithSectionResponse {
+        if let result = hadithSectionResult {
+            return try result.get()
+        }
+        // Default: return a matching Arabic entry so the language toggle works in tests
+        let arabicEntry = HadithAPIEntry(
+            hadithNumber: 1,
+            arabicNumber: 1,
+            text: "إنما الأعمال بالنيات",
+            grades: [HadithGradeEntry(name: "Sahih al-Bukhari", grade: "Sahih")],
+            reference: HadithReference(book: 1, hadith: 1)
+        )
+        return HadithSectionResponse(
+            metadata: HadithMetadata(name: "", section: nil, sectionDetail: nil),
+            hadiths: [arabicEntry]
+        )
     }
 }
 
@@ -71,6 +130,9 @@ final class MockCacheManager: CacheManaging {
     private var dailyHadithStore: [String: DailyHadith] = [:]
     private var ayahBookmarks: [BookmarkedAyah] = []
     private var hadithBookmarks: [BookmarkedHadith] = []
+    private var journalEntries: [JournalEntry] = []
+    private var surahStore: [Int: CachedSurah] = [:]
+    private var surahList: [SurahInfo]?
     private var streakStore: StreakData?
     private var routineStore: [String: DailyRoutine] = [:]
 
@@ -92,91 +154,129 @@ final class MockCacheManager: CacheManaging {
 
     // MARK: CacheManaging — Daily Ayah
 
-    func cacheDailyAyah(_ ayah: DailyAyah) {
+    func cacheDailyAyah(_ ayah: DailyAyah) async {
         cacheDailyAyahCallCount += 1
         dailyAyahStore[ayah.dateString] = ayah
     }
 
-    func loadDailyAyah(for dateKey: String) -> DailyAyah? {
+    func loadDailyAyah(for dateKey: String) async -> DailyAyah? {
         loadDailyAyahCallCount += 1
         return dailyAyahStore[dateKey]
     }
 
     // MARK: CacheManaging — Daily Hadith
 
-    func cacheDailyHadith(_ hadith: DailyHadith) {
+    func cacheDailyHadith(_ hadith: DailyHadith) async {
         cacheDailyHadithCallCount += 1
         dailyHadithStore[hadith.dateString] = hadith
     }
 
-    func loadDailyHadith(for dateKey: String) -> DailyHadith? {
+    func loadDailyHadith(for dateKey: String) async -> DailyHadith? {
         loadDailyHadithCallCount += 1
         return dailyHadithStore[dateKey]
     }
 
     // MARK: CacheManaging — Ayah Bookmarks
 
-    func saveAyahBookmark(_ bookmark: BookmarkedAyah) {
+    func saveAyahBookmark(_ bookmark: BookmarkedAyah) async {
         ayahBookmarks.removeAll { $0.surahNumber == bookmark.surahNumber && $0.ayahNumber == bookmark.ayahNumber }
         ayahBookmarks.insert(bookmark, at: 0)
     }
 
-    func removeAyahBookmark(id: UUID) {
+    func removeAyahBookmark(id: UUID) async {
         ayahBookmarks.removeAll { $0.id == id }
     }
 
-    func removeAyahBookmark(surah: Int, ayah: Int) {
+    func removeAyahBookmark(surah: Int, ayah: Int) async {
         ayahBookmarks.removeAll { $0.surahNumber == surah && $0.ayahNumber == ayah }
     }
 
-    func isAyahBookmarked(surah: Int, ayah: Int) -> Bool {
+    func isAyahBookmarked(surah: Int, ayah: Int) async -> Bool {
         ayahBookmarks.contains { $0.surahNumber == surah && $0.ayahNumber == ayah }
     }
 
-    func loadAyahBookmarks() -> [BookmarkedAyah] {
+    func loadAyahBookmarks() async -> [BookmarkedAyah] {
         ayahBookmarks
     }
 
     // MARK: CacheManaging — Hadith Bookmarks
 
-    func saveHadithBookmark(_ bookmark: BookmarkedHadith) {
+    func saveHadithBookmark(_ bookmark: BookmarkedHadith) async {
         hadithBookmarks.removeAll { $0.text == bookmark.text }
         hadithBookmarks.insert(bookmark, at: 0)
     }
 
-    func removeHadithBookmark(id: UUID) {
+    func removeHadithBookmark(id: UUID) async {
         hadithBookmarks.removeAll { $0.id == id }
     }
 
-    func removeHadithBookmark(text: String, source: String) {
+    func removeHadithBookmark(text: String, source: String) async {
         hadithBookmarks.removeAll { $0.text == text && $0.source == source }
     }
 
-    func isHadithBookmarked(text: String, source: String) -> Bool {
+    func isHadithBookmarked(text: String, source: String) async -> Bool {
         hadithBookmarks.contains { $0.text == text && $0.source == source }
     }
 
-    func loadHadithBookmarks() -> [BookmarkedHadith] {
+    func loadHadithBookmarks() async -> [BookmarkedHadith] {
         hadithBookmarks
+    }
+
+    // MARK: CacheManaging — Journal
+
+    func saveJournalEntry(_ entry: JournalEntry) async {
+        journalEntries.insert(entry, at: 0)
+    }
+
+    func updateJournalEntry(_ entry: JournalEntry) async {
+        if let index = journalEntries.firstIndex(where: { $0.id == entry.id }) {
+            journalEntries[index] = entry
+        }
+    }
+
+    func removeJournalEntry(id: UUID) async {
+        journalEntries.removeAll { $0.id == id }
+    }
+
+    func loadJournalEntries() async -> [JournalEntry] {
+        journalEntries
+    }
+
+    // MARK: CacheManaging — Surah
+
+    func cacheSurah(_ surah: CachedSurah) async {
+        surahStore[surah.surahNumber] = surah
+    }
+
+    func loadCachedSurah(_ number: Int) async -> CachedSurah? {
+        surahStore[number]
+    }
+
+    func cacheSurahList(_ list: [SurahInfo]) async {
+        surahList = list
+    }
+
+    func loadSurahList() async -> [SurahInfo]? {
+        surahList
     }
 
     // MARK: CacheManaging — Streak
 
-    func saveStreak(_ data: StreakData) {
+    func saveStreak(_ data: StreakData) async {
         streakStore = data
     }
 
-    func loadStreak() -> StreakData? {
+    func loadStreak() async -> StreakData? {
         streakStore
     }
 
     // MARK: CacheManaging — Routines
 
-    func saveRoutine(_ routine: DailyRoutine) {
+    func saveRoutine(_ routine: DailyRoutine) async {
         routineStore["\(routine.type.rawValue)_\(routine.dateString)"] = routine
     }
 
-    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine? {
+    func loadRoutine(type: RoutineType, for date: String) async -> DailyRoutine? {
         routineStore["\(type.rawValue)_\(date)"]
     }
 }
@@ -200,16 +300,16 @@ final class MockRoutineService: RoutineProviding {
 
     // MARK: RoutineProviding
 
-    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine? {
+    func loadRoutine(type: RoutineType, for date: String) async -> DailyRoutine? {
         store["\(type.rawValue)_\(date)"]
     }
 
-    func saveRoutineProgress(_ routine: DailyRoutine) {
+    func saveRoutineProgress(_ routine: DailyRoutine) async {
         saveProgressCallCount += 1
         store["\(routine.type.rawValue)_\(routine.dateString)"] = routine
     }
 
-    func generateRoutine(type: RoutineType, for date: String) -> DailyRoutine {
+    func generateRoutine(type: RoutineType, for date: String) async -> DailyRoutine {
         generateCallCount += 1
         if let existing = store["\(type.rawValue)_\(date)"] {
             return existing

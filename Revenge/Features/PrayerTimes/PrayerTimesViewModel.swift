@@ -13,10 +13,22 @@ final class PrayerTimesViewModel: ObservableObject {
     @Published var isLoading = false
 
     private var timer: Timer?
-    private let locationService = LocationService.shared
+    private let locationService: LocationService
+    private let prayerTimesService: PrayerTimesService
+    private let notificationService: NotificationService
+    private let settings: AppSettings
     private var cancellables = Set<AnyCancellable>()
 
-    init() {
+    init(
+        locationService: LocationService = .shared,
+        prayerTimesService: PrayerTimesService = .shared,
+        notificationService: NotificationService = .shared,
+        settings: AppSettings = .shared
+    ) {
+        self.locationService = locationService
+        self.prayerTimesService = prayerTimesService
+        self.notificationService = notificationService
+        self.settings = settings
         let today = Date()
         gregorianDate = today.gregorianString
         hijriDate = today.hijriString
@@ -35,9 +47,9 @@ final class PrayerTimesViewModel: ObservableObject {
             .store(in: &cancellables)
 
         // Manual city fallback
-        if !AppSettings.shared.useAutoLocation && !AppSettings.shared.manualCity.isEmpty {
+        if !settings.useAutoLocation && !settings.manualCity.isEmpty {
             Task {
-                if let coord = await locationService.geocodeCity(AppSettings.shared.manualCity) {
+                if let coord = await locationService.geocodeCity(settings.manualCity) {
                     await fetchTimes(coordinate: coord)
                 }
             }
@@ -48,13 +60,13 @@ final class PrayerTimesViewModel: ObservableObject {
 
     func onDisappear() {
         timer?.invalidate()
+        timer = nil
     }
 
     private func fetchTimes(coordinate: CLLocationCoordinate2D) async {
         isLoading = true
-        let settings = AppSettings.shared
 
-        guard let dayTimes = await PrayerTimesService.shared.fetchPrayerTimes(
+        guard let dayTimes = await prayerTimesService.fetchPrayerTimes(
             coordinate: coordinate,
             method: settings.calculationMethod,
             madhab: settings.madhab
@@ -78,7 +90,7 @@ final class PrayerTimesViewModel: ObservableObject {
         } else {
             // All of today's prayers have passed — roll over to tomorrow's Fajr.
             let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            if let tomorrowTimes = await PrayerTimesService.shared.fetchPrayerTimes(
+            if let tomorrowTimes = await prayerTimesService.fetchPrayerTimes(
                 coordinate: coordinate,
                 date: tomorrow,
                 method: settings.calculationMethod,
@@ -93,16 +105,19 @@ final class PrayerTimesViewModel: ObservableObject {
         isLoading = false
 
         // Schedule notifications
-        NotificationService.shared.schedulePrayerNotifications(prayers: prayerList, settings: settings)
+        notificationService.schedulePrayerNotifications(prayers: prayerList, settings: settings)
     }
 
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        timer?.invalidate()
+        let newTimer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
                 guard let self = self, let next = self.nextPrayer else { return }
                 let remaining = next.time.timeIntervalSince(Date())
                 self.countdownText = PrayerCountdownFormatter.format(remaining)
             }
         }
+        RunLoop.main.add(newTimer, forMode: .common)
+        timer = newTimer
     }
 }

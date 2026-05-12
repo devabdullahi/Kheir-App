@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import os
 
 @MainActor
 final class SurahListViewModel: ObservableObject {
@@ -8,13 +9,17 @@ final class SurahListViewModel: ObservableObject {
     @Published var searchText: String = ""
     @Published var isLoading = false
 
-    private let cache = CacheManager.shared
+    private let cache: any CacheManaging
+    private let settings: AppSettings
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "SurahListViewModel")
     private var searchCancellable: AnyCancellable?
 
-    var lastReadSurah: Int { AppSettings.shared.lastReadSurah }
-    var lastReadAyah: Int { AppSettings.shared.lastReadAyah }
+    var lastReadSurah: Int { settings.lastReadSurah }
+    var lastReadAyah: Int { settings.lastReadAyah }
 
-    init() {
+    init(cache: any CacheManaging = CacheManager.shared, settings: AppSettings = .shared) {
+        self.cache = cache
+        self.settings = settings
         searchCancellable = $searchText
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .removeDuplicates()
@@ -24,23 +29,24 @@ final class SurahListViewModel: ObservableObject {
     }
 
     func onAppear() {
-        if let cached = cache.loadSurahList() {
-            surahs = cached
-            filteredSurahs = cached
+        Task {
+            if let cached = await cache.loadSurahList() {
+                surahs = cached
+                filteredSurahs = cached
+            }
+            await fetchSurahs()
         }
-        Task { await fetchSurahs() }
     }
 
     private func fetchSurahs() async {
-        guard surahs.isEmpty else { return }
-        isLoading = true
+        isLoading = surahs.isEmpty
         do {
             let list = try await APIService.shared.fetchSurahList()
             surahs = list
             filteredSurahs = list
-            cache.cacheSurahList(list)
+            await cache.cacheSurahList(list)
         } catch {
-            print("Surah list error: \(error)")
+            logger.error("Surah list error: \(error.localizedDescription)")
         }
         isLoading = false
     }

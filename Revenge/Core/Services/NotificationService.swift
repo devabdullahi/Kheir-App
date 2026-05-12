@@ -1,20 +1,23 @@
 import Foundation
 import UserNotifications
 import CoreLocation
+import os
 
-final class NotificationService {
+final class NotificationService: Sendable {
     static let shared = NotificationService()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "NotificationService")
     private init() {}
 
     func requestPermission() async -> Bool {
         do {
             return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
         } catch {
-            print("Notification permission error: \(error)")
+            logger.error("Notification permission error: \(error.localizedDescription)")
             return false
         }
     }
 
+    @MainActor
     func schedulePrayerNotifications(prayers: [PrayerTime], settings: AppSettings) {
         let center = UNUserNotificationCenter.current()
 
@@ -23,7 +26,11 @@ final class NotificationService {
             prayers.map { "prayer_\($0.name)" }
         )
 
-        let enabledPrayers = enabledPrayerNames(settings: settings)
+        let enabledPrayers = enabledPrayerNames(
+            fajr: settings.fajrNotification, sunrise: settings.sunriseNotification,
+            dhuhr: settings.dhuhrNotification, asr: settings.asrNotification,
+            maghrib: settings.maghribNotification, isha: settings.ishaNotification
+        )
 
         for prayer in prayers {
             guard enabledPrayers.contains(prayer.name),
@@ -46,12 +53,13 @@ final class NotificationService {
 
             center.add(request) { error in
                 if let error = error {
-                    print("Failed to schedule \(prayer.name): \(error)")
+                    self.logger.error("Failed to schedule \(prayer.name): \(error.localizedDescription)")
                 }
             }
         }
     }
 
+    @MainActor
     func scheduleWeekOfNotifications(coordinate: (Double, Double), settings: AppSettings) async {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
@@ -68,7 +76,11 @@ final class NotificationService {
                     madhab: settings.madhab
                   ) else { continue }
 
-            let enabled = enabledPrayerNames(settings: settings)
+            let enabled = enabledPrayerNames(
+                fajr: settings.fajrNotification, sunrise: settings.sunriseNotification,
+                dhuhr: settings.dhuhrNotification, asr: settings.asrNotification,
+                maghrib: settings.maghribNotification, isha: settings.ishaNotification
+            )
             for prayer in prayerTimes.all where enabled.contains(prayer.name) && prayer.time > Date() {
                 let content = UNMutableNotificationContent()
                 content.title = "\(prayer.name) Prayer"
@@ -99,19 +111,22 @@ final class NotificationService {
         )
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Test notification error: \(error)")
+                self.logger.error("Test notification error: \(error.localizedDescription)")
             }
         }
     }
 
-    private func enabledPrayerNames(settings: AppSettings) -> Set<String> {
+    private func enabledPrayerNames(
+        fajr: Bool, sunrise: Bool, dhuhr: Bool,
+        asr: Bool, maghrib: Bool, isha: Bool
+    ) -> Set<String> {
         var names: Set<String> = []
-        if settings.fajrNotification { names.insert("Fajr") }
-        if settings.sunriseNotification { names.insert("Sunrise") }
-        if settings.dhuhrNotification { names.insert("Dhuhr") }
-        if settings.asrNotification { names.insert("Asr") }
-        if settings.maghribNotification { names.insert("Maghrib") }
-        if settings.ishaNotification { names.insert("Isha") }
+        if fajr { names.insert("Fajr") }
+        if sunrise { names.insert("Sunrise") }
+        if dhuhr { names.insert("Dhuhr") }
+        if asr { names.insert("Asr") }
+        if maghrib { names.insert("Maghrib") }
+        if isha { names.insert("Isha") }
         return names
     }
 }

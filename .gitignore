@@ -23,3 +23,12 @@ Pods/
 *.swp
 *.lock
 !Package.resolved
+
+# Secrets - never commit these
+.env
+.env.*
+*.p12
+*.mobileprovision
+*.pem
+Secrets.swift
+secrets/

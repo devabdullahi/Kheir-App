@@ -2,6 +2,7 @@ import Foundation
 
 final class APIService: @unchecked Sendable {
     static let shared = APIService()
+    private static let decoder = JSONDecoder()
     private let session: URLSession
 
     private init() {
@@ -27,9 +28,14 @@ final class APIService: @unchecked Sendable {
         let (data, response) = try await session.data(from: url)
         guard let httpResponse = response as? HTTPURLResponse,
               200..<300 ~= httpResponse.statusCode else {
-            throw APIError.serverError
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw APIError.serverError(statusCode: statusCode)
         }
-        return try JSONDecoder().decode(type, from: data)
+        do {
+            return try Self.decoder.decode(type, from: data)
+        } catch let error as DecodingError {
+            throw APIError.decodingError(underlying: error)
+        }
     }
 
     // MARK: - Surah List
@@ -96,23 +102,33 @@ final class APIService: @unchecked Sendable {
         return try await fetch(HadithSectionResponse.self, from: urlStr)
     }
 
+    /// Fetch a hadith section using a raw edition string
+    func fetchHadithSection(editionRaw: String, section: Int) async throws -> HadithSectionResponse {
+        let urlStr = "\(AppConstants.hadithBaseURL)/editions/\(editionRaw)/sections/\(section).json"
+        return try await fetch(HadithSectionResponse.self, from: urlStr)
+    }
+
     /// Fetch a random daily hadith from a random major collection
-    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String) {
+    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int) {
         // Pick a random collection and section for variety
         let collections: [HadithCollection] = [.bukhari, .muslim, .abuDawud, .tirmidhi, .nasai, .ibnMajah]
-        let collection = collections.randomElement()!
+        guard let collection = collections.randomElement() else {
+            throw APIError.serverError(statusCode: -1)
+        }
         let section = Int.random(in: 1...collection.totalSections)
 
         let response = try await fetchHadithSection(edition: collection, section: section)
 
         guard !response.hadiths.isEmpty else {
-            throw APIError.serverError
+            throw APIError.serverError(statusCode: -1)
         }
 
-        let hadith = response.hadiths.randomElement()!
+        guard let hadith = response.hadiths.randomElement() else {
+            throw APIError.serverError(statusCode: -1)
+        }
         let sectionName = response.metadata.section?["\(section)"] ?? "General"
 
-        return (hadith, collection, sectionName)
+        return (hadith, collection, sectionName, section)
     }
 
     // MARK: - Audio URL
@@ -128,96 +144,20 @@ final class APIService: @unchecked Sendable {
     }
 }
 
-// MARK: - Quran Ayah Global Index
-
-/// Maps (surah, ayahInSurah) → global ayah number (1...6236) using the canonical
-/// 114-surah ayah count table. Used by cdn.islamic.network audio URL construction.
-enum QuranAyahIndex {
-    /// Number of ayahs in each surah, index 0 = Surah 1 (Al-Fatiha).
-    static let ayahCounts: [Int] = [
-        7, 286, 200, 176, 120, 165, 206, 75, 129, 109,
-        123, 111, 43, 52, 99, 128, 111, 110, 98, 135,
-        112, 78, 118, 64, 77, 227, 93, 88, 69, 60,
-        34, 30, 73, 54, 45, 83, 182, 88, 75, 85,
-        54, 53, 89, 59, 37, 35, 38, 29, 18, 45,
-        60, 49, 62, 55, 78, 96, 29, 22, 24, 13,
-        14, 11, 11, 18, 12, 12, 30, 52, 52, 44,
-        28, 28, 20, 56, 40, 31, 50, 40, 46, 42,
-        29, 19, 36, 25, 22, 17, 19, 26, 30, 20,
-        15, 21, 11, 8, 8, 19, 5, 8, 8, 11,
-        11, 8, 3, 9, 5, 4, 7, 3, 6, 3,
-        5, 4, 5, 6
-    ]
-
-    /// Prefix sums over `ayahCounts` so that `prefixSums[i]` is the total number
-    /// of ayahs before surah `i + 1` (0-indexed). Computed once at app launch; each
-    /// lookup is then O(1) instead of O(n).
-    static let prefixSums: [Int] = {
-        var sums = [Int](repeating: 0, count: ayahCounts.count)
-        var running = 0
-        for i in ayahCounts.indices {
-            sums[i] = running
-            running += ayahCounts[i]
-        }
-        return sums
-    }()
-
-    /// Returns the 1-based global ayah number for a given surah (1-114) and
-    /// ayah-within-surah (1-based). Returns nil if either value is out of range.
-    /// Complexity: O(1) via precomputed prefix sums.
-    static func globalIndex(surah: Int, ayahInSurah: Int) -> Int? {
-        guard surah >= 1, surah <= 114 else { return nil }
-        let count = ayahCounts[surah - 1]
-        guard ayahInSurah >= 1, ayahInSurah <= count else { return nil }
-        return prefixSums[surah - 1] + ayahInSurah
-    }
-}
-
 // MARK: - Errors
 enum APIError: LocalizedError {
     case invalidURL
-    case serverError
-    case decodingError
+    case serverError(statusCode: Int)
+    case decodingError(underlying: DecodingError)
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "Invalid URL"
-        case .serverError: return "Server error"
-        case .decodingError: return "Failed to decode response"
+        case .invalidURL:
+            return "Invalid URL"
+        case .serverError(let statusCode):
+            return "Server error (HTTP \(statusCode))"
+        case .decodingError(let underlying):
+            return "Failed to decode response: \(underlying.localizedDescription)"
         }
     }
-}
-
-// MARK: - Additional Response Types
-struct AyahResponse: Codable {
-    let code: Int
-    let data: Ayah
-}
-
-struct AyahDetailResponse: Codable {
-    let code: Int
-    let data: AyahDetailData
-}
-
-struct AyahDetailData: Codable {
-    let number: Int
-    let text: String
-    let numberInSurah: Int
-    let surah: AyahSurahInfo
-
-    struct AyahSurahInfo: Codable {
-        let number: Int
-        let name: String
-        let englishName: String
-        let englishNameTranslation: String
-    }
-}
-
-struct HijriConvertResponse: Codable {
-    let code: Int
-    let data: HijriConvertData
-}
-
-struct HijriConvertData: Codable {
-    let hijri: HijriDate
 }

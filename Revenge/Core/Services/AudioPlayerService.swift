@@ -3,6 +3,7 @@ import AVFoundation
 import Combine
 import SwiftUI
 import MediaPlayer
+import os
 
 // MARK: - Supporting Types
 
@@ -41,7 +42,8 @@ struct NowPlayingInfo {
 final class AudioPlayerService: ObservableObject {
 
     // MARK: Singleton
-    static let shared = AudioPlayerService()
+    nonisolated static let shared = AudioPlayerService()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "AudioPlayerService")
 
     // MARK: - Legacy Published State (preserved for existing call sites)
 
@@ -123,7 +125,7 @@ final class AudioPlayerService: ObservableObject {
             )
             sessionConfigured = true
         } catch {
-            print("[AudioPlayerService] AVAudioSession category error: \(error)")
+            logger.error("AVAudioSession category error: \(error.localizedDescription)")
         }
     }
 
@@ -132,7 +134,7 @@ final class AudioPlayerService: ObservableObject {
         do {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
-            print("[AudioPlayerService] AVAudioSession activate error: \(error)")
+            logger.error("AVAudioSession activate error: \(error.localizedDescription)")
         }
     }
 
@@ -145,7 +147,7 @@ final class AudioPlayerService: ObservableObject {
                 options: .notifyOthersOnDeactivation
             )
         } catch {
-            print("[AudioPlayerService] AVAudioSession deactivate error: \(error)")
+            logger.error("AVAudioSession deactivate error: \(error.localizedDescription)")
         }
     }
 

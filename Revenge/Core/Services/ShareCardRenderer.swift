@@ -7,7 +7,7 @@ import UIKit
 @MainActor
 final class ShareCardRenderer {
 
-    static let shared = ShareCardRenderer()
+    nonisolated static let shared = ShareCardRenderer()
 
     private init() {}
 

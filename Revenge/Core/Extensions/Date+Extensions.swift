@@ -1,42 +1,71 @@
 import Foundation
 
 extension Date {
+
+    // MARK: - Cached Formatters
+
+    private static let gregorianFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE, MMMM d, yyyy"
+        return f
+    }()
+
+    private static let hijriFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .islamicUmmAlQura)
+        f.dateFormat = "d MMMM yyyy"
+        f.locale = Locale(identifier: "en")
+        return f
+    }()
+
+    /// Formatter for `dayKey` — no explicit timezone, so it follows the device locale.
+    private static let dayKeyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
+    /// Formatter for `currentDayKey()` — explicitly pinned to the device-local timezone
+    /// so widget and app targets produce identical keys regardless of any default overrides.
+    private static let currentDayKeyFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone.current
+        return f
+    }()
+
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
+    // MARK: - Computed Properties
+
     var gregorianString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMMM d, yyyy"
-        return formatter.string(from: self)
+        Self.gregorianFormatter.string(from: self)
     }
 
     var hijriString: String {
-        let calendar = Calendar(identifier: .islamicUmmAlQura)
-        let formatter = DateFormatter()
-        formatter.calendar = calendar
-        formatter.dateFormat = "d MMMM yyyy"
-        formatter.locale = Locale(identifier: "en")
-        return formatter.string(from: self) + " AH"
+        Self.hijriFormatter.string(from: self) + " AH"
     }
 
     var dayKey: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: self)
+        Self.dayKeyFormatter.string(from: self)
     }
 
     /// Returns today's cache key (`yyyy-MM-dd`) using the device-local timezone.
     /// Public so the KheirWidget extension target can call it without duplicating
     /// the formatter. Add `Date+Extensions.swift` to the widget target membership.
     static func currentDayKey() -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone.current
-        return formatter.string(from: Date())
+        Self.currentDayKeyFormatter.string(from: Date())
     }
 
     var timeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: self)
+        Self.timeFormatter.string(from: self)
     }
+
+    // MARK: - Helpers
 
     func timeRemaining(to target: Date) -> String {
         let interval = target.timeIntervalSince(self)

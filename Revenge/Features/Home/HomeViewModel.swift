@@ -1,26 +1,14 @@
 import Foundation
 import Combine
-import CoreLocation
 import SwiftUI
 import UIKit
 import WidgetKit
-
-// MARK: - Load State
-
-enum ContentLoadState {
-    case loading
-    case loaded
-    case failed
-    case offline
-}
+import os
 
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var dailyAyah: DailyAyah?
     @Published var dailyHadith: DailyHadith?
-    @Published var nextPrayerName: String = ""
-    @Published var nextPrayerTime: Date?
-    @Published var countdownText: String = "--:--:--"
     @Published var hijriDate: String = ""
     @Published var gregorianDate: String = ""
     @Published var isLoading = false
@@ -32,21 +20,19 @@ final class HomeViewModel: ObservableObject {
     @Published var currentRoutineType: RoutineType = RoutineTimeHelper.currentRoutineType()
     @Published var routineProgress: Double = 0
 
-    private var timer: Timer?
     private var midnightObserver: NSObjectProtocol?
     private let cache: any CacheManaging
     private let apiService: any AyahFetching & HadithFetching
     private let locationService: LocationService
-    private let prayerTimesService: PrayerTimesService
     private let streakService: any StreakTracking
     private let routineService: any RoutineProviding
     private let settings: AppSettings
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "HomeViewModel")
 
     init(
         apiService: any AyahFetching & HadithFetching = APIService.shared,
         cacheManager: any CacheManaging = CacheManager.shared,
         locationService: LocationService = .shared,
-        prayerTimesService: PrayerTimesService = .shared,
         streakService: any StreakTracking = StreakService.shared,
         routineService: any RoutineProviding = RoutineService.shared,
         settings: AppSettings = .shared
@@ -54,7 +40,6 @@ final class HomeViewModel: ObservableObject {
         self.apiService = apiService
         self.cache = cacheManager
         self.locationService = locationService
-        self.prayerTimesService = prayerTimesService
         self.streakService = streakService
         self.routineService = routineService
         self.settings = settings
@@ -64,22 +49,22 @@ final class HomeViewModel: ObservableObject {
     }
 
     func onAppear() {
-        Task { await loadDailyContent() }
-        loadPrayerCountdown()
-        startCountdownTimer()
+        Task {
+            await loadDailyContent()
+            await refreshRoutineProgress()
+            await recordStreak()
+        }
         subscribeMidnightRollover()
-        recordStreak()
-        refreshRoutineProgress()
     }
 
     // MARK: - Routine Progress
 
     /// Reads the persisted progress for today's contextual routine and updates
     /// `routineProgress` so the card's ring reflects the current completion.
-    func refreshRoutineProgress() {
+    func refreshRoutineProgress() async {
         currentRoutineType = RoutineTimeHelper.currentRoutineType()
         let today = currentDayKey()
-        if let routine = routineService.loadRoutine(type: currentRoutineType, for: today) {
+        if let routine = await routineService.loadRoutine(type: currentRoutineType, for: today) {
             routineProgress = routine.completionPercentage
         } else {
             routineProgress = 0
@@ -88,15 +73,14 @@ final class HomeViewModel: ObservableObject {
 
     // MARK: - Streak
 
-    private func recordStreak() {
-        let data = streakService.recordAppOpen()
+    private func recordStreak() async {
+        let data = await streakService.recordAppOpen()
         if data.currentStreak > 0 {
             streakData = data
         }
     }
 
     func onDisappear() {
-        timer?.invalidate()
         if let observer = midnightObserver {
             NotificationCenter.default.removeObserver(observer)
             midnightObserver = nil
@@ -134,12 +118,12 @@ final class HomeViewModel: ObservableObject {
         let today = currentDayKey()
 
         // Load cached first — update state immediately if available
-        if let cached = cache.loadDailyAyah(for: today) {
+        if let cached = await cache.loadDailyAyah(for: today) {
             dailyAyah = cached
             ayahState = .loaded
             syncAyahToWidget(cached)
         }
-        if let cached = cache.loadDailyHadith(for: today) {
+        if let cached = await cache.loadDailyHadith(for: today) {
             dailyHadith = cached
             hadithState = .loaded
         }
@@ -179,10 +163,10 @@ final class HomeViewModel: ObservableObject {
             )
             dailyAyah = ayah
             ayahState = .loaded
-            cache.cacheDailyAyah(ayah)
+            await cache.cacheDailyAyah(ayah)
             syncAyahToWidget(ayah)
         } catch {
-            print("Daily Ayah fetch error: \(error)")
+            logger.error("Daily Ayah fetch error: \(error.localizedDescription)")
             ayahState = dailyAyah != nil ? .offline : .failed
         }
     }
@@ -194,11 +178,19 @@ final class HomeViewModel: ObservableObject {
         }
         hadithState = .loading
         do {
-            let (entry, collection, sectionName) = try await apiService.fetchRandomHadith()
+            let (entry, collection, sectionName, section) = try await apiService.fetchRandomHadith()
+
+            // Try to fetch the Arabic text for the same hadith from the Arabic edition
+            var arabicText = ""
+            if let arabicResponse = try? await apiService.fetchHadithSection(editionRaw: collection.arabicEdition, section: section),
+               let arabicEntry = arabicResponse.hadiths.first(where: { $0.hadithNumber == entry.hadithNumber }) {
+                arabicText = arabicEntry.text
+            }
 
             let grade = entry.grades.first?.grade ?? "Unknown"
             let hadith = DailyHadith(
                 text: entry.text,
+                arabicText: arabicText,
                 source: collection.displayName,
                 chapter: sectionName,
                 narrator: "",
@@ -207,9 +199,9 @@ final class HomeViewModel: ObservableObject {
             )
             dailyHadith = hadith
             hadithState = .loaded
-            cache.cacheDailyHadith(hadith)
+            await cache.cacheDailyHadith(hadith)
         } catch {
-            print("Daily Hadith fetch error: \(error). Using fallback.")
+            logger.error("Daily Hadith fetch error: \(error.localizedDescription). Using fallback.")
             let fallbackHadiths = [
                 DailyHadith(text: "The best among you are those who have the best manners and character.", source: "Sahih al-Bukhari", chapter: "Good Manners", narrator: "Abdullah ibn Amr", grade: "Sahih", dateString: dateKey),
                 DailyHadith(text: "None of you truly believes until he loves for his brother what he loves for himself.", source: "Sahih al-Bukhari", chapter: "Faith", narrator: "Anas ibn Malik", grade: "Sahih", dateString: dateKey),
@@ -221,55 +213,7 @@ final class HomeViewModel: ObservableObject {
             let hadith = fallbackHadiths[dayOfYear % fallbackHadiths.count]
             dailyHadith = hadith
             hadithState = .offline
-            cache.cacheDailyHadith(hadith)
-        }
-    }
-
-    // MARK: - Prayer Countdown
-    private func loadPrayerCountdown() {
-        guard let location = locationService.currentLocation else {
-            // Try loading after a delay
-            Task {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                if let loc = locationService.currentLocation {
-                    await updateNextPrayer(location: loc)
-                }
-            }
-            return
-        }
-        Task {
-            await updateNextPrayer(location: location)
-        }
-    }
-
-    private func updateNextPrayer(location: CLLocationCoordinate2D) async {
-        guard let times = await prayerTimesService.fetchPrayerTimes(
-            coordinate: location,
-            method: settings.calculationMethod,
-            madhab: settings.madhab
-        ) else { return }
-
-        let now = Date()
-        let allTimes = times.all
-        if let next = allTimes.first(where: { $0.time > now }) {
-            nextPrayerName = next.name
-            nextPrayerTime = next.time
-        } else {
-            // All prayers passed, show next Fajr
-            nextPrayerName = "Fajr"
-            nextPrayerTime = Calendar.current.date(byAdding: .day, value: 1, to: times.fajr)
-        }
-    }
-
-    private func startCountdownTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                guard let self = self, let target = self.nextPrayerTime else { return }
-                self.countdownText = Date().timeRemaining(to: target)
-                if target <= Date() {
-                    self.loadPrayerCountdown()
-                }
-            }
+            await cache.cacheDailyHadith(hadith)
         }
     }
 
@@ -292,7 +236,6 @@ final class HomeViewModel: ObservableObject {
                 self.dailyAyah = nil
                 self.dailyHadith = nil
                 await self.loadDailyContent()
-                self.loadPrayerCountdown()
             }
         }
     }
@@ -316,45 +259,51 @@ final class HomeViewModel: ObservableObject {
     @Published var isHadithBookmarked = false
 
     func checkBookmarkStates() {
-        if let ayah = dailyAyah {
-            isAyahBookmarked = cache.isAyahBookmarked(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
-        }
-        if let hadith = dailyHadith {
-            isHadithBookmarked = cache.isHadithBookmarked(text: hadith.text, source: hadith.source)
+        Task {
+            if let ayah = dailyAyah {
+                isAyahBookmarked = await cache.isAyahBookmarked(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
+            }
+            if let hadith = dailyHadith {
+                isHadithBookmarked = await cache.isHadithBookmarked(text: hadith.text, source: hadith.source)
+            }
         }
     }
 
     func toggleAyahBookmark() {
         guard let ayah = dailyAyah else { return }
-        if isAyahBookmarked {
-            cache.removeAyahBookmark(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
-        } else {
-            let bookmark = BookmarkedAyah(
-                surahNumber: ayah.surahNumber,
-                surahName: ayah.surahEnglishName,
-                ayahNumber: ayah.ayahNumber,
-                arabicText: ayah.arabicText,
-                translationText: ayah.translationText
-            )
-            cache.saveAyahBookmark(bookmark)
-        }
         isAyahBookmarked.toggle()
+        Task {
+            if !isAyahBookmarked {
+                await cache.removeAyahBookmark(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
+            } else {
+                let bookmark = BookmarkedAyah(
+                    surahNumber: ayah.surahNumber,
+                    surahName: ayah.surahEnglishName,
+                    ayahNumber: ayah.ayahNumber,
+                    arabicText: ayah.arabicText,
+                    translationText: ayah.translationText
+                )
+                await cache.saveAyahBookmark(bookmark)
+            }
+        }
     }
 
     func toggleHadithBookmark() {
         guard let hadith = dailyHadith else { return }
-        if isHadithBookmarked {
-            cache.removeHadithBookmark(text: hadith.text, source: hadith.source)
-        } else {
-            let bookmark = BookmarkedHadith(
-                text: hadith.text,
-                source: hadith.source,
-                narrator: hadith.narrator,
-                grade: hadith.grade
-            )
-            cache.saveHadithBookmark(bookmark)
-        }
         isHadithBookmarked.toggle()
+        Task {
+            if !isHadithBookmarked {
+                await cache.removeHadithBookmark(text: hadith.text, source: hadith.source)
+            } else {
+                let bookmark = BookmarkedHadith(
+                    text: hadith.text,
+                    source: hadith.source,
+                    narrator: hadith.narrator,
+                    grade: hadith.grade
+                )
+                await cache.saveHadithBookmark(bookmark)
+            }
+        }
     }
 
     // MARK: - Share

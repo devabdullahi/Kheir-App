@@ -1,0 +1,20 @@
+# SwiftFormat Configuration for Kheir App
+
+--swiftversion 5.9
+--indent 4
+--indentcase false
+--trimwhitespace always
+--voidtype void
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--closingparen balanced
+--funcattributes prev-line
+--typeattributes prev-line
+--maxwidth 140
+--redundanttype inferred
+--self remove
+--importgrouping alpha
+
+# Exclusions
+--exclude swift-composable-architecture,DerivedData,.build,Pods
