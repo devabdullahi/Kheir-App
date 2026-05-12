@@ -56,15 +56,8 @@ struct MasjidFinderView: View {
                 // Map
                 Map(initialPosition: .region(viewModel.region)) {
                     ForEach(viewModel.masjids) { masjid in
-                        Annotation(masjid.name, coordinate: masjid.coordinate) {
-                            Image(systemName: "building.columns.fill")
-                                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                                .padding(6)
-                                .background(Color.adaptiveCardSurface(colorScheme))
-                                .clipShape(Circle())
-                                .shadow(radius: 2)
-                                .onTapGesture { selectedMasjid = masjid }
-                        }
+                        Marker(masjid.name, coordinate: masjid.coordinate)
+                            .tint(Color.adaptivePrimary(colorScheme))
                     }
                 }
                 .frame(height: viewModel.viewMode == .map ? geo.size.height : geo.size.height * 0.45)

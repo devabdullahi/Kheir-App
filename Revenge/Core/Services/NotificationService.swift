@@ -17,6 +17,7 @@ final class NotificationService: Sendable {
         }
     }
 
+    @MainActor
     func schedulePrayerNotifications(prayers: [PrayerTime], settings: AppSettings) {
         let center = UNUserNotificationCenter.current()
 
@@ -25,7 +26,11 @@ final class NotificationService: Sendable {
             prayers.map { "prayer_\($0.name)" }
         )
 
-        let enabledPrayers = enabledPrayerNames(settings: settings)
+        let enabledPrayers = enabledPrayerNames(
+            fajr: settings.fajrNotification, sunrise: settings.sunriseNotification,
+            dhuhr: settings.dhuhrNotification, asr: settings.asrNotification,
+            maghrib: settings.maghribNotification, isha: settings.ishaNotification
+        )
 
         for prayer in prayers {
             guard enabledPrayers.contains(prayer.name),
@@ -54,6 +59,7 @@ final class NotificationService: Sendable {
         }
     }
 
+    @MainActor
     func scheduleWeekOfNotifications(coordinate: (Double, Double), settings: AppSettings) async {
         let center = UNUserNotificationCenter.current()
         center.removeAllPendingNotificationRequests()
@@ -70,7 +76,11 @@ final class NotificationService: Sendable {
                     madhab: settings.madhab
                   ) else { continue }
 
-            let enabled = enabledPrayerNames(settings: settings)
+            let enabled = enabledPrayerNames(
+                fajr: settings.fajrNotification, sunrise: settings.sunriseNotification,
+                dhuhr: settings.dhuhrNotification, asr: settings.asrNotification,
+                maghrib: settings.maghribNotification, isha: settings.ishaNotification
+            )
             for prayer in prayerTimes.all where enabled.contains(prayer.name) && prayer.time > Date() {
                 let content = UNMutableNotificationContent()
                 content.title = "\(prayer.name) Prayer"
@@ -106,14 +116,17 @@ final class NotificationService: Sendable {
         }
     }
 
-    private func enabledPrayerNames(settings: AppSettings) -> Set<String> {
+    private func enabledPrayerNames(
+        fajr: Bool, sunrise: Bool, dhuhr: Bool,
+        asr: Bool, maghrib: Bool, isha: Bool
+    ) -> Set<String> {
         var names: Set<String> = []
-        if settings.fajrNotification { names.insert("Fajr") }
-        if settings.sunriseNotification { names.insert("Sunrise") }
-        if settings.dhuhrNotification { names.insert("Dhuhr") }
-        if settings.asrNotification { names.insert("Asr") }
-        if settings.maghribNotification { names.insert("Maghrib") }
-        if settings.ishaNotification { names.insert("Isha") }
+        if fajr { names.insert("Fajr") }
+        if sunrise { names.insert("Sunrise") }
+        if dhuhr { names.insert("Dhuhr") }
+        if asr { names.insert("Asr") }
+        if maghrib { names.insert("Maghrib") }
+        if isha { names.insert("Isha") }
         return names
     }
 }
