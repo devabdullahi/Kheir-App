@@ -1,13 +1,13 @@
 import Foundation
 
 // MARK: - Surah List Response
-struct SurahListResponse: Codable {
+struct SurahListResponse: Codable, Sendable {
     let code: Int
     let status: String
     let data: [SurahInfo]
 }
 
-struct SurahInfo: Codable, Identifiable {
+struct SurahInfo: Codable, Identifiable, Sendable {
     let number: Int
     let name: String
     let englishName: String
@@ -19,13 +19,13 @@ struct SurahInfo: Codable, Identifiable {
 }
 
 // MARK: - Surah Detail Response
-struct SurahDetailResponse: Codable {
+struct SurahDetailResponse: Codable, Sendable {
     let code: Int
     let status: String
     let data: SurahDetail
 }
 
-struct SurahDetail: Codable {
+struct SurahDetail: Codable, Sendable {
     let number: Int
     let name: String
     let englishName: String
@@ -35,7 +35,7 @@ struct SurahDetail: Codable {
     let ayahs: [Ayah]
 }
 
-struct Ayah: Codable, Identifiable {
+struct Ayah: Codable, Identifiable, Sendable {
     let number: Int
     let text: String
     let numberInSurah: Int
@@ -47,7 +47,7 @@ struct Ayah: Codable, Identifiable {
 }
 
 // MARK: - Combined Ayah for display (Arabic + Translation)
-struct DisplayAyah: Identifiable {
+struct DisplayAyah: Identifiable, Sendable {
     let id: Int
     let numberInSurah: Int
     let arabicText: String
@@ -57,13 +57,13 @@ struct DisplayAyah: Identifiable {
 }
 
 // MARK: - Edition Response
-struct EditionResponse: Codable {
+struct EditionResponse: Codable, Sendable {
     let code: Int
     let status: String
     let data: [Edition]
 }
 
-struct Edition: Codable, Identifiable {
+struct Edition: Codable, Identifiable, Sendable {
     let identifier: String
     let language: String
     let name: String
@@ -74,7 +74,7 @@ struct Edition: Codable, Identifiable {
 }
 
 // MARK: - Daily Ayah
-struct DailyAyah: Codable, Identifiable {
+struct DailyAyah: Codable, Identifiable, Sendable {
     let id: UUID
     let surahNumber: Int
     let surahName: String
@@ -99,7 +99,7 @@ struct DailyAyah: Codable, Identifiable {
 }
 
 // MARK: - Qari (Reciter)
-struct Qari: Identifiable, Codable {
+struct Qari: Identifiable, Codable, Sendable {
     let identifier: String
     let name: String
     /// CDN bitrate (kbps). Some reciters are only licensed at lower bitrates on cdn.islamic.network.
@@ -128,7 +128,7 @@ struct Qari: Identifiable, Codable {
 }
 
 // MARK: - Cached Surah
-struct CachedSurah: Codable {
+struct CachedSurah: Codable, Sendable {
     let surahNumber: Int
     let arabicAyahs: [Ayah]
     let translationAyahs: [Ayah]

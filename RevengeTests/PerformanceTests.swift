@@ -9,23 +9,24 @@ struct CacheManagerPerformanceTests {
     let cache = CacheManager.shared
 
     @Test("Memory cache hit is under 1ms for bookmark load")
-    func memoryCacheHitSpeed() {
+    func memoryCacheHitSpeed() async {
         // Warm the cache with a save
         let bookmark = BookmarkedAyah(
             surahNumber: 900, surahName: "PerfTest",
             ayahNumber: 1, arabicText: "test", translationText: "test"
         )
-        cache.saveAyahBookmark(bookmark)
-        defer { cache.removeAyahBookmark(id: bookmark.id) }
+        await cache.saveAyahBookmark(bookmark)
 
         // Measure read — should hit memory cache
         let start = CFAbsoluteTimeGetCurrent()
         let iterations = 100
         for _ in 0..<iterations {
-            _ = cache.loadAyahBookmarks()
+            _ = await cache.loadAyahBookmarks()
         }
         let elapsed = (CFAbsoluteTimeGetCurrent() - start) / Double(iterations)
         let elapsedMs = elapsed * 1000
+
+        await cache.removeAyahBookmark(id: bookmark.id)
 
         // Memory cache reads should be well under 1ms each
         #expect(elapsedMs < 1.0, "Average bookmark load took \(String(format: "%.3f", elapsedMs))ms, expected < 1ms")
@@ -37,43 +38,45 @@ struct CacheManagerPerformanceTests {
             surahNumber: 901, surahName: "ConcurrentTest",
             ayahNumber: 1, arabicText: "test", translationText: "test"
         )
-        cache.saveAyahBookmark(bookmark)
-        defer { cache.removeAyahBookmark(id: bookmark.id) }
+        await cache.saveAyahBookmark(bookmark)
 
         await withTaskGroup(of: Void.self) { group in
             for _ in 0..<50 {
                 group.addTask {
-                    _ = self.cache.loadAyahBookmarks()
+                    _ = await self.cache.loadAyahBookmarks()
                 }
             }
         }
+
+        await cache.removeAyahBookmark(id: bookmark.id)
         // If we get here without crash, concurrent reads are safe
     }
 
     @Test("Save + immediate load returns saved data (memory cache consistency)")
-    func saveLoadConsistency() {
+    func saveLoadConsistency() async {
         let entry = JournalEntry(text: "PerfTest consistency \(UUID().uuidString)")
-        cache.saveJournalEntry(entry)
-        defer { cache.removeJournalEntry(id: entry.id) }
+        await cache.saveJournalEntry(entry)
 
         // Immediate load should return the entry from memory cache
         // even before disk write completes
-        let loaded = cache.loadJournalEntries()
+        let loaded = await cache.loadJournalEntries()
         #expect(loaded.contains { $0.id == entry.id })
+
+        await cache.removeJournalEntry(id: entry.id)
     }
 
     @Test("Daily ayah cache round-trip")
-    func dailyAyahCacheRoundTrip() {
+    func dailyAyahCacheRoundTrip() async {
         let ayah = DailyAyah(
             surahNumber: 1, surahName: "الفاتحة",
             surahEnglishName: "Al-Fatiha", ayahNumber: 1,
             arabicText: "بسم الله", translationText: "In the name of Allah",
             transliteration: "", dateString: "perf-test-key"
         )
-        cache.cacheDailyAyah(ayah)
+        await cache.cacheDailyAyah(ayah)
 
         let start = CFAbsoluteTimeGetCurrent()
-        let loaded = cache.loadDailyAyah(for: "perf-test-key")
+        let loaded = await cache.loadDailyAyah(for: "perf-test-key")
         let elapsed = (CFAbsoluteTimeGetCurrent() - start) * 1000
 
         #expect(loaded != nil)

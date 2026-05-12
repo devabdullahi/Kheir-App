@@ -4,12 +4,13 @@ import SwiftUI
 struct ScrollRevealModifier: ViewModifier {
     let delay: Double
     @State private var hasAppeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
             .opacity(hasAppeared ? 1 : 0)
-            .offset(y: hasAppeared ? 0 : 20)
-            .animation(.easeOut(duration: 0.45).delay(delay), value: hasAppeared)
+            .offset(y: hasAppeared || reduceMotion ? 0 : 20)
+            .animation(reduceMotion ? .none : .easeOut(duration: 0.45).delay(delay), value: hasAppeared)
             .onAppear {
                 if !hasAppeared {
                     hasAppeared = true
@@ -76,5 +77,6 @@ struct IslamicPatternBackground: View {
                 }
             }
         }
+        .drawingGroup()
     }
 }

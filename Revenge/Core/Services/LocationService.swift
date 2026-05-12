@@ -1,11 +1,14 @@
 import Foundation
 import CoreLocation
 import Combine
+import os
 
+@MainActor
 final class LocationService: NSObject, ObservableObject, CLLocationManagerDelegate {
     static let shared = LocationService()
 
     private let manager = CLLocationManager()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "LocationService")
 
     @Published var currentLocation: CLLocationCoordinate2D?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -43,33 +46,44 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
 
     // MARK: - CLLocationManagerDelegate
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        currentLocation = locations.last?.coordinate
+        let coordinate = locations.last?.coordinate
+        DispatchQueue.main.async {
+            self.currentLocation = coordinate
+        }
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        heading = newHeading
-        headingAccuracy = newHeading.headingAccuracy
+        let accuracy = newHeading.headingAccuracy
+        DispatchQueue.main.async {
+            self.heading = newHeading
+            self.headingAccuracy = accuracy
+        }
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorizationStatus = manager.authorizationStatus
-        if manager.authorizationStatus == .authorizedWhenInUse || manager.authorizationStatus == .authorizedAlways {
-            startUpdating()
+        let status = manager.authorizationStatus
+        DispatchQueue.main.async {
+            self.authorizationStatus = status
+            if status == .authorizedWhenInUse || status == .authorizedAlways {
+                self.startUpdating()
+            }
         }
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("Location error: \(error.localizedDescription)")
+        logger.error("Location error: \(error.localizedDescription)")
     }
 
     // MARK: - Geocoding
     func geocodeCity(_ city: String) async -> CLLocationCoordinate2D? {
+        let trimmed = city.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else { return nil }
         let geocoder = CLGeocoder()
         do {
-            let placemarks = try await geocoder.geocodeAddressString(city)
+            let placemarks = try await geocoder.geocodeAddressString(trimmed)
             return placemarks.first?.location?.coordinate
         } catch {
-            print("Geocoding error: \(error)")
+            logger.error("Geocoding error: \(error.localizedDescription)")
             return nil
         }
     }

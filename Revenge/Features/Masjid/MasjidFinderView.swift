@@ -54,15 +54,17 @@ struct MasjidFinderView: View {
         GeometryReader { geo in
             VStack(spacing: 0) {
                 // Map
-                Map(coordinateRegion: .constant(viewModel.region), annotationItems: viewModel.masjids) { masjid in
-                    MapAnnotation(coordinate: masjid.coordinate) {
-                        Image(systemName: "building.columns.fill")
-                            .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                            .padding(6)
-                            .background(Color.adaptiveCardSurface(colorScheme))
-                            .clipShape(Circle())
-                            .shadow(radius: 2)
-                            .onTapGesture { selectedMasjid = masjid }
+                Map(initialPosition: .region(viewModel.region)) {
+                    ForEach(viewModel.masjids) { masjid in
+                        Annotation(masjid.name, coordinate: masjid.coordinate) {
+                            Image(systemName: "building.columns.fill")
+                                .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                                .padding(6)
+                                .background(Color.adaptiveCardSurface(colorScheme))
+                                .clipShape(Circle())
+                                .shadow(radius: 2)
+                                .onTapGesture { selectedMasjid = masjid }
+                        }
                     }
                 }
                 .frame(height: viewModel.viewMode == .map ? geo.size.height : geo.size.height * 0.45)

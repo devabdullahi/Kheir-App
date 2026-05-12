@@ -46,9 +46,9 @@ final class RoutineViewModel: ObservableObject {
     // MARK: - Public API
 
     /// Loads (or generates) the routine for the given type and today's date.
-    func loadRoutine(type: RoutineType) {
+    func loadRoutine(type: RoutineType) async {
         let date = todayKey()
-        let routine = routineService.generateRoutine(type: type, for: date)
+        let routine = await routineService.generateRoutine(type: type, for: date)
         currentRoutine = routine
         updateCompletion(from: routine)
     }
@@ -68,8 +68,8 @@ final class RoutineViewModel: ObservableObject {
         }
 
         currentRoutine = routine
-        routineService.saveRoutineProgress(routine)
         updateCompletion(from: routine)
+        Task { await routineService.saveRoutineProgress(routine) }
 
         if routine.isCompleted && !showCelebration {
             showCelebration = true
@@ -82,10 +82,10 @@ final class RoutineViewModel: ObservableObject {
     func resetRoutine() {
         guard var routine = currentRoutine else { return }
         routine.completedSteps = []
-        routineService.saveRoutineProgress(routine)
         currentRoutine = routine
         updateCompletion(from: routine)
         showCelebration = false
+        Task { await routineService.saveRoutineProgress(routine) }
     }
 
     /// Dismisses the celebration overlay without resetting progress.

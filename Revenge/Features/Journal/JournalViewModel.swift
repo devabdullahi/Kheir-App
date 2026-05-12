@@ -8,40 +8,47 @@ final class JournalViewModel: ObservableObject {
     @Published var ayahBookmarks: [BookmarkedAyah] = []
     @Published var hadithBookmarks: [BookmarkedHadith] = []
 
-    private let cache = CacheManager.shared
+    private let cache: any CacheManaging
 
-    func onAppear() {
-        refresh()
+    init(cacheManager: any CacheManaging = CacheManager.shared) {
+        self.cache = cacheManager
     }
 
-    func refresh() {
-        entries = cache.loadJournalEntries()
-        ayahBookmarks = cache.loadAyahBookmarks()
-        hadithBookmarks = cache.loadHadithBookmarks()
+    func onAppear() {
+        Task { await refresh() }
+    }
+
+    func refresh() async {
+        entries = await cache.loadJournalEntries()
+        ayahBookmarks = await cache.loadAyahBookmarks()
+        hadithBookmarks = await cache.loadHadithBookmarks()
     }
 
     func addEntry(_ entry: JournalEntry) {
-        cache.saveJournalEntry(entry)
         entries.insert(entry, at: 0)
+        Task { await cache.saveJournalEntry(entry) }
     }
 
     func updateEntry(_ entry: JournalEntry) {
-        cache.updateJournalEntry(entry)
         if let index = entries.firstIndex(where: { $0.id == entry.id }) {
             entries[index] = entry
         }
+        Task { await cache.updateJournalEntry(entry) }
     }
 
     func deleteEntry(at offsets: IndexSet) {
-        for index in offsets {
-            cache.removeJournalEntry(id: entries[index].id)
-        }
+        let idsToRemove = offsets.map { entries[$0].id }
         entries.remove(atOffsets: offsets)
+        Task {
+            for id in idsToRemove {
+                await cache.removeJournalEntry(id: id)
+            }
+        }
     }
 
     func deleteEntry(_ entry: JournalEntry) {
-        cache.removeJournalEntry(id: entry.id)
         entries.removeAll { $0.id == entry.id }
+        Task { await cache.removeJournalEntry(id: entry.id) }
     }
 
     var entriesByDate: [(String, [JournalEntry])] {

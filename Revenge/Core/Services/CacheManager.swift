@@ -1,22 +1,19 @@
 import Foundation
+import os
 
 // MARK: - CacheManager
 //
 // Design decisions:
-//   - A private serial DispatchQueue (`ioQueue`) replaces NSRecursiveLock for thread safety.
-//     A serial queue guarantees that only one task executes at a time, which eliminates the
-//     deadlock class that arose because bookmark methods called load() which also acquired
-//     the recursive lock — they now simply enqueue work items that run serially.
-//   - Reads use `ioQueue.sync` so callers that require a return value block only as long as
-//     the in-flight write ahead of them finishes, then hit the memory layer.
-//   - Writes update the in-memory NSCache synchronously (on whatever thread the caller is on,
-//     before dispatch) and then persist to disk asynchronously via `ioQueue.async`. This means
-//     the data is immediately visible to the next in-memory read without waiting for disk I/O,
-//     and the main thread is never blocked.
-//   - The class stays a `final class` (not an actor) so it can conform to `CacheManaging: AnyObject`
-//     and be injected as a protocol-typed dependency without existential boxing overhead.
+//   - CacheManager is a Swift actor. All mutable state is protected by the actor's
+//     implicit serial executor, which guarantees that read-modify-write cycles
+//     (e.g. load bookmarks → insert → save) are atomic without manual locking.
+//   - NSCache is used as an in-memory layer. It is thread-safe for concurrent
+//     get/set calls, so no extra synchronisation is required on the memory layer.
+//   - Disk I/O runs inline within the actor's executor. Because actors use a
+//     cooperative thread pool, this never blocks the main thread.
+//   - All public methods are async. Callers (ViewModels on @MainActor) use `await`.
 
-final class CacheManager {
+actor CacheManager {
 
     // MARK: - Shared Instance
 
@@ -29,24 +26,27 @@ final class CacheManager {
     /// Both targets must declare this group under Signing & Capabilities → App Groups.
     static let appGroupIdentifier = "group.com.kheir.shared"
 
+    // MARK: - Cached Coders
+
+    private static let encoder = JSONEncoder()
+    private static let decoder = JSONDecoder()
+
     // MARK: - Private State
 
     private let fileManager = FileManager.default
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "CacheManager")
 
     /// Root cache directory — either inside the shared App Group container or the Documents
     /// directory fallback when the capability has not yet been configured.
     private let cacheDirectory: URL
 
-    /// All disk operations are serialised through this queue. Using a serial queue rather than
-    /// NSRecursiveLock eliminates re-entrancy deadlocks: when a write method previously called
-    /// a read method that also tried to acquire the lock, the recursive lock hid the double-enter.
-    /// With a serial queue, nested dispatches are simply enqueued and run in order.
-    private let ioQueue = DispatchQueue(label: "com.kheir.cache.io", qos: .utility)
-
     /// In-memory store keyed by filename. NSCache evicts automatically under memory pressure and
     /// is thread-safe for concurrent get/set calls, so no extra synchronisation is required on
     /// the memory layer itself.
     private let memoryCache = NSCache<NSString, CacheBox>()
+
+    /// O(1) lookup index for ayah bookmarks. Rebuilt from disk on first access.
+    private var ayahBookmarkIndex: Set<AyahBookmarkKey> = []
 
     // MARK: - Filename Constants
 
@@ -78,6 +78,7 @@ final class CacheManager {
         warmMemoryCache(filename: journalFile,          type: [JournalEntry].self)
 
         migrateToAppGroupIfNeeded()
+        evictStaleDailyContent()
     }
 
     // MARK: - Memory Cache Helpers
@@ -142,56 +143,66 @@ final class CacheManager {
         fileManager.createFile(atPath: markerURL.path, contents: nil)
     }
 
+    // MARK: - Cache Eviction
+
+    /// Removes daily content files (daily_ayah_*, daily_hadith_*, routine_*) older than 30 days.
+    /// Runs once at init to prevent unbounded cache growth (~730 files/year without eviction).
+    private func evictStaleDailyContent() {
+        let maxAge: TimeInterval = 30 * 24 * 60 * 60 // 30 days
+        let cutoff = Date().addingTimeInterval(-maxAge)
+        let prefixes = ["daily_ayah_", "daily_hadith_", "routine_"]
+
+        guard let files = try? fileManager.contentsOfDirectory(
+            at: cacheDirectory,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: .skipsHiddenFiles
+        ) else { return }
+
+        for fileURL in files {
+            let name = fileURL.lastPathComponent
+            guard prefixes.contains(where: { name.hasPrefix($0) }) else { continue }
+            guard let attrs = try? fileURL.resourceValues(forKeys: [.contentModificationDateKey]),
+                  let modified = attrs.contentModificationDate,
+                  modified < cutoff else { continue }
+            try? fileManager.removeItem(at: fileURL)
+        }
+    }
+
     // MARK: - Generic Save / Load
 
-    /// Encodes `object` and persists it.
-    /// The memory cache is updated immediately on the caller's thread; disk I/O is dispatched
-    /// asynchronously on `ioQueue` so the calling thread (including @MainActor ViewModels) is
-    /// never blocked by file writing.
+    /// Encodes `object` and persists it to both the in-memory cache and disk.
+    /// The actor's serial executor ensures this entire operation is atomic.
     func save<T: Encodable>(_ object: T, filename: String) {
-        guard let data = try? JSONEncoder().encode(object) else {
-            print("CacheManager: failed to encode \(T.self) for '\(filename)'")
+        guard let data = try? Self.encoder.encode(object) else {
+            logger.error("CacheManager: failed to encode \(String(describing: T.self)) for '\(filename)'")
             return
         }
-        // Write memory cache synchronously so the next read is instant regardless of
-        // whether the disk write has finished.
         memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
 
-        // Capture both the data and the target URL before crossing the dispatch boundary.
         let url = cacheDirectory.appendingPathComponent(filename)
-        ioQueue.async { [weak self] in
-            guard self != nil else { return }
-            do {
-                try data.write(to: url, options: .atomic)
-            } catch {
-                print("CacheManager: disk write error for '\(filename)': \(error)")
-            }
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            logger.error("CacheManager: disk write error for '\(filename)': \(error.localizedDescription)")
         }
     }
 
     /// Decodes and returns a value of `type` from cache.
-    /// Checks the memory layer first; falls back to disk inside `ioQueue.sync` only when the
-    /// value has been evicted by NSCache under memory pressure.
+    /// Checks the memory layer first; falls back to disk when NSCache has evicted the entry.
+    /// The actor guarantees no concurrent access, so no queue synchronisation is needed.
     func load<T: Decodable>(_ type: T.Type, filename: String) -> T? {
-        // Fast path: memory hit — no disk I/O, no queue hop.
+        // Fast path: memory hit.
         if let box = memoryCache.object(forKey: filename as NSString) {
-            return try? JSONDecoder().decode(type, from: box.data)
+            return try? Self.decoder.decode(type, from: box.data)
         }
 
-        // Slow path: evicted from memory, must read from disk.
-        return ioQueue.sync { [self] in
-            // Double-check after acquiring queue — another thread may have warmed the cache.
-            if let box = memoryCache.object(forKey: filename as NSString) {
-                return try? JSONDecoder().decode(type, from: box.data)
-            }
+        // Slow path: evicted from memory, read from disk.
+        let url = cacheDirectory.appendingPathComponent(filename)
+        guard let data = try? Data(contentsOf: url) else { return nil }
 
-            let url = cacheDirectory.appendingPathComponent(filename)
-            guard let data = try? Data(contentsOf: url) else { return nil }
-
-            // Re-insert into memory cache so the next call is fast.
-            memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
-            return try? JSONDecoder().decode(type, from: data)
-        }
+        // Re-insert into memory cache so the next call is fast.
+        memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
+        return try? Self.decoder.decode(type, from: data)
     }
 
     /// Returns `true` when a file with `filename` exists in the cache directory.
@@ -205,9 +216,7 @@ final class CacheManager {
     func delete(filename: String) {
         memoryCache.removeObject(forKey: filename as NSString)
         let url = cacheDirectory.appendingPathComponent(filename)
-        ioQueue.async { [weak self] in
-            try? self?.fileManager.removeItem(at: url)
-        }
+        try? fileManager.removeItem(at: url)
     }
 
     // MARK: - Surah Cache
@@ -286,22 +295,38 @@ final class CacheManager {
     }
 }
 
+// MARK: - Bookmark Index Key
+
+private struct AyahBookmarkKey: Hashable {
+    let surah: Int
+    let ayah: Int
+}
+
 // MARK: - Ayah Bookmarks
 
 extension CacheManager {
 
+    /// Rebuilds the O(1) lookup index from the full bookmark list.
+    private func rebuildAyahIndex(_ bookmarks: [BookmarkedAyah]) {
+        ayahBookmarkIndex = Set(bookmarks.map { AyahBookmarkKey(surah: $0.surahNumber, ayah: $0.ayahNumber) })
+    }
+
     /// Returns all saved Ayah bookmarks, newest first.
     /// Reads from the memory cache; hits disk only when NSCache has evicted the entry.
     func loadAyahBookmarks() -> [BookmarkedAyah] {
-        load([BookmarkedAyah].self, filename: ayahBookmarksFile) ?? []
+        let bookmarks = load([BookmarkedAyah].self, filename: ayahBookmarksFile) ?? []
+        if ayahBookmarkIndex.isEmpty && !bookmarks.isEmpty {
+            rebuildAyahIndex(bookmarks)
+        }
+        return bookmarks
     }
 
     /// Inserts `bookmark` at the front of the list and persists asynchronously.
     func saveAyahBookmark(_ bookmark: BookmarkedAyah) {
-        // Mutate the current list, update memory, queue disk write — all without locking.
         var bookmarks = loadAyahBookmarks()
         bookmarks.insert(bookmark, at: 0)
         save(bookmarks, filename: ayahBookmarksFile)
+        ayahBookmarkIndex.insert(AyahBookmarkKey(surah: bookmark.surahNumber, ayah: bookmark.ayahNumber))
     }
 
     /// Removes the bookmark matching the given surah / ayah coordinate.
@@ -309,18 +334,24 @@ extension CacheManager {
         var bookmarks = loadAyahBookmarks()
         bookmarks.removeAll { $0.surahNumber == surah && $0.ayahNumber == ayah }
         save(bookmarks, filename: ayahBookmarksFile)
+        ayahBookmarkIndex.remove(AyahBookmarkKey(surah: surah, ayah: ayah))
     }
 
     /// Removes the bookmark with the given stable `id`.
     func removeAyahBookmark(id: UUID) {
         var bookmarks = loadAyahBookmarks()
+        let removed = bookmarks.filter { $0.id == id }
         bookmarks.removeAll { $0.id == id }
         save(bookmarks, filename: ayahBookmarksFile)
+        for b in removed {
+            ayahBookmarkIndex.remove(AyahBookmarkKey(surah: b.surahNumber, ayah: b.ayahNumber))
+        }
     }
 
     /// Returns `true` when an Ayah at the given position is in the bookmark list.
+    /// Uses the in-memory bookmark index for O(1) lookup instead of scanning the full list.
     func isAyahBookmarked(surah: Int, ayah: Int) -> Bool {
-        loadAyahBookmarks().contains { $0.surahNumber == surah && $0.ayahNumber == ayah }
+        ayahBookmarkIndex.contains(AyahBookmarkKey(surah: surah, ayah: ayah))
     }
 }
 

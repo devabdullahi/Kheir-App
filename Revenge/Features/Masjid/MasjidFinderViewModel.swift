@@ -2,6 +2,7 @@ import Foundation
 import MapKit
 import Combine
 import SwiftUI
+import os
 
 @MainActor
 final class MasjidFinderViewModel: ObservableObject {
@@ -10,13 +11,13 @@ final class MasjidFinderViewModel: ObservableObject {
         center: CLLocationCoordinate2D(latitude: 21.4225, longitude: 39.8262),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
-    @Published var selectedMasjid: MasjidItem?
     @Published var isLoading = false
     @Published var searchRadius: SearchRadius = .fiveKm
     @Published var viewMode: ViewMode = .split
     @Published var locationDenied = false
 
     private let locationService = LocationService.shared
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "MasjidFinder")
     private var cancellables = Set<AnyCancellable>()
 
     enum ViewMode: String, CaseIterable {
@@ -108,7 +109,7 @@ final class MasjidFinderViewModel: ObservableObject {
             }
             .sorted { $0.distance < $1.distance }
         } catch {
-            print("Masjid search error: \(error)")
+            logger.error("Masjid search error: \(error.localizedDescription)")
         }
         isLoading = false
     }

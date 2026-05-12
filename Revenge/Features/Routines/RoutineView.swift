@@ -63,8 +63,8 @@ struct RoutineView: View {
                     .accessibilityIdentifier("resetRoutineButton")
                 }
             }
-            .onAppear {
-                viewModel.loadRoutine(type: routineType)
+            .task {
+                await viewModel.loadRoutine(type: routineType)
             }
         }
     }

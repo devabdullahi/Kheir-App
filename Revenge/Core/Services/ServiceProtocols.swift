@@ -13,7 +13,8 @@ protocol AyahFetching: Sendable {
 
 /// Abstracts random-hadith fetching used by HomeViewModel.
 protocol HadithFetching: Sendable {
-    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String)
+    func fetchRandomHadith() async throws -> (entry: HadithAPIEntry, collection: HadithCollection, sectionName: String, section: Int)
+    func fetchHadithSection(editionRaw: String, section: Int) async throws -> HadithSectionResponse
 }
 
 // MARK: - Prayer Times Fetching Protocol
@@ -23,40 +24,80 @@ protocol PrayerTimesFetching: Sendable {
     func fetchPrayerTimes(latitude: Double, longitude: Double, method: Int) async throws -> AladhanData
 }
 
+// MARK: - Daily Content Caching
+
+/// Abstracts caching and loading of the daily ayah and hadith content.
+protocol DailyContentCaching: AnyObject {
+    func cacheDailyAyah(_ ayah: DailyAyah) async
+    func loadDailyAyah(for date: String) async -> DailyAyah?
+    func cacheDailyHadith(_ hadith: DailyHadith) async
+    func loadDailyHadith(for date: String) async -> DailyHadith?
+}
+
+// MARK: - Ayah Bookmark Managing
+
+/// Abstracts saving, removing, querying, and loading bookmarked ayahs.
+protocol AyahBookmarkManaging: AnyObject {
+    func saveAyahBookmark(_ bookmark: BookmarkedAyah) async
+    func removeAyahBookmark(surah: Int, ayah: Int) async
+    func removeAyahBookmark(id: UUID) async
+    func isAyahBookmarked(surah: Int, ayah: Int) async -> Bool
+    func loadAyahBookmarks() async -> [BookmarkedAyah]
+}
+
+// MARK: - Hadith Bookmark Managing
+
+/// Abstracts saving, removing, querying, and loading bookmarked hadiths.
+protocol HadithBookmarkManaging: AnyObject {
+    func saveHadithBookmark(_ bookmark: BookmarkedHadith) async
+    func removeHadithBookmark(text: String, source: String) async
+    func removeHadithBookmark(id: UUID) async
+    func isHadithBookmarked(text: String, source: String) async -> Bool
+    func loadHadithBookmarks() async -> [BookmarkedHadith]
+}
+
+// MARK: - Journal Managing
+
+/// Abstracts saving, updating, removing, and loading journal entries.
+protocol JournalManaging: AnyObject {
+    func saveJournalEntry(_ entry: JournalEntry) async
+    func updateJournalEntry(_ entry: JournalEntry) async
+    func removeJournalEntry(id: UUID) async
+    func loadJournalEntries() async -> [JournalEntry]
+}
+
+// MARK: - Surah Caching
+
+/// Abstracts caching and loading of surah data and surah list.
+protocol SurahCaching: AnyObject {
+    func cacheSurah(_ surah: CachedSurah) async
+    func loadCachedSurah(_ number: Int) async -> CachedSurah?
+    func cacheSurahList(_ list: [SurahInfo]) async
+    func loadSurahList() async -> [SurahInfo]?
+}
+
+// MARK: - Streak Persisting
+
+/// Abstracts raw persistence of `StreakData` (read/write only, no business logic).
+protocol StreakPersisting: AnyObject {
+    func saveStreak(_ data: StreakData) async
+    func loadStreak() async -> StreakData?
+}
+
+// MARK: - Routine Persisting
+
+/// Abstracts raw persistence of a `DailyRoutine` for a given type and date.
+protocol RoutinePersisting: AnyObject {
+    func saveRoutine(_ routine: DailyRoutine) async
+    func loadRoutine(type: RoutineType, for date: String) async -> DailyRoutine?
+}
+
 // MARK: - Cache Managing Protocol
 
-/// Abstracts daily-content and bookmark persistence used by HomeViewModel and bookmark screens.
-/// NOTE: CacheManager is intentionally NOT an actor for now.
-/// TODO(phase2): race when Home + Bookmarks mutate concurrently; convert to actor with widget App Group work
-protocol CacheManaging: AnyObject {
-    // Daily content
-    func cacheDailyAyah(_ ayah: DailyAyah)
-    func loadDailyAyah(for date: String) -> DailyAyah?
-    func cacheDailyHadith(_ hadith: DailyHadith)
-    func loadDailyHadith(for date: String) -> DailyHadith?
-
-    // Ayah bookmarks
-    func saveAyahBookmark(_ bookmark: BookmarkedAyah)
-    func removeAyahBookmark(surah: Int, ayah: Int)
-    func removeAyahBookmark(id: UUID)
-    func isAyahBookmarked(surah: Int, ayah: Int) -> Bool
-    func loadAyahBookmarks() -> [BookmarkedAyah]
-
-    // Hadith bookmarks
-    func saveHadithBookmark(_ bookmark: BookmarkedHadith)
-    func removeHadithBookmark(text: String, source: String)
-    func removeHadithBookmark(id: UUID)
-    func isHadithBookmarked(text: String, source: String) -> Bool
-    func loadHadithBookmarks() -> [BookmarkedHadith]
-
-    // Streak persistence
-    func saveStreak(_ data: StreakData)
-    func loadStreak() -> StreakData?
-
-    // Routine persistence
-    func saveRoutine(_ routine: DailyRoutine)
-    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine?
-}
+/// Composes all cache sub-protocols into a single conformance point.
+/// All methods are async to ensure atomicity of read-modify-write cycles
+/// and prevent data races on concurrent bookmark/journal mutations.
+protocol CacheManaging: DailyContentCaching, AyahBookmarkManaging, HadithBookmarkManaging, JournalManaging, SurahCaching, StreakPersisting, RoutinePersisting {}
 
 // MARK: - Routine Providing Protocol
 
@@ -64,13 +105,13 @@ protocol CacheManaging: AnyObject {
 /// Conforming types: `RoutineService` (production), mock stubs (tests).
 protocol RoutineProviding: AnyObject {
     /// Returns a previously persisted routine, or `nil` if one has not been generated yet.
-    func loadRoutine(type: RoutineType, for date: String) -> DailyRoutine?
+    func loadRoutine(type: RoutineType, for date: String) async -> DailyRoutine?
 
     /// Persists the current progress of `routine` (i.e. its `completedSteps` set).
-    func saveRoutineProgress(_ routine: DailyRoutine)
+    func saveRoutineProgress(_ routine: DailyRoutine) async
 
     /// Generates a brand-new routine for the given type and date, persists it, and returns it.
-    func generateRoutine(type: RoutineType, for date: String) -> DailyRoutine
+    func generateRoutine(type: RoutineType, for date: String) async -> DailyRoutine
 }
 
 // MARK: - Streak Tracking Protocol
@@ -80,14 +121,14 @@ protocol RoutineProviding: AnyObject {
 protocol StreakTracking: AnyObject {
     /// Records that the app was opened today and returns the updated `StreakData`.
     /// Safe to call multiple times per day — idempotent when `lastOpenedDate` equals today.
-    func recordAppOpen() -> StreakData
+    func recordAppOpen() async -> StreakData
 
     /// Returns the currently persisted `StreakData`, or `nil` if the user has never
     /// triggered `recordAppOpen()`.
-    func loadStreak() -> StreakData?
+    func loadStreak() async -> StreakData?
 
     /// Wipes the persisted streak. Intended for debugging and user-facing reset flows.
-    func resetStreak()
+    func resetStreak() async
 }
 
 // MARK: - APIService Conformances
