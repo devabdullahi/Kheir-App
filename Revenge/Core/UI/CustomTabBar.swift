@@ -117,62 +117,52 @@ struct CustomTabBar: View {
     @Binding var isVisible: Bool
 
     var body: some View {
-        GeometryReader { proxy in
-            let bottomInset = proxy.safeAreaInsets.bottom
-
-            HStack(spacing: 0) {
-                ForEach(TabItem.allCases, id: \.rawValue) { tab in
-                    TabButton(tab: tab, isSelected: selectedTab == tab) {
-                        guard selectedTab != tab else { return }
-                        HapticManager.shared.lightTap()
-                        withAnimation(
-                            .spring(
-                                response: DesignTokens.springResponse,
-                                dampingFraction: DesignTokens.springDamping
-                            )
-                        ) {
-                            selectedTab = tab
-                        }
+        HStack(spacing: 0) {
+            ForEach(TabItem.allCases, id: \.rawValue) { tab in
+                TabButton(tab: tab, isSelected: selectedTab == tab) {
+                    guard selectedTab != tab else { return }
+                    HapticManager.shared.lightTap()
+                    withAnimation(
+                        .spring(
+                            response: DesignTokens.springResponse,
+                            dampingFraction: DesignTokens.springDamping
+                        )
+                    ) {
+                        selectedTab = tab
                     }
-                    .frame(maxWidth: .infinity)
                 }
+                .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            // Pill container
-            .background {
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .overlay {
-                        Capsule()
-                            .fill(Color.tabBarOverlay.opacity(0.85))
-                    }
-                    .overlay {
-                        Capsule()
-                            .strokeBorder(Color.tabBarBorder.opacity(0.25), lineWidth: 1)
-                    }
-            }
-            .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.30), radius: 12, x: 0, y: 6)
-            // Scroll-reactive visibility
-            .opacity(isVisible ? 1 : 0)
-            .offset(y: isVisible ? 0 : 20)
-            .animation(
-                .spring(
-                    response: DesignTokens.springResponse,
-                    dampingFraction: DesignTokens.springDamping
-                ),
-                value: isVisible
-            )
-            // Position: float above safe area with 8pt padding
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.horizontal, 20)
-            .position(
-                x: proxy.size.width / 2,
-                y: proxy.size.height - bottomInset - 8
-            )
         }
-        .ignoresSafeArea(edges: .bottom)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        // Pill container
+        .background {
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    Capsule()
+                        .fill(Color.tabBarOverlay.opacity(0.85))
+                }
+                .overlay {
+                    Capsule()
+                        .strokeBorder(Color.tabBarBorder.opacity(0.25), lineWidth: 1)
+                }
+        }
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.30), radius: 12, x: 0, y: 6)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 28)
+        // Scroll-reactive visibility
+        .opacity(isVisible ? 1 : 0)
+        .offset(y: isVisible ? 0 : 80)
+        .animation(
+            .spring(
+                response: DesignTokens.springResponse,
+                dampingFraction: DesignTokens.springDamping
+            ),
+            value: isVisible
+        )
     }
 }
 

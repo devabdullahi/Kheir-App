@@ -7,25 +7,23 @@ struct ContentView: View {
     @State private var isTabBarVisible = true
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Group {
-                switch selectedTab {
-                case .home:
-                    NavigationStack { HomeView() }
-                case .quran:
-                    NavigationStack { SurahListView() }
-                case .saved:
-                    NavigationStack { BookmarksView() }
-                case .qibla:
-                    NavigationStack { QiblaView() }
-                case .prayer:
-                    NavigationStack { PrayerTimesView() }
-                }
+        Group {
+            switch selectedTab {
+            case .home:
+                NavigationStack { HomeView() }
+            case .quran:
+                NavigationStack { SurahListView() }
+            case .saved:
+                NavigationStack { BookmarksView() }
+            case .qibla:
+                NavigationStack { QiblaView() }
+            case .prayer:
+                NavigationStack { PrayerTimesView() }
             }
-
+        }
+        .safeAreaInset(edge: .bottom) {
             CustomTabBar(selectedTab: $selectedTab, isVisible: $isTabBarVisible)
         }
-        .ignoresSafeArea(edges: .bottom)
         .preferredColorScheme(settings.appTheme.colorScheme)
     }
 }
