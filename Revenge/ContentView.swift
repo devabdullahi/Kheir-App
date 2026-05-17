@@ -3,35 +3,29 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject private var settings = AppSettings.shared
     @Environment(\.colorScheme) private var colorScheme
+    @State private var selectedTab: TabItem = .home
+    @State private var isTabBarVisible = true
 
     var body: some View {
-        TabView {
-            HomeView()
-                .tabItem {
-                    Label("Home", systemImage: "house")
+        ZStack(alignment: .bottom) {
+            Group {
+                switch selectedTab {
+                case .home:
+                    NavigationStack { HomeView() }
+                case .quran:
+                    NavigationStack { SurahListView() }
+                case .saved:
+                    NavigationStack { BookmarksView() }
+                case .qibla:
+                    NavigationStack { QiblaView() }
+                case .prayer:
+                    NavigationStack { PrayerTimesView() }
                 }
+            }
 
-            SurahListView()
-                .tabItem {
-                    Label("Quran", systemImage: "book")
-                }
-
-            BookmarksView()
-                .tabItem {
-                    Label("Saved", systemImage: "bookmark")
-                }
-
-            QiblaView()
-                .tabItem {
-                    Label("Qibla", systemImage: "safari")
-                }
-
-            PrayerTimesView()
-                .tabItem {
-                    Label("Prayer", systemImage: "clock")
-                }
+            CustomTabBar(selectedTab: $selectedTab, isVisible: $isTabBarVisible)
         }
-        .tint(Color.adaptivePrimary(colorScheme))
+        .ignoresSafeArea(edges: .bottom)
         .preferredColorScheme(settings.appTheme.colorScheme)
     }
 }

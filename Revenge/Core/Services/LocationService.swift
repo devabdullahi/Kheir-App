@@ -5,7 +5,7 @@ import os
 
 @MainActor
 final class LocationService: NSObject, ObservableObject, @preconcurrency CLLocationManagerDelegate {
-    nonisolated static let shared = LocationService()
+    static let shared = LocationService()
 
     private let manager = CLLocationManager()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "LocationService")

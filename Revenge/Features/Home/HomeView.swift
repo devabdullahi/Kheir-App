@@ -3,6 +3,7 @@ import SwiftUI
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var prayerCountdownVM = PrayerCountdownViewModel()
+    @StateObject private var skyEngine = SkyEngine()
     @Environment(\.colorScheme) private var colorScheme
     @State private var showShareSheet = false
     @State private var shareText = ""
@@ -10,9 +11,37 @@ struct HomeView: View {
     @State private var showArabicHadith = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
+        ScrollView {
+            VStack(spacing: 0) {
+                // MARK: - Sky Header
+                ZStack(alignment: .bottom) {
+                    DynamicSkyView(skyState: skyEngine.currentState)
+                        .frame(height: DesignTokens.skyHeaderHeight)
+                        .ignoresSafeArea(edges: .top)
+
+                    // Prayer info overlay on sky
+                    VStack(spacing: 4) {
+                        Text(skyEngine.currentPrayerName.uppercased())
+                            .font(.system(size: 11, weight: .regular))
+                            .tracking(2)
+                            .foregroundStyle(.white.opacity(0.6))
+
+                        Text(prayerCountdownVM.countdownText)
+                            .font(.system(.title, design: .rounded, weight: .bold))
+                            .foregroundStyle(.white)
+                            .monospacedDigit()
+
+                        if !prayerCountdownVM.nextPrayerName.isEmpty {
+                            Text("Next: \(prayerCountdownVM.nextPrayerName)")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                    }
+                    .padding(.bottom, DesignTokens.spacingLG)
+                }
+
+                // MARK: - Content Cards
+                VStack(spacing: DesignTokens.spacingXXL) {
                     // MARK: - Date Header
                     dateHeader
                         .scrollReveal(delay: 0)
@@ -30,10 +59,6 @@ struct HomeView: View {
                     )
                     .scrollReveal(delay: 0.08)
                     .task { await viewModel.refreshRoutineProgress() }
-
-                    // MARK: - Prayer Countdown
-                    prayerCountdown
-                        .scrollReveal(delay: 0.1)
 
                     // MARK: - Offline Banner
                     if viewModel.ayahState == .offline || viewModel.hadithState == .offline {
@@ -79,42 +104,42 @@ struct HomeView: View {
                 }
                 .padding()
             }
-            .refreshable {
-                await viewModel.refresh()
-            }
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-            .navigationTitle("Kheir")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: SettingsView()) {
-                        Image(systemName: "gearshape")
-                            .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    }
-                    .accessibilityLabel("Open Settings")
-                    .accessibilityIdentifier("openSettingsButton")
+        }
+        .refreshable {
+            await viewModel.refresh()
+        }
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .navigationTitle("Kheir")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(destination: SettingsView()) {
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
                 }
+                .accessibilityLabel("Open Settings")
+                .accessibilityIdentifier("openSettingsButton")
             }
-            .onAppear {
-                viewModel.onAppear()
-                viewModel.checkBookmarkStates()
-                prayerCountdownVM.onAppear()
-            }
-            .onChange(of: viewModel.dailyAyah?.surahNumber) { _, _ in
-                viewModel.checkBookmarkStates()
-            }
-            .onChange(of: viewModel.dailyHadith?.text) { _, _ in
-                viewModel.checkBookmarkStates()
-            }
-            .onDisappear {
-                viewModel.onDisappear()
-                prayerCountdownVM.onDisappear()
-            }
-            .sheet(isPresented: $showShareSheet) {
-                ShareSheet(text: shareText)
-            }
-            .sheet(item: $shareCardData) { cardData in
-                ShareSheetView(data: cardData)
-            }
+        }
+        .onAppear {
+            viewModel.onAppear()
+            viewModel.checkBookmarkStates()
+            prayerCountdownVM.onAppear()
+        }
+        .onChange(of: viewModel.dailyAyah?.surahNumber) { _, _ in
+            viewModel.checkBookmarkStates()
+        }
+        .onChange(of: viewModel.dailyHadith?.text) { _, _ in
+            viewModel.checkBookmarkStates()
+        }
+        .onDisappear {
+            viewModel.onDisappear()
+            prayerCountdownVM.onDisappear()
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(text: shareText)
+        }
+        .sheet(item: $shareCardData) { cardData in
+            ShareSheetView(data: cardData)
         }
     }
 

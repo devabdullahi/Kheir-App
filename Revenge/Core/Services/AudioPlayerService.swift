@@ -42,7 +42,7 @@ struct NowPlayingInfo {
 final class AudioPlayerService: ObservableObject {
 
     // MARK: Singleton
-    nonisolated static let shared = AudioPlayerService()
+    static let shared = AudioPlayerService()
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "AudioPlayerService")
 
     // MARK: - Legacy Published State (preserved for existing call sites)

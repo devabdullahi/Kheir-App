@@ -18,7 +18,7 @@ actor CacheManager {
     // MARK: - Shared Instance
 
     /// The singleton used by production code.
-    nonisolated static let shared = CacheManager()
+    static let shared = CacheManager()
 
     // MARK: - App Group
 
