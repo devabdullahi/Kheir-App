@@ -134,10 +134,8 @@ struct CustomTabBar: View {
                         return
                     }
                     HapticManager.shared.lightTap()
-                    // The tag slides to the new tab: ease-out, no bounce.
-                    withAnimation(.open(0.25)) {
-                        selectedTab = tab
-                    }
+                    // Content switches instantly, like any iOS tab bar; only the tag slides.
+                    selectedTab = tab
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -156,6 +154,8 @@ struct CustomTabBar: View {
                 .overlay(alignment: .topTrailing) { BrassBrad(size: 8).padding(.trailing, 10).padding(.top, 12) }
                 .ignoresSafeArea(edges: .bottom)
         }
+        // The tag slides to the new tab: ease-out, no bounce. Scoped to the bar only.
+        .animation(.open(0.25), value: selectedTab)
         // Scroll-reactive visibility
         .opacity(isVisible ? 1 : 0)
         .offset(y: isVisible ? 0 : 80)

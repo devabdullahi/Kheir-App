@@ -4,6 +4,12 @@ import UserNotifications
 /// Settings as separate card sheets on the table, each headed by a torn kraft
 /// label. Native controls (toggles, pickers, sliders) keep their shape and sit
 /// on the paper.
+/// Pushed screens shared by every tab's navigation path.
+enum AppRoute: Hashable {
+    case settings
+    case settingsPage(SettingsView.SettingsPage)
+}
+
 struct SettingsView: View {
     @Bindable private var settings = AppSettings.shared
     private var backup = CloudBackupService.shared
@@ -110,7 +116,7 @@ struct SettingsView: View {
         card(seed: 190 + index) {
             ForEach(Array(pages.enumerated()), id: \.element) { i, page in
                 if i > 0 { PaperRowDivider() }
-                NavigationLink(value: page) {
+                NavigationLink(value: AppRoute.settingsPage(page)) {
                     HStack(spacing: 12) {
                         PaperIconView(page.icon, size: 26)
                         VStack(alignment: .leading, spacing: 2) {
@@ -138,7 +144,7 @@ struct SettingsView: View {
 
     /// Name, journey and today's flower in one strip; opens "You".
     private var profileStrip: some View {
-        NavigationLink(value: SettingsPage.you) {
+        NavigationLink(value: AppRoute.settingsPage(.you)) {
             HStack(spacing: 12) {
                 DailyFlowerView(date: .now, size: 34)
                     .frame(width: 42, height: 46)

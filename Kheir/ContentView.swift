@@ -6,8 +6,9 @@ struct ContentView: View {
     @State private var selectedTab: TabItem = .home
     @State private var isTabBarVisible = true
     @State private var visitedTabs: Set<TabItem> = [.home]
-    /// Changing a tab's ID resets its navigation (tap the current tab to go back to its root).
-    @State private var stackIDs: [TabItem: UUID] = Dictionary(uniqueKeysWithValues: TabItem.allCases.map { ($0, UUID()) })
+    /// Each tab's navigation path. Emptying it pops back to the tab's first screen
+    /// without rebuilding it (tap the current tab, or follow kheir://home).
+    @State private var paths: [TabItem: NavigationPath] = [:]
     /// For `AppTheme.sky`: true between Fajr and Maghrib.
     @State private var isDaytime = SkyThemeClock.fallbackIsDaytime(.now)
     @Environment(\.scenePhase) private var scenePhase
@@ -19,8 +20,7 @@ struct ContentView: View {
             ForEach(TabItem.allCases, id: \.self) { tab in
                 if visitedTabs.contains(tab) {
                     let active = tab == selectedTab
-                    NavigationStack { root(for: tab) }
-                        .id(stackIDs[tab])
+                    NavigationStack(path: pathBinding(tab)) { root(for: tab) }
                         .opacity(active ? 1 : 0)
                         .allowsHitTesting(active)
                         .accessibilityHidden(!active)
@@ -31,8 +31,7 @@ struct ContentView: View {
         .onChange(of: selectedTab, initial: true) { _, tab in visitedTabs.insert(tab) }
         .safeAreaInset(edge: .bottom) {
             CustomTabBar(selectedTab: $selectedTab, isVisible: $isTabBarVisible) { tab in
-                // A fresh identity pops the tab's NavigationStack back to its root.
-                withAnimation(.open(0.25)) { stackIDs[tab] = UUID() }
+                paths[tab] = NavigationPath()
             }
         }
         .preferredColorScheme(resolvedScheme)
@@ -55,6 +54,10 @@ struct ContentView: View {
             if let url = NotificationService.shared.takePendingDeepLink() { open(url) }
         }
         #if DEBUG
+        // Screenshots: `-openSettings` opens Settings on launch.
+        .task {
+            if ProcessInfo.processInfo.arguments.contains("-openSettings") { paths[.home] = NavigationPath([AppRoute.settings]) }
+        }
         // Screenshots: `-startLiveActivity` starts the prayer countdown a few seconds in.
         .task {
             guard ProcessInfo.processInfo.arguments.contains("-startLiveActivity") else { return }
@@ -75,8 +78,17 @@ struct ContentView: View {
             case .prayer: PrayerTimesView()
             }
         }
-        // Settings topics are pushed by value; register them at the stack's root.
-        .navigationDestination(for: SettingsView.SettingsPage.self) { SettingsView(page: $0) }
+        // Settings and its topics are pushed by value from any tab.
+        .navigationDestination(for: AppRoute.self) { route in
+            switch route {
+            case .settings: SettingsView()
+            case .settingsPage(let page): SettingsView(page: page)
+            }
+        }
+    }
+
+    private func pathBinding(_ tab: TabItem) -> Binding<NavigationPath> {
+        Binding(get: { paths[tab] ?? NavigationPath() }, set: { paths[tab] = $0 })
     }
 
     /// kheir://qibla, kheir://prayer, kheir://home/ayah
@@ -87,7 +99,7 @@ struct ContentView: View {
         case "prayer": selectedTab = .prayer
         case "home":
             selectedTab = .home
-            stackIDs[.home] = UUID()
+            paths[.home] = NavigationPath()
         default: break
         }
     }

@@ -53,10 +53,6 @@ struct HomeView: View {
         }
         .paperBackground()
         .toolbar(.hidden, for: .navigationBar)
-        #if DEBUG
-        // Screenshots: `-openSettings` opens Settings on launch.
-        .navigationDestination(isPresented: .constant(ProcessInfo.processInfo.arguments.contains("-openSettings"))) { SettingsView() }
-        #endif
         .onAppear {
             viewModel.onAppear()
             viewModel.checkBookmarkStates()
@@ -196,7 +192,7 @@ struct HomeView: View {
     }
 
     private var settingsButton: some View {
-        NavigationLink(destination: SettingsView()) {
+        NavigationLink(value: AppRoute.settings) {
             PaperIconView(.gear, size: 18)
                 .padding(7)
                 .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.4, radius: 20, seed: 48, padding: nil)

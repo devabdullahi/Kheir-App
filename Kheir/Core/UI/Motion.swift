@@ -148,8 +148,10 @@ public struct LoopClock<Content: View>: View {
 
     public var body: some View {
         let still = paused || reduceMotion || motionPaused
+        // Pausing only stops the ticks: the last frame stays put instead of snapping back
+        // to frame 0 (which looked like the screen reloading). Reduce Motion is frame 0.
         TimelineView(.animation(minimumInterval: 1 / fps, paused: still)) { context in
-            let t = still ? 0 : (context.date.timeIntervalSince(start) * 1000).truncatingRemainder(dividingBy: period)
+            let t = reduceMotion ? 0 : (context.date.timeIntervalSince(start) * 1000).truncatingRemainder(dividingBy: period)
             content(t)
         }
     }
