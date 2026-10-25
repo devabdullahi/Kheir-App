@@ -119,6 +119,8 @@ private struct TabButton: View {
 struct CustomTabBar: View {
     @Binding var selectedTab: TabItem
     @Binding var isVisible: Bool
+    /// Tapping the tab you're already on: return it to its first screen.
+    var onReselect: (TabItem) -> Void = { _ in }
     @Namespace private var tagNamespace
     @Environment(\.colorScheme) private var scheme
 
@@ -126,7 +128,11 @@ struct CustomTabBar: View {
         HStack(spacing: 0) {
             ForEach(TabItem.allCases, id: \.rawValue) { tab in
                 TabButton(tab: tab, isSelected: selectedTab == tab, tagNamespace: tagNamespace) {
-                    guard selectedTab != tab else { return }
+                    guard selectedTab != tab else {
+                        HapticManager.shared.lightTap()
+                        onReselect(tab)
+                        return
+                    }
                     HapticManager.shared.lightTap()
                     // The tag slides to the new tab: ease-out, no bounce.
                     withAnimation(.open(0.25)) {

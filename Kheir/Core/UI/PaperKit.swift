@@ -374,8 +374,11 @@ extension View {
 struct PaperPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            // The whole piece is tappable, gaps included — not just its drawn text and icons.
+            .contentShape(Rectangle())
+            // Pressed flat into the table. Scale only: moving the piece would slide it out
+            // from under the finger and cancel the tap.
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .offset(y: configuration.isPressed ? 1.5 : 0)
             .animation(.open(configuration.isPressed ? 0.12 : 0.2), value: configuration.isPressed)
     }
 }

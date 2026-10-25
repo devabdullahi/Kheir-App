@@ -5,6 +5,8 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedTab: TabItem = .home
     @State private var isTabBarVisible = true
+    /// Changing a tab's ID resets its navigation (tap the current tab to go back to its root).
+    @State private var stackIDs: [TabItem: UUID] = Dictionary(uniqueKeysWithValues: TabItem.allCases.map { ($0, UUID()) })
     /// For `AppTheme.sky`: true between Fajr and Maghrib.
     @State private var isDaytime = SkyThemeClock.fallbackIsDaytime(.now)
     @Environment(\.scenePhase) private var scenePhase
@@ -13,19 +15,22 @@ struct ContentView: View {
         Group {
             switch selectedTab {
             case .home:
-                NavigationStack { HomeView() }
+                NavigationStack { HomeView() }.id(stackIDs[.home])
             case .quran:
-                NavigationStack { SurahListView() }
+                NavigationStack { SurahListView() }.id(stackIDs[.quran])
             case .saved:
-                NavigationStack { BookmarksView() }
+                NavigationStack { BookmarksView() }.id(stackIDs[.saved])
             case .qibla:
-                NavigationStack { QiblaView() }
+                NavigationStack { QiblaView() }.id(stackIDs[.qibla])
             case .prayer:
-                NavigationStack { PrayerTimesView() }
+                NavigationStack { PrayerTimesView() }.id(stackIDs[.prayer])
             }
         }
         .safeAreaInset(edge: .bottom) {
-            CustomTabBar(selectedTab: $selectedTab, isVisible: $isTabBarVisible)
+            CustomTabBar(selectedTab: $selectedTab, isVisible: $isTabBarVisible) { tab in
+                // A fresh identity pops the tab's NavigationStack back to its root.
+                withAnimation(.open(0.25)) { stackIDs[tab] = UUID() }
+            }
         }
         .preferredColorScheme(resolvedScheme)
         .task(id: settings.appTheme) {
@@ -46,6 +51,14 @@ struct ContentView: View {
         .task {
             if let url = NotificationService.shared.takePendingDeepLink() { open(url) }
         }
+        #if DEBUG
+        // Screenshots: `-startLiveActivity` starts the prayer countdown a few seconds in.
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains("-startLiveActivity") else { return }
+            try? await Task.sleep(for: .seconds(6))
+            if let problem = await PrayerLiveActivityManager.shared.startNow() { print("LiveActivity:", problem) }
+        }
+        #endif
     }
 
     /// kheir://qibla, kheir://prayer, kheir://home/ayah
@@ -54,7 +67,9 @@ struct ContentView: View {
         switch url.host() {
         case "qibla": selectedTab = .qibla
         case "prayer": selectedTab = .prayer
-        case "home": selectedTab = .home
+        case "home":
+            selectedTab = .home
+            stackIDs[.home] = UUID()
         default: break
         }
     }

@@ -80,6 +80,25 @@ final class PrayerLiveActivityManager {
         }
     }
 
+    /// Starts the countdown to the next enabled prayer right now, whatever the time
+    /// (for trying the Live Activity from Settings). Returns a reason when it can't.
+    func startNow(now: Date = Date()) async -> String? {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            return "Live Activities are off for Kheir. Turn them on in Settings › Kheir."
+        }
+        guard let target = nextTarget(after: now) else {
+            return "No upcoming prayer with its athan on. Set a location and turn on an athan."
+        }
+        await Self.end(where: { _ in true })
+        let content = Content(state: target.state, staleDate: target.state.prayerTime, relevanceScore: 50)
+        do {
+            _ = try Activity.request(attributes: target.attributes, content: content, pushType: nil)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
     /// While the app is in the foreground, re-render the activity once a minute so
     /// the paper sun moves along the strip. Stops when the app goes to background.
     func setForeground(_ active: Bool) {

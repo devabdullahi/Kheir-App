@@ -62,6 +62,10 @@ final class PrayerCountdownViewModel {
         ) else { return }
 
         todayPrayerTimes = times
+        // Opening Home is enough to keep athans, widgets and the prayer Live Activity
+        // scheduled (previously only the Prayer tab did this). Throttled inside.
+        NotificationService.shared.schedulePrayerNotifications(prayers: times.all, settings: settings)
+        Task { await PrayerLiveActivityManager.shared.refresh() }
         let now = Date()
         let allTimes = times.all
         if let nextIndex = allTimes.firstIndex(where: { $0.time > now }) {
