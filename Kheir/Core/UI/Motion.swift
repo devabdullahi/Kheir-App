@@ -113,6 +113,18 @@ public func seeded(_ i: Int, salt: Double = 0) -> Double {
 
 // MARK: - Clocks
 
+private struct MotionPausedKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+public extension EnvironmentValues {
+    /// Set on views that are kept alive but not shown (e.g. a hidden tab): their clocks stop.
+    var motionPaused: Bool {
+        get { self[MotionPausedKey.self] }
+        set { self[MotionPausedKey.self] = newValue }
+    }
+}
+
 /// A looping clock from 0 to `period` ms. Frozen at 0 with Reduce Motion, or when `paused`
 /// (off screen, app in the background). Frame 0 must be a good drawing on its own.
 public struct LoopClock<Content: View>: View {
@@ -120,6 +132,7 @@ public struct LoopClock<Content: View>: View {
     var paused: Bool
     let content: (Double) -> Content
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.motionPaused) private var motionPaused
     @State private var start = Date()
 
     /// Frames per second. Idle loops are slow and calm, so 30 fps reads as smooth and
@@ -134,7 +147,7 @@ public struct LoopClock<Content: View>: View {
     }
 
     public var body: some View {
-        let still = paused || reduceMotion
+        let still = paused || reduceMotion || motionPaused
         TimelineView(.animation(minimumInterval: 1 / fps, paused: still)) { context in
             let t = still ? 0 : (context.date.timeIntervalSince(start) * 1000).truncatingRemainder(dividingBy: period)
             content(t)

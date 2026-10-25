@@ -5,6 +5,7 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedTab: TabItem = .home
     @State private var isTabBarVisible = true
+    @State private var visitedTabs: Set<TabItem> = [.home]
     /// Changing a tab's ID resets its navigation (tap the current tab to go back to its root).
     @State private var stackIDs: [TabItem: UUID] = Dictionary(uniqueKeysWithValues: TabItem.allCases.map { ($0, UUID()) })
     /// For `AppTheme.sky`: true between Fajr and Maghrib.
@@ -12,20 +13,22 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        Group {
-            switch selectedTab {
-            case .home:
-                NavigationStack { HomeView() }.id(stackIDs[.home])
-            case .quran:
-                NavigationStack { SurahListView() }.id(stackIDs[.quran])
-            case .saved:
-                NavigationStack { BookmarksView() }.id(stackIDs[.saved])
-            case .qibla:
-                NavigationStack { QiblaView() }.id(stackIDs[.qibla])
-            case .prayer:
-                NavigationStack { PrayerTimesView() }.id(stackIDs[.prayer])
+        // Every visited tab stays alive (no reload when switching back); hidden tabs
+        // can't be touched and their animations pause.
+        ZStack {
+            ForEach(TabItem.allCases, id: \.self) { tab in
+                if visitedTabs.contains(tab) {
+                    let active = tab == selectedTab
+                    NavigationStack { root(for: tab) }
+                        .id(stackIDs[tab])
+                        .opacity(active ? 1 : 0)
+                        .allowsHitTesting(active)
+                        .accessibilityHidden(!active)
+                        .environment(\.motionPaused, !active)
+                }
             }
         }
+        .onChange(of: selectedTab, initial: true) { _, tab in visitedTabs.insert(tab) }
         .safeAreaInset(edge: .bottom) {
             CustomTabBar(selectedTab: $selectedTab, isVisible: $isTabBarVisible) { tab in
                 // A fresh identity pops the tab's NavigationStack back to its root.
@@ -59,6 +62,21 @@ struct ContentView: View {
             if let problem = await PrayerLiveActivityManager.shared.startNow() { print("LiveActivity:", problem) }
         }
         #endif
+    }
+
+    @ViewBuilder
+    private func root(for tab: TabItem) -> some View {
+        Group {
+            switch tab {
+            case .home: HomeView()
+            case .quran: SurahListView()
+            case .saved: BookmarksView()
+            case .qibla: QiblaView()
+            case .prayer: PrayerTimesView()
+            }
+        }
+        // Settings topics are pushed by value; register them at the stack's root.
+        .navigationDestination(for: SettingsView.SettingsPage.self) { SettingsView(page: $0) }
     }
 
     /// kheir://qibla, kheir://prayer, kheir://home/ayah

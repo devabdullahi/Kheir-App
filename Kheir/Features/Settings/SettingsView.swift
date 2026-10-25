@@ -18,8 +18,20 @@ struct SettingsView: View {
     private let themes: [AppTheme] = [.light, .dark, .system, .sky]
 
     @State private var liveActivityMessage: String?
+    /// `nil` shows the menu; a page shows that topic.
+    var page: SettingsPage? = nil
 
     var body: some View {
+        if let page {
+            pageView(page)
+                .onAppear { backup.start() }
+                .modifier(SettingsAlerts(showPermissionDenied: $showPermissionDeniedAlert, showDeleteBackup: $showDeleteBackupConfirm, backup: backup))
+        } else {
+            menu
+        }
+    }
+
+    private var menu: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 profileStrip
@@ -37,29 +49,7 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .toolbarTitleDisplayMode(.large)
         .onAppear { backup.start() }
-        .alert("Notifications Disabled", isPresented: $showPermissionDeniedAlert) {
-            Button("Open Settings") {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Prayer notifications are blocked. Open Settings to allow Kheir to send notifications.")
-        }
-        .confirmationDialog("Delete your iCloud backup?", isPresented: $showDeleteBackupConfirm, titleVisibility: .visible) {
-            Button("Delete Backup", role: .destructive) {
-                backup.deleteBackup()
-                backup.setEnabled(false)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Everything stays on this iPhone. A new iPhone won't be able to restore it.")
-        }
         .accessibilityIdentifier("settingsScrollView")
-        .navigationDestination(for: SettingsPage.self) { page in
-            pageView(page)
-        }
     }
 
     // MARK: - Menu
@@ -850,5 +840,36 @@ struct SettingsView: View {
             rowLabel(label, icon: PaperIcon.forPrayer(label))
         }
         .tint(Color.adaptivePrimary(colorScheme))
+    }
+}
+
+/// The notification-permission alert and the delete-backup confirmation, shown from
+/// whichever Settings page raised them.
+private struct SettingsAlerts: ViewModifier {
+    @Binding var showPermissionDenied: Bool
+    @Binding var showDeleteBackup: Bool
+    let backup: CloudBackupService
+
+    func body(content: Content) -> some View {
+        content
+            .alert("Notifications Disabled", isPresented: $showPermissionDenied) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Prayer notifications are blocked. Open Settings to allow Kheir to send notifications.")
+            }
+            .confirmationDialog("Delete your iCloud backup?", isPresented: $showDeleteBackup, titleVisibility: .visible) {
+                Button("Delete Backup", role: .destructive) {
+                    backup.deleteBackup()
+                    backup.setEnabled(false)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Everything stays on this iPhone. A new iPhone won't be able to restore it.")
+            }
     }
 }
