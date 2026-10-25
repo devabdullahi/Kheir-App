@@ -86,6 +86,7 @@ struct DynamicSkyView: View {
         static let starTwinkle: Double = 0.18         // scale dip
         static let cloudPeriods: [Double] = [120_000, 60_000, 40_000] // far → near
         static let hillHeight: CGFloat = 0.2          // fraction of the canvas
+        static let skyTopInset: CGFloat = 0.16        // keep sun, moon and clouds below the status bar
     }
 }
 
@@ -105,6 +106,13 @@ private struct PaperSkyScene {
     var night: Double { min(1, max(0, state.starOpacity)) }
     /// Loose pieces used to be nudged per photo (stop motion); motion is smooth now.
     func nudge(_ key: Int) -> CGSize { .zero }
+
+    /// Maps a 0…1 sky height to points, below the status bar and Dynamic Island:
+    /// the top `T.skyTopInset` of the canvas is kept clear of the sun, moon and clouds.
+    func skyY(_ fraction: CGFloat) -> CGFloat {
+        let top = size.height * T.skyTopInset
+        return top + fraction * (size.height - top)
+    }
 
     // MARK: Shadow helper
 
@@ -177,7 +185,7 @@ private struct PaperSkyScene {
         layer.opacity = state.moonOpacity
 
         let anchor = CGPoint(x: state.moonPosition.x * size.width, y: -4)
-        let hang = max(24, state.moonPosition.y * size.height)
+        let hang = max(24, skyY(state.moonPosition.y))
         let swing = Angle.degrees(T.moonRock * wave(t, period: T.moonRockPeriod))
         let n = nudge(3)
 
@@ -214,7 +222,7 @@ private struct PaperSkyScene {
 
         let n = nudge(5)
         let bob = T.sunBob * CGFloat(wave(t, period: T.sunBobPeriod))
-        let c = CGPoint(x: state.sunPosition.x * size.width + n.width, y: state.sunPosition.y * size.height + bob + n.height)
+        let c = CGPoint(x: state.sunPosition.x * size.width + n.width, y: skyY(state.sunPosition.y) + bob + n.height)
         let core = state.sunSize / 2 + 4
 
         // Tissue-paper glow: two translucent circles, not a gradient.
@@ -262,7 +270,7 @@ private struct PaperSkyScene {
             let travel = size.width + w * 2
             let x = CGFloat(loop(t, period: period, phase: seeded(i, salt: 22))) * travel - w
             // Clouds keep to the upper sky, clear of the greeting and countdown below.
-            let y = (0.08 + CGFloat(i) * 0.08 + CGFloat(seeded(i, salt: 23)) * 0.04) * size.height
+            let y = skyY(0.10 + CGFloat(i) * 0.08 + CGFloat(seeded(i, salt: 23)) * 0.04)
             let n = nudge(30 + i)
             let cloud = Self.cloud(center: CGPoint(x: x + n.width, y: y + n.height), width: w, seed: i)
             var layer = ctx

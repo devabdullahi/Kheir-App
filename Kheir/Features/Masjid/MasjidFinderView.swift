@@ -3,9 +3,9 @@ import MapKit
 
 /// Nearby masjids on a hand-made paper map, with a list of cards below.
 ///
-/// The map is for looking: kraft paper with torn roads, a tissue-paper park and
-/// little masjid cut-outs standing where the masjids are relative to you. Tapping
-/// a card in the list opens directions in Apple Maps or Google Maps.
+/// The map shows real streets with a paper treatment and a masjid cut-out standing
+/// on each masjid's actual location. Tapping a card in the list opens directions in
+/// Apple Maps or Google Maps.
 struct MasjidFinderView: View {
     /// `true` when pushed onto an existing navigation stack (from Qibla);
     /// `false` when presented as a sheet, so it brings its own stack and Done button.
@@ -15,6 +15,8 @@ struct MasjidFinderView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @State private var directionsTarget: MasjidItem?
+    /// The maps app chosen the first time; long-press a card for the other one.
+    @AppStorage("preferredMapsApp") private var preferredMaps = ""
     @State private var showFilterSheet = false
 
     var body: some View {
@@ -76,14 +78,14 @@ struct MasjidFinderView: View {
             titleVisibility: .visible,
             presenting: directionsTarget
         ) { masjid in
-            Button("Apple Maps") { viewModel.openInMaps(masjid) }
-            Button("Google Maps") { viewModel.openInGoogleMaps(masjid) }
+            Button("Apple Maps") { preferredMaps = "apple"; viewModel.openInMaps(masjid) }
+            Button("Google Maps") { preferredMaps = "google"; viewModel.openInGoogleMaps(masjid) }
             ShareLink(item: "\(masjid.name)\n\(masjid.address)") {
                 Text("Share")
             }
             Button("Cancel", role: .cancel) {}
         } message: { masjid in
-            Text(masjid.address.isEmpty ? masjid.distanceString : "\(masjid.address) · \(masjid.distanceString)")
+            Text((masjid.address.isEmpty ? masjid.distanceString : "\(masjid.address) · \(masjid.distanceString)") + "\nYour choice is remembered; long-press a masjid for the other app.")
         }
         .sheet(isPresented: $showFilterSheet) {
             filterSheet
@@ -117,7 +119,12 @@ struct MasjidFinderView: View {
                         LazyVStack(spacing: 10) {
                             ForEach(Array(viewModel.masjids.enumerated()), id: \.element.id) { index, masjid in
                                 Button {
-                                    directionsTarget = masjid
+                                    // After the first choice, open that app straight away.
+                                    switch preferredMaps {
+                                    case "apple": viewModel.openInMaps(masjid)
+                                    case "google": viewModel.openInGoogleMaps(masjid)
+                                    default: directionsTarget = masjid
+                                    }
                                 } label: {
                                     masjidCard(masjid, index: index)
                                 }
@@ -278,139 +285,69 @@ struct MasjidFinderView: View {
 
 // MARK: - Paper Map
 
-/// A decorative paper map: kraft base, torn cream roads, a tissue park and pond,
-/// you in the middle, and a masjid cut-out standing at each masjid's direction
-/// and (relative) distance from you.
+/// Real Apple Maps streets given a paper treatment (muted, kraft-tinted, grained,
+/// cut edges), with a paper masjid cut-out standing on each masjid's actual
+/// location. Framed to fit you and the masjids shown.
 struct PaperMasjidMap: View {
     let center: CLLocationCoordinate2D
     let masjids: [MasjidItem]
     var isLoading = false
+    @State private var position: MapCameraPosition = .automatic
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        GeometryReader { geo in
-            let size = geo.size
-            let placed = placements(in: size)
-            ZStack {
-                Canvas { ctx, size in drawMap(ctx, size: size) }
-                PaperGrain(material: .kraft, seed: 125, dark: scheme == .dark)
-
-                // You are here
-                ZStack {
-                    Circle().fill(Color.lightCardSurface).frame(width: 15, height: 15)
-                    Circle().fill(Color.paperSky).frame(width: 9, height: 9)
-                }
-                .paperShadow(depth: 0.6)
-                .position(x: size.width / 2, y: size.height / 2)
-                .accessibilityHidden(true)
-
-                // Farthest first so nearer cut-outs stand in front.
-                ForEach(placed.reversed(), id: \.index) { item in
-                    MasjidCutout(isNearest: item.index == 0, seed: 150 + item.index)
-                        .scaleEffect(item.index == 0 ? 1.25 : 0.95, anchor: .bottom)
-                        .position(item.point)
-                }
-
-                if isLoading && masjids.isEmpty {
-                    PaperTag(text: "Looking for masjids…", color: Color.lightCardSurface, ink: .lightBodyText, seed: 126)
-                        .position(x: size.width / 2, y: size.height / 2 + 30)
+        ZStack {
+            Map(position: $position, interactionModes: [.pan, .zoom]) {
+                UserAnnotation()
+                // Farthest first so the nearest cut-out stands in front.
+                ForEach(Array(masjids.enumerated()).reversed(), id: \.element.id) { index, masjid in
+                    Annotation(masjid.name, coordinate: masjid.coordinate, anchor: .bottom) {
+                        MasjidCutout(isNearest: index == 0, seed: 150 + index)
+                            .scaleEffect(index == 0 ? 1.15 : 0.85, anchor: .bottom)
+                    }
+                    .annotationTitles(index == 0 ? .automatic : .hidden)
                 }
             }
-            .clipShape(CutShape(cornerRadius: 13, seed: 127))
+            .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+            .mapControls { MapUserLocationButton() }
+
+            // Paper over the streets: a kraft wash and fibres, never blocking touches.
+            Color(hex: scheme == .dark ? "#3A2E28" : "#D9C29A")
+                .opacity(scheme == .dark ? 0.35 : 0.30)
+                .blendMode(.multiply)
+                .allowsHitTesting(false)
+            PaperGrain(material: .kraft, seed: 125, dark: scheme == .dark)
+                .allowsHitTesting(false)
+
+            if isLoading && masjids.isEmpty {
+                PaperTag(text: "Looking for masjids…", color: Color.lightCardSurface, ink: .lightBodyText, seed: 126)
+            }
         }
-        .accessibilityElement()
-        .accessibilityLabel(masjids.isEmpty ? "Paper map of your area" : "Paper map showing \(masjids.count) masjids around you")
+        .clipShape(CutShape(cornerRadius: 13, seed: 127))
+        .onAppear { position = .region(fittingRegion) }
+        .onChange(of: masjids.map(\.id)) { _, _ in
+            withAnimation(.open(0.4)) { position = .region(fittingRegion) }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(masjids.isEmpty ? "Map of your area" : "Map showing \(masjids.count) masjids around you")
     }
 
-    private struct Placement { let index: Int; let point: CGPoint }
-
-    /// Projects each masjid onto the card around the centre, scaled so the
-    /// farthest one sits near the edge.
-    private func placements(in size: CGSize) -> [Placement] {
-        guard !masjids.isEmpty else { return [] }
-        let cosLat = cos(center.latitude * .pi / 180)
-        let offsets = masjids.map { m in
-            CGVector(dx: (m.coordinate.longitude - center.longitude) * cosLat,
-                     dy: -(m.coordinate.latitude - center.latitude))
+    /// A region containing you and every masjid shown, with a margin for the cut-outs.
+    private var fittingRegion: MKCoordinateRegion {
+        let coords = [center] + masjids.map(\.coordinate)
+        let lats = coords.map(\.latitude), lons = coords.map(\.longitude)
+        guard let minLat = lats.min(), let maxLat = lats.max(), let minLon = lons.min(), let maxLon = lons.max() else {
+            return MKCoordinateRegion(center: center, latitudinalMeters: 3_000, longitudinalMeters: 3_000)
         }
-        let maxX = max(offsets.map { abs($0.dx) }.max() ?? 0, 1e-6)
-        let maxY = max(offsets.map { abs($0.dy) }.max() ?? 0, 1e-6)
-        let scale = min((size.width * 0.40) / maxX, (size.height * 0.36) / maxY)
-        return offsets.enumerated().map { i, o in
-            var x = size.width / 2 + o.dx * scale
-            var y = size.height / 2 + o.dy * scale
-            // keep the cut-outs (which stand up from their base) inside the card
-            x = min(max(x, 26), size.width - 26)
-            y = min(max(y, 46), size.height - 10)
-            return Placement(index: i, point: CGPoint(x: x, y: y - 14))
-        }
-    }
-
-    private func drawMap(_ ctx: GraphicsContext, size: CGSize) {
-        let dark = scheme == .dark
-        let kraft = dark ? Color(hex: "#6E5A3E") : Color(hex: "#D9C29A")
-        let road = dark ? Color(hex: "#C9B48C") : Color.lightCardSurface
-        ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(kraft))
-
-        // Tissue park and pond: thin paper, see-through, soft edges.
-        let park = CGRect(x: size.width * 0.06, y: size.height * 0.62, width: size.width * 0.34, height: size.height * 0.30)
-        ctx.fill(tissueBlob(in: park, seed: 1), with: .color(PaperInk.parkTissue.opacity(0.8)))
-        let pond = CGRect(x: size.width * 0.70, y: size.height * 0.06, width: size.width * 0.26, height: size.height * 0.20)
-        ctx.fill(tissueBlob(in: pond, seed: 2), with: .color(Color.paperSky.opacity(0.7)))
-
-        // Torn roads: a winding avenue across and a straight street down.
-        var across = ctx
-        across.addFilter(.shadow(color: .black.opacity(0.18), radius: 1, x: 0.6, y: 1.2))
-        across.fill(tornStrip(width: size.width, y: size.height * 0.44, thickness: 15, roll: 10, seed: 3), with: .color(road))
-
-        var down = ctx
-        down.translateBy(x: size.width * 0.5, y: 0)
-        down.rotate(by: .degrees(84))
-        down.addFilter(.shadow(color: .black.opacity(0.18), radius: 1, x: 1.2, y: -0.6))
-        down.fill(tornStrip(width: size.height * 1.1, y: -6, thickness: 13, roll: 3, seed: 4), with: .color(road))
-
-        var lane = ctx
-        lane.translateBy(x: 0, y: size.height * 0.80)
-        lane.rotate(by: .degrees(-8))
-        lane.addFilter(.shadow(color: .black.opacity(0.14), radius: 0.8, x: 0.5, y: 1))
-        lane.fill(tornStrip(width: size.width * 1.1, y: 0, thickness: 8, roll: 4, seed: 5), with: .color(road.opacity(0.9)))
-    }
-
-    /// A horizontal strip whose top and bottom edges are both torn.
-    private func tornStrip(width: CGFloat, y: CGFloat, thickness: CGFloat, roll: CGFloat, seed: Int) -> Path {
-        let top = PaperNoise.tornLine(width: width + 20, y: y, amplitude: roll, seed: seed)
-        let bottom = PaperNoise.tornLine(width: width + 20, y: y + thickness, amplitude: roll, seed: seed)
-        var p = Path()
-        // Both edges share the roll so the road keeps its width; only the rag differs.
-        p.move(to: top[0])
-        for pt in top.dropFirst() { p.addLine(to: pt) }
-        for (k, pt) in bottom.enumerated().reversed() {
-            let rag = (seeded(k, salt: Double(seed) + 21) - 0.5) * 2
-            p.addLine(to: CGPoint(x: pt.x, y: pt.y + rag))
-        }
-        p.closeSubpath()
-        return p
-    }
-
-    /// A soft irregular oval, like a torn piece of tissue paper.
-    private func tissueBlob(in rect: CGRect, seed: Int) -> Path {
-        var p = Path()
-        let c = CGPoint(x: rect.midX, y: rect.midY)
-        let steps = 48
-        for i in 0...steps {
-            let a = Double(i) / Double(steps) * .pi * 2
-            let wobble = 1 + 0.08 * sin(a * 3 + seeded(seed, salt: 1) * 6) + (seeded(i, salt: Double(seed)) - 0.5) * 0.05
-            let pt = CGPoint(x: c.x + CGFloat(cos(a) * wobble) * rect.width / 2,
-                             y: c.y + CGFloat(sin(a) * wobble) * rect.height / 2)
-            if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
-        }
-        p.closeSubpath()
-        return p
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(0.01, (maxLat - minLat) * 1.5),
+            longitudeDelta: max(0.01, (maxLon - minLon) * 1.5)
+        )
+        let mid = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2 + span.latitudeDelta * 0.06, longitude: (minLon + maxLon) / 2)
+        return MKCoordinateRegion(center: mid, span: span)
     }
 }
 
-/// A tiny masjid cut from card, standing on the map. The nearest one stands on a
-/// mustard base and carries a terracotta "NEAREST" tag.
 private struct MasjidCutout: View {
     let isNearest: Bool
     let seed: Int

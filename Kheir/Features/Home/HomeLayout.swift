@@ -125,16 +125,14 @@ struct HomeTile<Destination: View>: View {
     var note: String? = nil
     let seed: Int
     @ViewBuilder let destination: () -> Destination
-    var presentAsSheet = false
-
-    @State private var showSheet = false
+    /// When set, tapping runs this (Home presents the sheet) instead of pushing.
+    var action: (() -> Void)? = nil
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         Group {
-            if presentAsSheet {
-                Button { showSheet = true } label: { content }
-                    .sheet(isPresented: $showSheet) { destination() }
+            if let action {
+                Button(action: action) { content }
             } else {
                 NavigationLink(destination: destination) { content }
             }
@@ -167,6 +165,8 @@ struct HomeTile<Destination: View>: View {
 /// The small intentions laid out two-up.
 struct IntentionTiles: View {
     let intentions: [Intention]
+    /// Opens a sheet owned by Home, so Home can pause its own animation underneath.
+    var open: (HomeSheet) -> Void = { _ in }
     private var settings: AppSettings { .shared }
 
     var body: some View {
@@ -183,9 +183,9 @@ struct IntentionTiles: View {
                 ReadingView(surahNumber: settings.lastReadSurah, scrollToAyah: settings.lastReadAyah)
             }
         case .journal:
-            HomeTile(icon: .pen, overline: "Reflect", title: "Journal", note: "Reflect on today", seed: 931, destination: { JournalView() }, presentAsSheet: true)
+            HomeTile(icon: .pen, overline: "Reflect", title: "Journal", note: "Reflect on today", seed: 931, destination: { EmptyView() }, action: { open(.journal) })
         case .masjids:
-            HomeTile(icon: .masjid, overline: "Nearby", title: "Find a masjid", seed: 932, destination: { MasjidFinderView() }, presentAsSheet: true)
+            HomeTile(icon: .masjid, overline: "Nearby", title: "Find a masjid", seed: 932, destination: { EmptyView() }, action: { open(.masjids) })
         case .prayOnTime, .adhkar:
             EmptyView()
         }
@@ -377,4 +377,10 @@ enum DailyVerse {
         let day = DailyFlower.dayNumber(date)
         return all[((day % all.count) + all.count) % all.count]
     }
+}
+
+/// Full-screen tools Home opens as sheets.
+enum HomeSheet: String, Identifiable {
+    case journal, masjids
+    var id: String { rawValue }
 }

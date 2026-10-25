@@ -12,6 +12,7 @@ struct HomeView: View {
     @State private var shareCardData: ShareCardData?
     @State private var showArabicHadith = false
     @State private var fullHadith: DailyHadith?
+    @State private var homeSheet: HomeSheet?
     @State private var entered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -41,6 +42,9 @@ struct HomeView: View {
                 }
             }
             .ignoresSafeArea(edges: .top)
+            // While a sheet covers Home, its sky, flowers and icons stop animating, so
+            // the sheet on top gets the main thread (taps there were slow).
+            .environment(\.motionPaused, isCovered)
             // Room for the tab bar strip, so the last card can scroll fully clear of it.
             .contentMargins(.bottom, 96, for: .scrollContent)
             #if DEBUG
@@ -80,11 +84,21 @@ struct HomeView: View {
         .sheet(item: $shareCardData) { cardData in
             ShareSheetView(data: cardData)
         }
+        .sheet(item: $homeSheet) { sheet in
+            switch sheet {
+            case .journal: JournalView()
+            case .masjids: MasjidFinderView()
+            }
+        }
         .sheet(item: $fullHadith) { hadith in
             HadithSheet(hadith: hadith)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
+    }
+
+    private var isCovered: Bool {
+        homeSheet != nil || fullHadith != nil || shareCardData != nil || showShareSheet
     }
 
     // MARK: - Order
@@ -139,7 +153,7 @@ struct HomeView: View {
             )
             .task { await viewModel.refreshRoutineProgress() }
         case .tiles(let intentions):
-            IntentionTiles(intentions: intentions)
+            IntentionTiles(intentions: intentions) { homeSheet = $0 }
         case .offline:
             offlineBanner
         case .ayah:
