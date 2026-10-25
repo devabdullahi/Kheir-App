@@ -1,21 +1,6 @@
 import WidgetKit
 import SwiftUI
 
-// MARK: - Theme Colors (matching app's Color+Theme.swift)
-
-private extension Color {
-    // Dark mode
-    static let darkBackground = Color(red: 0.08, green: 0.09, blue: 0.18)
-    static let darkCardSurface = Color(red: 0.08, green: 0.16, blue: 0.14)
-    static let islamicGold = Color(red: 0.85, green: 0.68, blue: 0.32)
-    static let darkBodyText = Color(red: 0.93, green: 0.93, blue: 0.90)
-
-    // Light mode
-    static let lightBackground = Color(red: 0.97, green: 0.95, blue: 0.90)
-    static let lightPrimary = Color(red: 0.13, green: 0.37, blue: 0.27)
-    static let lightBodyText = Color(red: 0.08, green: 0.09, blue: 0.18)
-}
-
 // MARK: - Timeline Entry
 
 struct DailyAyahEntry: TimelineEntry {
@@ -32,6 +17,10 @@ struct DailyAyahEntry: TimelineEntry {
         surahName: "الفاتحة",
         verseRef: "Al-Fatiha 1:1"
     )
+
+    func at(_ date: Date) -> DailyAyahEntry {
+        DailyAyahEntry(date: date, arabicText: arabicText, translation: translation, surahName: surahName, verseRef: verseRef)
+    }
 }
 
 // MARK: - Timeline Provider
@@ -50,10 +39,17 @@ struct DailyAyahProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<DailyAyahEntry>) -> Void) {
         let entry = entryForToday()
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date().addingTimeInterval(86400)
-        let nextMidnight = Calendar.current.startOfDay(for: tomorrow)
-        let timeline = Timeline(entries: [entry], policy: .after(nextMidnight))
-        completion(timeline)
+        let calendar = Calendar.current
+        let now = Date()
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now) ?? now.addingTimeInterval(86400)
+        let nextMidnight = calendar.startOfDay(for: tomorrow)
+        // The large size shows a still of the paper sky, so add an entry at each
+        // change of sky phase (same ayah) to keep the colours true to the hour.
+        let boundaries = [4, 6, 10, 15, 17, 19].compactMap {
+            calendar.date(bySettingHour: $0, minute: 0, second: 0, of: now)
+        }.filter { $0 > now }
+        let entries = [entry] + boundaries.map { entry.at($0) }
+        completion(Timeline(entries: entries, policy: .after(nextMidnight)))
     }
 
     private func entryForToday() -> DailyAyahEntry {
@@ -86,167 +82,130 @@ struct DailyAyahWidgetEntryView: View {
 
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.widgetRenderingMode) private var mode
 
-    // Adaptive colors matching the app
-    private var primaryColor: Color {
-        colorScheme == .dark ? .islamicGold : .lightPrimary
-    }
-    private var textColor: Color {
-        colorScheme == .dark ? .darkBodyText : .lightBodyText
-    }
-    private var secondaryTextColor: Color {
-        colorScheme == .dark ? .darkBodyText.opacity(0.7) : .lightBodyText.opacity(0.6)
-    }
-    private var cardSurface: Color {
-        colorScheme == .dark ? .darkCardSurface : .white
-    }
-    private var bgColor: Color {
-        colorScheme == .dark ? .darkBackground : .lightBackground
-    }
+    private var dark: Bool { colorScheme == .dark }
+    private var ink: Color { mode.isMonochrome ? .primary : WPalette.text(dark) }
+    private var ink2: Color { mode.isMonochrome ? .secondary : WPalette.text2(dark) }
 
     var body: some View {
-        switch family {
-        case .systemSmall:
-            smallLayout
-        case .systemLarge:
-            largeLayout
-        default:
-            mediumLayout
+        Group {
+            switch family {
+            case .systemSmall: smallLayout
+            case .systemLarge: largeLayout
+            default: mediumLayout
+            }
+        }
+        .widgetURL(URL(string: "kheir://home/ayah"))
+    }
+
+    private func header(_ title: String, seed: Int) -> some View {
+        HStack(alignment: .center) {
+            WPaperTag(text: title, seed: seed)
+            Spacer(minLength: 4)
+            WPaperIcon(.book, size: 18)
         }
     }
 
-    // MARK: Small (2x2)
+    private func arabic(_ size: CGFloat, lines: Int?) -> some View {
+        Text(entry.arabicText)
+            .font(.system(size: size, weight: .regular, design: .serif))
+            .lineSpacing(size * 0.25)
+            .multilineTextAlignment(.trailing)
+            .lineLimit(lines)
+            .minimumScaleFactor(0.7)
+            .foregroundStyle(ink)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .environment(\.layoutDirection, .rightToLeft)
+    }
+
+    private func footer(showBrand: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(entry.verseRef)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 4)
+            if showBrand { Text("Kheir").fontWeight(.black) }
+        }
+        .font(.system(size: 11, weight: .heavy, design: .rounded))
+        .foregroundStyle(ink2)
+    }
+
+    // MARK: Small (2x2): header, ayah, reference
 
     private var smallLayout: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            Spacer(minLength: 0)
-
-            Text(entry.arabicText)
-                .font(.system(size: 15, weight: .regular, design: .serif))
-                .multilineTextAlignment(.trailing)
-                .lineLimit(3)
-                .foregroundStyle(textColor)
-                .environment(\.layoutDirection, .rightToLeft)
-
-            Spacer(minLength: 0)
-
-            HStack {
-                Spacer()
-                Text(entry.verseRef)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundStyle(primaryColor.opacity(0.8))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            header("Ayah", seed: 301)
+            arabic(20, lines: 3)
+                .frame(maxHeight: .infinity)
+            footer(showBrand: false)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-        .widgetURL(URL(string: "kheir://home/ayah"))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: Medium (4x2)
 
     private var mediumLayout: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Header
-            HStack {
-                Text("Daily Ayah")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(primaryColor)
-                Spacer()
-                Image(systemName: "book.fill")
-                    .font(.caption)
-                    .foregroundStyle(primaryColor.opacity(0.6))
+        VStack(alignment: .leading, spacing: 6) {
+            header("Daily Ayah", seed: 302)
+            VStack(alignment: .leading, spacing: 4) {
+                arabic(19, lines: 2)
+                Text(entry.translation)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .lineLimit(2)
+                    .foregroundStyle(ink2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            // Arabic text
-            Text(entry.arabicText)
-                .font(.system(size: 18, weight: .regular, design: .serif))
-                .multilineTextAlignment(.trailing)
-                .lineLimit(2)
-                .foregroundStyle(textColor)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .environment(\.layoutDirection, .rightToLeft)
-
-            // Translation
-            Text(entry.translation)
-                .font(.caption)
-                .multilineTextAlignment(.leading)
-                .lineLimit(2)
-                .foregroundStyle(secondaryTextColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 0)
-
-            // Surah reference
-            Text(entry.verseRef)
-                .font(.caption2)
-                .fontWeight(.medium)
-                .foregroundStyle(primaryColor.opacity(0.8))
+            .frame(maxHeight: .infinity)
+            footer(showBrand: true)
         }
-        .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .widgetURL(URL(string: "kheir://home/ayah"))
     }
 
-    // MARK: Large (4x4)
+    // MARK: Large (4x4): paper sky strip with the ayah on cardstock below
 
     private var largeLayout: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack {
-                Text("Daily Ayah")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(primaryColor)
-                Spacer()
-                Image(systemName: "book.fill")
-                    .font(.caption)
-                    .foregroundStyle(primaryColor.opacity(0.6))
+        VStack(spacing: 0) {
+            // The sky itself lives in the container background so it can bleed to
+            // the edges; leave room for it here.
+            Color.clear.frame(height: 70)
+            VStack(alignment: .leading, spacing: 10) {
+                header("Daily Ayah", seed: 305)
+                arabic(22, lines: 5)
+                    .frame(maxHeight: .infinity)
+                Text(entry.translation)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .lineLimit(5)
+                    .foregroundStyle(ink2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                footer(showBrand: true)
             }
-
-            Spacer(minLength: 4)
-
-            // Arabic text — full display
-            Text(entry.arabicText)
-                .font(.system(size: 24, weight: .regular, design: .serif))
-                .multilineTextAlignment(.trailing)
-                .foregroundStyle(textColor)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .environment(\.layoutDirection, .rightToLeft)
-
-            // Divider line
-            Rectangle()
-                .fill(primaryColor.opacity(0.2))
-                .frame(height: 1)
-                .padding(.vertical, 4)
-
-            // Translation — full display
-            Text(entry.translation)
-                .font(.body)
-                .multilineTextAlignment(.leading)
-                .foregroundStyle(textColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 4)
-
-            // Surah reference
-            HStack {
-                Text(entry.verseRef)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(primaryColor.opacity(0.8))
-                Spacer()
-                Text("Kheir")
-                    .font(.caption2)
-                    .foregroundStyle(secondaryTextColor)
-            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .wPaper(WPalette.card(dark), depth: 1.2, radius: 12, seed: 306)
+            .rotationEffect(.degrees(-0.4))
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .widgetURL(URL(string: "kheir://home/ayah"))
+    }
+}
+
+// MARK: - Background
+
+/// Cardstock for small/medium; for large a raised sheet with the paper sky at the top.
+struct DailyAyahBackground: View {
+    let date: Date
+    @Environment(\.widgetFamily) private var family
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        if family == .systemLarge {
+            ZStack(alignment: .top) {
+                WPaperSheet(color: WPalette.raised(scheme == .dark), seed: 304)
+                WPaperSky(date: date, height: 118)
+            }
+        } else {
+            WPaperSheet(seed: family == .systemSmall ? 301 : 302)
+        }
     }
 }
 
@@ -259,22 +218,12 @@ struct DailyAyahWidget: Widget {
         StaticConfiguration(kind: kind, provider: DailyAyahProvider()) { entry in
             DailyAyahWidgetEntryView(entry: entry)
                 .containerBackground(for: .widget) {
-                    AdaptiveWidgetBackground()
+                    DailyAyahBackground(date: entry.date)
                 }
         }
         .configurationDisplayName("Daily Ayah")
         .description("The verse of the day from the Quran.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-    }
-}
-
-// Adaptive background that matches the app's theme
-private struct AdaptiveWidgetBackground: View {
-    @Environment(\.colorScheme) private var colorScheme
-    var body: some View {
-        colorScheme == .dark
-            ? Color(red: 0.08, green: 0.09, blue: 0.18)
-            : Color(red: 0.97, green: 0.95, blue: 0.90)
     }
 }
 

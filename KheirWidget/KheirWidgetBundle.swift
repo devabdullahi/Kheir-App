@@ -7,5 +7,7 @@ import SwiftUI
 struct KheirWidgetBundle: WidgetBundle {
     var body: some Widget {
         DailyAyahWidget()
+        NextPrayerWidget()
+        PrayerLiveActivity()
     }
 }

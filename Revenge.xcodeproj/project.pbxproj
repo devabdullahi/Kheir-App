@@ -600,6 +600,7 @@
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Kheir uses your location to provide prayer time notifications even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Kheir needs your location to calculate accurate prayer times, find the Qibla direction, and locate nearby mosques.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "Kheir uses device motion sensors to show the compass and Qibla direction accurately.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = "audio fetch processing";
@@ -638,6 +639,7 @@
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Kheir uses your location to provide prayer time notifications even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Kheir needs your location to calculate accurate prayer times, find the Qibla direction, and locate nearby mosques.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "Kheir uses device motion sensors to show the compass and Qibla direction accurately.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UIBackgroundModes = "audio fetch processing";
