@@ -240,8 +240,8 @@ enum HijriLabel {
 
 // MARK: Day strip
 
-/// The date and the streak on one slim strip: the Hijri date leads, the Gregorian
-/// date is a quiet second line, today's flower on the left, the streak palm on the right.
+/// The date and the streak on one slim strip: the Hijri date leads, a short verse
+/// of the day under it, today's flower on the left, the streak palm on the right.
 struct DayStrip: View {
     let streakData: StreakData?
     @Environment(\.colorScheme) private var scheme
@@ -258,9 +258,13 @@ struct DayStrip: View {
                     .foregroundStyle(Color.adaptiveText(scheme))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                Text("\(Date.now.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))) · \(flower.species.name)")
+                let verse = DailyVerse.forDate()
+                Text("“\(verse.meaning)” · \(verse.ref)")
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.adaptiveSecondaryText(scheme))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("\(verse.meaning) Quran \(verse.ref). \(Date.now.formatted(date: .complete, time: .omitted))")
             }
             Spacer(minLength: 6)
             if let streakData {
@@ -326,5 +330,51 @@ struct HadithSheet: View {
             .padding(24)
         }
         .paperBackground()
+    }
+}
+
+// MARK: Verse of the day (date strip)
+
+/// Short ayat for the date strip: one a day, in order, the same for everyone on a
+/// given day. Meanings follow Sahih International, lightly shortened.
+enum DailyVerse {
+    struct Verse { let meaning: String; let ref: String }
+
+    static let all: [Verse] = [
+        Verse(meaning: "Indeed, with hardship comes ease.", ref: "94:6"),
+        Verse(meaning: "So remember Me; I will remember you.", ref: "2:152"),
+        Verse(meaning: "Indeed, I am near.", ref: "2:186"),
+        Verse(meaning: "In the remembrance of Allah do hearts find rest.", ref: "13:28"),
+        Verse(meaning: "Allah does not burden a soul beyond its capacity.", ref: "2:286"),
+        Verse(meaning: "Whoever relies upon Allah, He is sufficient for him.", ref: "65:3"),
+        Verse(meaning: "Do not weaken and do not grieve.", ref: "3:139"),
+        Verse(meaning: "He is with you wherever you are.", ref: "57:4"),
+        Verse(meaning: "Do not despair of the mercy of Allah.", ref: "39:53"),
+        Verse(meaning: "Indeed, Allah is with the patient.", ref: "2:153"),
+        Verse(meaning: "Call upon Me; I will respond to you.", ref: "40:60"),
+        Verse(meaning: "If you are grateful, I will surely increase you.", ref: "14:7"),
+        Verse(meaning: "My Lord, increase me in knowledge.", ref: "20:114"),
+        Verse(meaning: "Your Lord will give you, and you will be satisfied.", ref: "93:5"),
+        Verse(meaning: "Your Lord has not taken leave of you.", ref: "93:3"),
+        Verse(meaning: "We are closer to him than his jugular vein.", ref: "50:16"),
+        Verse(meaning: "Those who strive for Us, We will guide to Our ways.", ref: "29:69"),
+        Verse(meaning: "Allah loves those who rely upon Him.", ref: "3:159"),
+        Verse(meaning: "Seek help through patience and prayer.", ref: "2:45"),
+        Verse(meaning: "Do not grieve; indeed Allah is with us.", ref: "9:40"),
+        Verse(meaning: "Say, He is Allah, the One.", ref: "112:1"),
+        Verse(meaning: "Which of the favours of your Lord would you deny?", ref: "55:13"),
+        Verse(meaning: "My success is only through Allah.", ref: "11:88"),
+        Verse(meaning: "The mercy of Allah is near to the doers of good.", ref: "7:56"),
+        Verse(meaning: "Perhaps you dislike a thing and it is good for you.", ref: "2:216"),
+        Verse(meaning: "Whoever believes in Allah, He will guide his heart.", ref: "64:11"),
+        Verse(meaning: "Remember Allah with much remembrance.", ref: "33:41"),
+        Verse(meaning: "And to your Lord direct your longing.", ref: "94:8"),
+        Verse(meaning: "Allah is the best of planners.", ref: "8:30"),
+        Verse(meaning: "Indeed, my Lord is near and responsive.", ref: "11:61"),
+    ]
+
+    static func forDate(_ date: Date = .now) -> Verse {
+        let day = DailyFlower.dayNumber(date)
+        return all[((day % all.count) + all.count) % all.count]
     }
 }
