@@ -224,12 +224,13 @@ enum FlowerArt {
 struct DailyFlowerView: View {
     var date: Date = .now
     var size: CGFloat = 36
-    /// Paused while scrolled out of view.
+    /// Paused while scrolled out of view, and rests after a short sway.
     @State private var isOnScreen = true
+    @State private var resting = false
 
     var body: some View {
         let flower = DailyFlower.forDate(date)
-        LoopClock(period: 7_600, paused: !isOnScreen, fps: 20) { t in
+        LoopClock(period: 7_600, paused: !isOnScreen || resting, fps: 15) { t in
             Canvas { ctx, canvasSize in
                 var c = ctx
                 c.translateBy(x: canvasSize.width / 2, y: canvasSize.height * 0.95)
@@ -240,6 +241,10 @@ struct DailyFlowerView: View {
         }
         .frame(width: size * 1.2, height: size * 1.3)
         .onScrollVisibilityChange(threshold: 0.01) { isOnScreen = $0 }
+        .task {
+            try? await Task.sleep(for: .seconds(12))
+            resting = true
+        }
         .accessibilityLabel("Today's flower: \(flower.species.name)")
     }
 }

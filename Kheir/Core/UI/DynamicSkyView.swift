@@ -30,15 +30,22 @@ struct DynamicSkyView: View {
     @State private var isOnScreen = true
     @Environment(\.scenePhase) private var scenePhase
 
+    /// The sky plays when it appears (and when the app returns), then comes to rest on
+    /// its last frame: any ticking animation makes the whole screen repaint, so an
+    /// always-moving sky cost ~7% CPU at idle on Home.
+    @State private var resting = false
+    static let playSeconds: Double = 20
+
     var body: some View {
-        let paused = !isVisible || !isOnScreen || scenePhase != .active
+        let paused = !isVisible || !isOnScreen || scenePhase != .active || resting
         // Only the pieces that move are redrawn on the clock. The torn sky bands, the
         // hills, the masjid and the back garden rows are drawn once per sky state.
         ZStack {
             Canvas { context, size in
                 PaperSkyScene(state: skyState, size: size, t: 0).drawBands(context)
             }
-            LoopClock(period: Tokens.loop, paused: paused, fps: 24) { t in
+            // Sun rays, moon and clouds move slowly: 15 fps is smooth for them.
+            LoopClock(period: Tokens.loop, paused: paused, fps: 15) { t in
                 Canvas { context, size in
                     let scene = PaperSkyScene(state: skyState, size: size, t: t, moving: true)
                     scene.drawStars(context)
@@ -51,19 +58,27 @@ struct DynamicSkyView: View {
                 Canvas { context, size in
                     PaperSkyScene(state: skyState, size: size, t: 0).drawHills(context)
                 }
-                LoopClock(period: Tokens.loop, paused: paused, fps: 24) { t in
-                    Canvas { context, size in
-                        PaperSkyScene(state: skyState, size: size, t: t, moving: true).drawFrontGarden(context)
-                    }
+                // The garden stands still: ~20 flowers with shadows redrawn every frame
+                // were the most expensive thing on Home.
+                Canvas { context, size in
+                    PaperSkyScene(state: skyState, size: size, t: 0).drawFrontGarden(context)
                 }
             }
         }
         .overlay {
+            // Plain overlay (no blend mode): blending over a moving layer forces an
+            // offscreen pass every frame.
             PaperGrain(material: .construction, seed: 12, dark: skyState.starOpacity > 0.5)
-                .blendMode(.multiply)
+                .opacity(0.7)
         }
         .animation(.travel(2.0), value: skyState.sunPosition.y)
         .clipped()
+        .task(id: isVisible && scenePhase == .active) {
+            guard isVisible, scenePhase == .active else { return }
+            resting = false
+            try? await Task.sleep(for: .seconds(Self.playSeconds))
+            resting = true
+        }
         .onAppear { isVisible = true }
         .onDisappear { isVisible = false }
         // Scrolled out of view (e.g. Home scrolled down): stop the clock.

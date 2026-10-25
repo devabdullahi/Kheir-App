@@ -118,7 +118,7 @@ struct SettingsView: View {
                 if i > 0 { PaperRowDivider() }
                 NavigationLink(value: AppRoute.settingsPage(page)) {
                     HStack(spacing: 12) {
-                        PaperIconView(page.icon, size: 26)
+                        PaperIconView(page.icon, size: 26, animated: false)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(page.title)
                                 .font(.system(size: 16, weight: .heavy, design: .rounded))

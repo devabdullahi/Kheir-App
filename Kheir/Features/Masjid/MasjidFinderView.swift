@@ -313,8 +313,7 @@ struct PaperMasjidMap: View {
 
             // Paper over the streets: a kraft wash and fibres, never blocking touches.
             Color(hex: scheme == .dark ? "#3A2E28" : "#D9C29A")
-                .opacity(scheme == .dark ? 0.35 : 0.30)
-                .blendMode(.multiply)
+                .opacity(scheme == .dark ? 0.22 : 0.18)
                 .allowsHitTesting(false)
             PaperGrain(material: .kraft, seed: 125, dark: scheme == .dark)
                 .allowsHitTesting(false)

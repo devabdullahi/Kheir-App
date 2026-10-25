@@ -18,8 +18,13 @@ struct TodayPrayersStrip: View {
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
+        // Re-evaluated once a minute (not every countdown second) so "now" moves on time.
+        TimelineView(.everyMinute) { _ in strip }
+    }
+
+    @ViewBuilder
+    private var strip: some View {
         let prayers = (viewModel.todayPrayerTimes?.all ?? []).filter { PrayerWindow.five.contains($0.name) }
-        let _ = viewModel.countdownText   // re-evaluated each tick so "now" moves on time
         let now = PrayerWindow.current(in: viewModel.todayPrayerTimes)
         let highlighted = now ?? prayers.first { $0.time > .now }?.name
         VStack(alignment: .leading, spacing: 10) {
@@ -72,7 +77,7 @@ struct TodayPrayersStrip: View {
             withAnimation(.open(0.25)) { prayed = PrayerLog.prayed(on: .now) }
         } label: {
             VStack(spacing: 3) {
-                PaperIconView(.forPrayer(prayer.name), size: 22, animated: !done)
+                PaperIconView(.forPrayer(prayer.name), size: 22, animated: isNow && !done)
                 Text(prayer.name)
                     .font(.system(size: 11, weight: .heavy, design: .rounded))
                     .lineLimit(1)

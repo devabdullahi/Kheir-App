@@ -117,11 +117,15 @@ struct PaperIconView: View {
 
     /// Paused while scrolled out of view, so off-screen icons cost nothing.
     @State private var isOnScreen = true
+    /// Interface icons play when they appear, then come to rest on their last frame
+    /// (each looping icon costs CPU every frame; a screen has several).
+    @State private var resting = false
+    static let playSeconds: Double = 6
 
     var body: some View {
         Group {
             if animated, let period = icon.motionPeriod {
-                LoopClock(period: period, paused: !isOnScreen, fps: 20) { t in art(t) }
+                LoopClock(period: period, paused: !isOnScreen || resting, fps: 15) { t in art(t) }
             } else {
                 art(0)
             }
@@ -129,6 +133,10 @@ struct PaperIconView: View {
         .frame(width: size, height: size)
         .modifier(PIconOuterShadow(dark: colorScheme == .dark))
         .onScrollVisibilityChange(threshold: 0.01) { isOnScreen = $0 }
+        .task {
+            try? await Task.sleep(for: .seconds(Self.playSeconds))
+            resting = true
+        }
         .accessibilityHidden(true)
     }
 
