@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Shared prayer schedule (widget side)
 //
 // The app writes upcoming prayer times to the App Group as JSON (see
-// `Revenge/Core/LiveActivity/SharedPrayerSchedule.swift`, which must stay
+// `Kheir/Core/LiveActivity/SharedPrayerSchedule.swift`, which must stay
 // byte-compatible with this file). Format, key `widget_prayer_schedule_v1`:
 //
 //   { "generatedAt": 1761400000, "prayers": [ { "name": "Fajr", "time": 1761369480 }, … ] }

@@ -8,9 +8,9 @@ excluded:
   - KheirWidget
 
 included:
-  - Revenge
-  - RevengeTests
-  - RevengeUITests
+  - Kheir
+  - KheirTests
+  - KheirUITests
 
 # Rules
 disabled_rules:

@@ -5,7 +5,7 @@ import ActivityKit
 //
 // IMPORTANT: this file exists twice, byte-for-byte identical:
 //   KheirWidget/PrayerCountdownAttributes.swift            (widget extension)
-//   Revenge/Core/LiveActivity/PrayerCountdownAttributes.swift (app)
+//   Kheir/Core/LiveActivity/PrayerCountdownAttributes.swift (app)
 // ActivityKit matches the app's activity to the extension's UI by this type's
 // name and Codable shape, so keep both copies in sync when changing it.
 
