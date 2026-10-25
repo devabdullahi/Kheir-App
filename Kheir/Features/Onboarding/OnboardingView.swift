@@ -132,6 +132,12 @@ private struct OnboardingStage: View {
                     .accessibilityHidden(true)
             }
         }
+        // The eraser rubs and the pencil scratches in time with the drawing.
+        .onChange(of: turnT) { _, t in
+            let running = flow.turn != nil && (t ?? .infinity) < OnboardingFlow.turnMs
+            PaperSounds.shared.turn(t: running ? t : nil, eraseMs: OnboardingFlow.eraseMs, writeMs: OnboardingFlow.writeMs, rows: EraserPath.rows)
+        }
+        .onDisappear { PaperSounds.shared.silence() }
         // The stage is the whole screen; everything inside is placed in screen coordinates.
         .frame(width: screen.width, height: screen.height)
         .ignoresSafeArea()

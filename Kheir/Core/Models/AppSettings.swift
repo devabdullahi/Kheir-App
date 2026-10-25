@@ -122,6 +122,10 @@ final class AppSettings {
     var duaNames: [DuaName] = [] {
         didSet { defaults.set(try? JSONEncoder().encode(duaNames), forKey: "duaNames") }
     }
+    /// Paper sound effects (the eraser and pencil in onboarding page turns).
+    var soundEffects: Bool = true {
+        didSet { defaults.set(soundEffects, forKey: "soundEffects") }
+    }
     /// Back up progress to iCloud so it returns on a new iPhone.
     var iCloudBackup: Bool = false {
         didSet { defaults.set(iCloudBackup, forKey: "iCloudBackup") }
@@ -162,6 +166,7 @@ final class AppSettings {
         if defaults.object(forKey: "adhkarRemindersOn") != nil { adhkarRemindersOn = defaults.bool(forKey: "adhkarRemindersOn") }
         if let raw = defaults.stringArray(forKey: "weeklyReminders") { weeklyReminders = Set(raw.compactMap(WeeklyReminder.init(rawValue:))) }
         if let data = defaults.data(forKey: "duaNames"), let value = try? JSONDecoder().decode([DuaName].self, from: data) { duaNames = value }
+        if defaults.object(forKey: "soundEffects") != nil { soundEffects = defaults.bool(forKey: "soundEffects") }
         if defaults.object(forKey: "iCloudBackup") != nil { iCloudBackup = defaults.bool(forKey: "iCloudBackup") }
     }
 }
