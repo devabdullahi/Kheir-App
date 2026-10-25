@@ -183,7 +183,7 @@ struct IntentionTiles: View {
                 ReadingView(surahNumber: settings.lastReadSurah, scrollToAyah: settings.lastReadAyah)
             }
         case .journal:
-            HomeTile(icon: .pen, overline: "Reflect", title: "What brought you ease today?", seed: 931, destination: { JournalView() }, presentAsSheet: true)
+            HomeTile(icon: .pen, overline: "Reflect", title: "Journal", note: "Reflect on today", seed: 931, destination: { JournalView() }, presentAsSheet: true)
         case .masjids:
             HomeTile(icon: .masjid, overline: "Nearby", title: "Find a masjid", seed: 932, destination: { MasjidFinderView() }, presentAsSheet: true)
         case .prayOnTime, .adhkar:
@@ -281,5 +281,50 @@ struct DayStrip: View {
         }
         .paperPiece(Color.adaptiveCardSurface(scheme), material: .card, depth: 1, seed: 41, padding: 12)
         .rotationEffect(.degrees(-0.3))
+    }
+}
+
+// MARK: Full hadith
+
+/// The whole hadith on a sheet of paper: English, then Arabic, then the source.
+struct HadithSheet: View {
+    let hadith: DailyHadith
+    @Environment(\.colorScheme) private var scheme
+    private var settings: AppSettings { .shared }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                PaperTag(text: "Daily Hadith", color: .paperRose, ink: .lightBodyText, seed: 6)
+                Text(hadith.text)
+                    .font(.system(size: 17, design: .rounded))
+                    .lineSpacing(4)
+                    .foregroundStyle(Color.adaptiveText(scheme))
+                    .textSelection(.enabled)
+                if !hadith.arabicText.isEmpty {
+                    Text(hadith.arabicText)
+                        .arabicFont(size: CGFloat(settings.arabicFontSize))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundStyle(Color.adaptiveText(scheme))
+                        .textSelection(.enabled)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(hadith.source)
+                        .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.adaptivePrimary(scheme))
+                    if !hadith.narrator.isEmpty {
+                        Text("Narrated by \(hadith.narrator)")
+                            .font(.system(size: 13.5, design: .rounded))
+                            .foregroundStyle(Color.adaptiveSecondaryText(scheme))
+                    }
+                }
+                if !hadith.grade.isEmpty, hadith.grade.lowercased() != "unknown" {
+                    PaperTag(text: "Grade: \(hadith.grade)", color: Color(hex: "#7FAE7A"), ink: .lightBodyText, seed: 7)
+                }
+            }
+            .padding(24)
+        }
+        .paperBackground()
     }
 }

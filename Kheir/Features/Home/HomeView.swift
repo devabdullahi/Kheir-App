@@ -11,6 +11,7 @@ struct HomeView: View {
     @State private var shareText = ""
     @State private var shareCardData: ShareCardData?
     @State private var showArabicHadith = false
+    @State private var fullHadith: DailyHadith?
     @State private var entered = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -40,6 +41,12 @@ struct HomeView: View {
                 }
             }
             .ignoresSafeArea(edges: .top)
+            // Room for the tab bar strip, so the last card can scroll fully clear of it.
+            .contentMargins(.bottom, 96, for: .scrollContent)
+            #if DEBUG
+            // Screenshots: `-homeScrolledToBottom` opens Home at the end of the page.
+            .defaultScrollAnchor(ProcessInfo.processInfo.arguments.contains("-homeScrolledToBottom") ? .bottom : .top)
+            #endif
             .refreshable {
                 await viewModel.refresh()
             }
@@ -72,6 +79,11 @@ struct HomeView: View {
         }
         .sheet(item: $shareCardData) { cardData in
             ShareSheetView(data: cardData)
+        }
+        .sheet(item: $fullHadith) { hadith in
+            HadithSheet(hadith: hadith)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -329,19 +341,45 @@ struct HomeView: View {
                 .accessibilityIdentifier("toggleHadithLanguageButton")
             }
 
+            // Capped so a long hadith never changes Home's layout; the full text
+            // opens on a paper sheet.
+            let showingArabic = showArabicHadith && !hadith.arabicText.isEmpty
+            let fullText = showingArabic ? hadith.arabicText : hadith.text
+            let isLong = fullText.count > (showingArabic ? 140 : 220)
             Group {
-                if showArabicHadith, !hadith.arabicText.isEmpty {
+                if showingArabic {
                     Text(hadith.arabicText)
                         .arabicFont(size: CGFloat(settings.arabicFontSize))
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .multilineTextAlignment(.trailing)
+                        .lineLimit(3)
                 } else {
                     Text(hadith.text)
                         .font(.system(size: 15, design: .rounded))
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(4)
                 }
             }
             .foregroundStyle(Color.adaptiveText(colorScheme))
+            .mask {
+                // The last line fades into the paper instead of ending on an ellipsis.
+                LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: isLong ? 0.62 : 1), .init(color: .black.opacity(isLong ? 0.15 : 1), location: 1)], startPoint: .top, endPoint: .bottom)
+            }
+            if isLong {
+                Button {
+                    fullHadith = hadith
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Read in full")
+                        Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold))
+                    }
+                    .font(.system(size: 13.5, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    .frame(minHeight: 32)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PaperPressStyle())
+                .accessibilityHint("Opens the whole hadith")
+            }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(hadith.source)
@@ -355,7 +393,9 @@ struct HomeView: View {
             }
 
             HStack {
-                PaperTag(text: "Grade: \(hadith.grade)", color: Color(hex: "#7FAE7A"), ink: .lightBodyText, seed: 7)
+                if !hadith.grade.isEmpty, hadith.grade.lowercased() != "unknown" {
+                    PaperTag(text: "Grade: \(hadith.grade)", color: Color(hex: "#7FAE7A"), ink: .lightBodyText, seed: 7)
+                }
                 Spacer()
                 Button {
                     withAnimation(.open(0.2)) {
