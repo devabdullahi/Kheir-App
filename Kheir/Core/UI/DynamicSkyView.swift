@@ -44,8 +44,8 @@ struct DynamicSkyView: View {
             Canvas { context, size in
                 PaperSkyScene(state: skyState, size: size, t: 0).drawBands(context)
             }
-            // Sun rays, moon and clouds move slowly: 15 fps is smooth for them.
-            LoopClock(period: Tokens.loop, paused: paused, fps: 15) { t in
+            // Sun rays, moon and clouds at a full 60 fps while the sky plays.
+            LoopClock(period: Tokens.loop, paused: paused, fps: 60) { t in
                 Canvas { context, size in
                     let scene = PaperSkyScene(state: skyState, size: size, t: t, moving: true)
                     scene.drawStars(context)
