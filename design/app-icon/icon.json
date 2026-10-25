@@ -1,28 +1,29 @@
 {
   "groups": [
     {
-      "name": "Hills",
-      "layers": [
-        { "name": "hills", "image-name-specializations": [ { "value": "hills-dusk.png" }, { "appearance": "dark", "value": "hills-night.png" } ], "glass": false }
-      ],
+      "name": "Heart",
+      "layers": [ { "name": "heart", "image-name-specializations": [ { "value": "heart-light.png" }, { "appearance": "dark", "value": "heart-dark.png" } ], "glass": false } ],
+      "shadow": { "kind": "neutral", "opacity": 0.4 },
+      "specular": true,
+      "translucency": { "enabled": false, "value": 0 }
+    },
+    {
+      "name": "Inner petals",
+      "layers": [ { "name": "inner", "image-name-specializations": [ { "value": "inner-light.png" }, { "appearance": "dark", "value": "inner-dark.png" } ], "glass": false } ],
       "shadow": { "kind": "neutral", "opacity": 0.35 },
       "specular": false,
       "translucency": { "enabled": false, "value": 0 }
     },
     {
-      "name": "Moon",
-      "layers": [
-        { "name": "moon", "image-name-specializations": [ { "value": "moon-dusk.png" }, { "appearance": "dark", "value": "moon-night.png" } ], "glass": false }
-      ],
+      "name": "Outer petals",
+      "layers": [ { "name": "outer", "image-name-specializations": [ { "value": "outer-light.png" }, { "appearance": "dark", "value": "outer-dark.png" } ], "glass": false } ],
       "shadow": { "kind": "neutral", "opacity": 0.35 },
-      "specular": true,
+      "specular": false,
       "translucency": { "enabled": false, "value": 0 }
     },
     {
-      "name": "Sky",
-      "layers": [
-        { "name": "sky", "image-name-specializations": [ { "value": "sky-dusk.png" }, { "appearance": "dark", "value": "sky-night.png" } ], "glass": false }
-      ],
+      "name": "Background",
+      "layers": [ { "name": "background", "image-name-specializations": [ { "value": "background-light.png" }, { "appearance": "dark", "value": "background-dark.png" } ], "glass": false } ],
       "shadow": { "kind": "none", "opacity": 0 },
       "specular": false,
       "translucency": { "enabled": false, "value": 0 }

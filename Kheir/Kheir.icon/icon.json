@@ -6,17 +6,44 @@
           "glass": false,
           "image-name-specializations": [
             {
-              "value": "hills-dusk.png"
+              "value": "heart-light.png"
             },
             {
               "appearance": "dark",
-              "value": "hills-night.png"
+              "value": "heart-dark.png"
             }
           ],
-          "name": "hills"
+          "name": "heart"
         }
       ],
-      "name": "Hills",
+      "name": "Heart",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "layers": [
+        {
+          "glass": false,
+          "image-name-specializations": [
+            {
+              "value": "inner-light.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "inner-dark.png"
+            }
+          ],
+          "name": "inner"
+        }
+      ],
+      "name": "Inner petals",
       "shadow": {
         "kind": "neutral",
         "opacity": 0.35
@@ -33,22 +60,22 @@
           "glass": false,
           "image-name-specializations": [
             {
-              "value": "moon-dusk.png"
+              "value": "outer-light.png"
             },
             {
               "appearance": "dark",
-              "value": "moon-night.png"
+              "value": "outer-dark.png"
             }
           ],
-          "name": "moon"
+          "name": "outer"
         }
       ],
-      "name": "Moon",
+      "name": "Outer petals",
       "shadow": {
         "kind": "neutral",
         "opacity": 0.35
       },
-      "specular": true,
+      "specular": false,
       "translucency": {
         "enabled": false,
         "value": 0
@@ -60,17 +87,17 @@
           "glass": false,
           "image-name-specializations": [
             {
-              "value": "sky-dusk.png"
+              "value": "background-light.png"
             },
             {
               "appearance": "dark",
-              "value": "sky-night.png"
+              "value": "background-dark.png"
             }
           ],
-          "name": "sky"
+          "name": "background"
         }
       ],
-      "name": "Sky",
+      "name": "Background",
       "shadow": {
         "kind": "none",
         "opacity": 0
