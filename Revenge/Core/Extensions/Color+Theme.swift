@@ -3,23 +3,40 @@ import SwiftUI
 // MARK: - Sacred Garden Design System
 
 extension Color {
-    // MARK: - Dark Mode Palette (Primary)
-    static let darkBackground = Color(red: 0.039, green: 0.059, blue: 0.118)    // #0A0F1E — Deep navy
-    static let darkCardSurface = Color(red: 0.051, green: 0.122, blue: 0.102)   // #0D1F1A — Emerald surface
-    static let darkCardElevated = Color(red: 0.086, green: 0.239, blue: 0.180)  // #163D2E — Elevated card
-    static let islamicGold = Color(red: 0.831, green: 0.659, blue: 0.278)       // #D4A847 — Gold accent
-    static let darkPrimary = Color(red: 0.133, green: 0.341, blue: 0.235)       // #22573C — Primary green
-    static let darkBodyText = Color(red: 0.910, green: 0.863, blue: 0.784)      // #E8DCC8 — Warm cream
-    static let darkSecondaryTextColor = Color(red: 0.910, green: 0.863, blue: 0.784).opacity(0.5)
+    /// Initializes a `Color` from a CSS-style hex string such as `"#RRGGBB"` or `"RRGGBB"`.
+    init(hex: String) {
+        let sanitized = hex.trimmingCharacters(in: .alphanumerics.inverted)
+        var value: UInt64 = 0
+        Scanner(string: sanitized).scanHexInt64(&value)
+        let r = Double((value >> 16) & 0xFF) / 255
+        let g = Double((value >>  8) & 0xFF) / 255
+        let b = Double( value        & 0xFF) / 255
+        self.init(red: r, green: g, blue: b)
+    }
 
-    // MARK: - Light Mode Palette
-    static let lightBackground = Color(red: 0.961, green: 0.941, blue: 0.910)   // #F5F0E8 — Warm parchment
-    static let lightCardSurface = Color.white                                     // #FFFFFF
-    static let lightCardElevated = Color(red: 0.973, green: 0.961, blue: 0.937) // #F8F5EF
-    static let lightPrimary = Color(red: 0.102, green: 0.420, blue: 0.259)      // #1A6B42 — Forest green
-    static let lightGoldAccent = Color(red: 0.722, green: 0.573, blue: 0.180)   // #B8922E — Light gold
-    static let lightBodyText = Color(red: 0.102, green: 0.165, blue: 0.133)     // #1A2A22 — Dark green-black
-    static let lightSecondaryTextColor = Color(red: 0.353, green: 0.420, blue: 0.384) // #5A6B62
+    // MARK: - Dark Mode Palette (night construction paper under a lamp)
+    static let darkBackground = Color(red: 0.118, green: 0.141, blue: 0.259)    // #1E2442 — Indigo sheet
+    static let darkCardSurface = Color(red: 0.169, green: 0.208, blue: 0.376)   // #2B3560 — Navy card
+    static let darkCardElevated = Color(red: 0.227, green: 0.278, blue: 0.471)  // #3A4778 — Raised card
+    static let islamicGold = Color(red: 0.890, green: 0.714, blue: 0.353)       // #E3B65A — Mustard paper
+    static let darkPrimary = Color(red: 0.373, green: 0.604, blue: 0.431)       // #5F9A6E — Sage paper
+    static let darkBodyText = Color(red: 0.953, green: 0.914, blue: 0.824)      // #F3E9D2 — Cream
+    static let darkSecondaryTextColor = Color(red: 0.953, green: 0.914, blue: 0.824).opacity(0.6)
+
+    // MARK: - Light Mode Palette (daylight kraft and cardstock)
+    static let lightBackground = Color(red: 0.914, green: 0.851, blue: 0.737)   // #E9D9BC — Kraft-cream sheet
+    static let lightCardSurface = Color(red: 0.984, green: 0.961, blue: 0.910)  // #FBF5E8 — Cream cardstock
+    static let lightCardElevated = Color(red: 0.953, green: 0.910, blue: 0.824) // #F3E8D2 — Raised card
+    static let lightPrimary = Color(red: 0.243, green: 0.451, blue: 0.314)      // #3E7350 — Leaf paper
+    static let lightGoldAccent = Color(red: 0.788, green: 0.561, blue: 0.133)   // #C98F22 — Mustard paper
+    static let lightBodyText = Color(red: 0.169, green: 0.129, blue: 0.094)     // #2B2118 — Warm ink
+    static let lightSecondaryTextColor = Color(red: 0.431, green: 0.369, blue: 0.290) // #6E5E4A
+
+    // MARK: - Paper Accents
+    static let paperTerracotta = Color(red: 0.824, green: 0.412, blue: 0.294)   // #D2694B
+    static let paperRose = Color(red: 0.902, green: 0.627, blue: 0.549)         // #E6A08C
+    static let paperSky = Color(red: 0.494, green: 0.706, blue: 0.808)          // #7EB4CE
+    static let paperKraft = Color(red: 0.722, green: 0.545, blue: 0.369)        // #B88B5E
 
     // MARK: - Semantic Colors
     static let destructive = Color(red: 0.863, green: 0.149, blue: 0.149)       // #DC2626

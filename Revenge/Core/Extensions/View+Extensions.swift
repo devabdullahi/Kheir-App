@@ -1,21 +1,12 @@
 import SwiftUI
 
 // MARK: - Animated Scroll Reveal
+/// Pieces are lowered onto the table as they first appear (see `PaperPlaceModifier`).
 struct ScrollRevealModifier: ViewModifier {
     let delay: Double
-    @State private var hasAppeared = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        content
-            .opacity(hasAppeared ? 1 : 0)
-            .offset(y: hasAppeared || reduceMotion ? 0 : 20)
-            .animation(reduceMotion ? .none : .easeOut(duration: 0.45).delay(delay), value: hasAppeared)
-            .onAppear {
-                if !hasAppeared {
-                    hasAppeared = true
-                }
-            }
+        content.paperPlace(delay: delay, seed: Int(delay * 1000))
     }
 }
 
@@ -29,7 +20,8 @@ struct PressScaleModifier: ViewModifier {
         content
             .scaleEffect(isPressed ? scale : 1.0)
             .opacity(isPressed ? opacity : 1.0)
-            .animation(.spring(response: DesignTokens.springResponse, dampingFraction: DesignTokens.springDamping), value: isPressed)
+            .offset(y: isPressed ? 1.5 : 0)
+            .animation(.open(isPressed ? 0.12 : 0.2), value: isPressed)
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in isPressed = true }
@@ -70,41 +62,45 @@ struct SkeletonModifier: ViewModifier {
     }
 }
 
-// MARK: - Featured Card Style (Gold Border)
+// MARK: - Featured Card Style (taped-down paper)
 struct FeaturedCardModifier: ViewModifier {
     let colorScheme: ColorScheme
+    var seed: Int = 7
 
     func body(content: Content) -> some View {
         content
-            .padding(DesignTokens.cardPadding)
-            .background(
-                Color.adaptiveCardSurface(colorScheme)
-                    .opacity(colorScheme == .dark ? 0.8 : 1.0)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cardRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.cardRadius)
-                    .stroke(Color.adaptiveGoldBorder(colorScheme), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.2 : 0.06), radius: DesignTokens.cardShadowRadius, y: DesignTokens.cardShadowY)
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.2, seed: seed)
+            .overlay(alignment: .top) {
+                PaperTape(seed: seed)
+                    .offset(y: -9)
+            }
     }
 }
 
-// MARK: - Glassmorphism Card (Over Sky)
+/// A strip of translucent washi tape holding a piece to the table.
+struct PaperTape: View {
+    var seed: Int = 0
+
+    var body: some View {
+        Rectangle()
+            .fill(Color.islamicGold.opacity(0.55))
+            .frame(width: 64, height: 18)
+            .mask(CutShape(cornerRadius: 1, edge: .torn, seed: seed + 40))
+            .overlay(PaperGrain(material: .tissue, seed: seed).mask(Rectangle().frame(width: 64, height: 18)))
+            .rotationEffect(.degrees((seeded(seed, salt: 3) - 0.5) * 8))
+            .shadow(color: .black.opacity(0.08), radius: 0.5, y: 0.5)
+            .accessibilityHidden(true)
+    }
+}
+
+// MARK: - Over-sky card (paper lifted off the backdrop)
 struct GlassmorphismCardModifier: ViewModifier {
     let colorScheme: ColorScheme
+    var seed: Int = 3
 
     func body(content: Content) -> some View {
         content
-            .padding(DesignTokens.cardPadding)
-            .background(.ultraThinMaterial)
-            .background(Color.adaptiveCardSurface(colorScheme).opacity(0.6))
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cardRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.cardRadius)
-                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.2), radius: 12, y: 6)
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.8, seed: seed)
     }
 }
 
@@ -131,23 +127,16 @@ extension View {
             .environment(\.layoutDirection, .rightToLeft)
     }
 
-    func cardStyle(_ colorScheme: ColorScheme) -> some View {
-        self.padding(DesignTokens.cardPadding)
-            .background(Color.adaptiveCardSurface(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: DesignTokens.cardRadius))
-            .overlay(
-                RoundedRectangle(cornerRadius: DesignTokens.cardRadius)
-                    .stroke(Color.adaptiveBorder(colorScheme), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.2 : 0.06), radius: DesignTokens.cardShadowRadius, y: DesignTokens.cardShadowY)
+    func cardStyle(_ colorScheme: ColorScheme, seed: Int = 0) -> some View {
+        paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1, seed: seed)
     }
 
-    func featuredCardStyle(_ colorScheme: ColorScheme) -> some View {
-        modifier(FeaturedCardModifier(colorScheme: colorScheme))
+    func featuredCardStyle(_ colorScheme: ColorScheme, seed: Int = 7) -> some View {
+        modifier(FeaturedCardModifier(colorScheme: colorScheme, seed: seed))
     }
 
-    func glassmorphismCard(_ colorScheme: ColorScheme) -> some View {
-        modifier(GlassmorphismCardModifier(colorScheme: colorScheme))
+    func glassmorphismCard(_ colorScheme: ColorScheme, seed: Int = 3) -> some View {
+        modifier(GlassmorphismCardModifier(colorScheme: colorScheme, seed: seed))
     }
 
     func pressScale(_ scale: CGFloat = DesignTokens.pressScaleCard, opacity: Double = 1.0) -> some View {

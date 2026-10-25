@@ -82,6 +82,51 @@ final class AppSettings {
         didSet { defaults.set(lastReadAyah, forKey: "lastReadAyah") }
     }
 
+    // MARK: - Personalisation (set during onboarding, editable in Settings)
+    var userName: String = "" {
+        didSet { defaults.set(userName, forKey: "userName") }
+    }
+    var journey: Journey = .praying {
+        didSet { defaults.set(journey.rawValue, forKey: "journey") }
+    }
+    /// What the user asked Kheir to help with; decides the order of cards on Home.
+    var intentions: Set<Intention> = [.prayOnTime, .readQuran] {
+        didSet { defaults.set(intentions.map(\.rawValue).sorted(), forKey: "intentions") }
+    }
+    var arabicLevel: ArabicLevel = .learning {
+        didSet {
+            defaults.set(arabicLevel.rawValue, forKey: "arabicLevel")
+            showTransliteration = arabicLevel != .fluent
+        }
+    }
+    var quranGoal: QuranGoal = .onePage {
+        didSet { defaults.set(quranGoal.rawValue, forKey: "quranGoal") }
+    }
+    /// Minutes before Fajr for the gentle wake-up; `nil` means off.
+    var fajrWakeOffset: Int? = nil {
+        didSet { defaults.set(fajrWakeOffset ?? -1, forKey: "fajrWakeOffset") }
+    }
+    var morningAdhkarMinutes: Int = 6 * 60 + 20 {
+        didSet { defaults.set(morningAdhkarMinutes, forKey: "morningAdhkarMinutes") }
+    }
+    var eveningAdhkarBeforeMaghrib: Int = 30 {
+        didSet { defaults.set(eveningAdhkarBeforeMaghrib, forKey: "eveningAdhkarBeforeMaghrib") }
+    }
+    var adhkarRemindersOn: Bool = false {
+        didSet { defaults.set(adhkarRemindersOn, forKey: "adhkarRemindersOn") }
+    }
+    var weeklyReminders: Set<WeeklyReminder> = [.alKahf, .jumuah, .ramadan] {
+        didSet { defaults.set(weeklyReminders.map(\.rawValue).sorted(), forKey: "weeklyReminders") }
+    }
+    /// People the user wants to remember in dua. Stays on device.
+    var duaNames: [DuaName] = [] {
+        didSet { defaults.set(try? JSONEncoder().encode(duaNames), forKey: "duaNames") }
+    }
+    /// Back up progress to iCloud so it returns on a new iPhone.
+    var iCloudBackup: Bool = false {
+        didSet { defaults.set(iCloudBackup, forKey: "iCloudBackup") }
+    }
+
     private init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         // Hydrate from persisted values. Once `defaults` is set every property is
@@ -106,22 +151,109 @@ final class AppSettings {
         if let raw = defaults.string(forKey: "distanceUnit"), let value = DistanceUnit(rawValue: raw) { distanceUnit = value }
         if defaults.object(forKey: "lastReadSurah") != nil { lastReadSurah = defaults.integer(forKey: "lastReadSurah") }
         if defaults.object(forKey: "lastReadAyah") != nil { lastReadAyah = defaults.integer(forKey: "lastReadAyah") }
+        if let value = defaults.string(forKey: "userName") { userName = value }
+        if let raw = defaults.string(forKey: "journey"), let value = Journey(rawValue: raw) { journey = value }
+        if let raw = defaults.stringArray(forKey: "intentions") { intentions = Set(raw.compactMap(Intention.init(rawValue:))) }
+        if let raw = defaults.string(forKey: "arabicLevel"), let value = ArabicLevel(rawValue: raw) { arabicLevel = value }
+        if let raw = defaults.string(forKey: "quranGoal"), let value = QuranGoal(rawValue: raw) { quranGoal = value }
+        if defaults.object(forKey: "fajrWakeOffset") != nil { let v = defaults.integer(forKey: "fajrWakeOffset"); fajrWakeOffset = v < 0 ? nil : v }
+        if defaults.object(forKey: "morningAdhkarMinutes") != nil { morningAdhkarMinutes = defaults.integer(forKey: "morningAdhkarMinutes") }
+        if defaults.object(forKey: "eveningAdhkarBeforeMaghrib") != nil { eveningAdhkarBeforeMaghrib = defaults.integer(forKey: "eveningAdhkarBeforeMaghrib") }
+        if defaults.object(forKey: "adhkarRemindersOn") != nil { adhkarRemindersOn = defaults.bool(forKey: "adhkarRemindersOn") }
+        if let raw = defaults.stringArray(forKey: "weeklyReminders") { weeklyReminders = Set(raw.compactMap(WeeklyReminder.init(rawValue:))) }
+        if let data = defaults.data(forKey: "duaNames"), let value = try? JSONDecoder().decode([DuaName].self, from: data) { duaNames = value }
+        if defaults.object(forKey: "iCloudBackup") != nil { iCloudBackup = defaults.bool(forKey: "iCloudBackup") }
     }
 }
 
 // MARK: - Enums
 enum AppTheme: String, CaseIterable {
-    case dark, light, system
+    /// Light (kraft), Dark (night indigo), System, or Sky: light from Fajr to Maghrib, dark after.
+    case dark, light, system, sky
     var displayName: String {
-        rawValue.capitalized
+        switch self {
+        case .light: return "Kraft"
+        case .dark: return "Night"
+        case .system: return "System"
+        case .sky: return "Follow the sky"
+        }
     }
+    /// Fixed scheme, or `nil` to follow the system. `.sky` is resolved against prayer times by the caller.
     var colorScheme: ColorScheme? {
         switch self {
         case .dark: return .dark
         case .light: return .light
-        case .system: return nil
+        case .system, .sky: return nil
         }
     }
+}
+
+// MARK: - Personalisation
+enum Journey: String, CaseIterable, Codable {
+    case newToIslam, returning, praying, deeper
+    var title: String {
+        switch self {
+        case .newToIslam: "New to Islam"
+        case .returning: "Coming back to it"
+        case .praying: "Praying daily"
+        case .deeper: "Going deeper"
+        }
+    }
+}
+
+enum Intention: String, CaseIterable, Codable {
+    case prayOnTime, readQuran, adhkar, journal, masjids
+    var title: String {
+        switch self {
+        case .prayOnTime: "Pray on time"
+        case .readQuran: "Read more Quran"
+        case .adhkar: "Morning & evening adhkar"
+        case .journal: "Reflect & journal"
+        case .masjids: "Find masjids nearby"
+        }
+    }
+}
+
+enum ArabicLevel: String, CaseIterable, Codable {
+    case fluent, learning, notYet
+    var title: String {
+        switch self {
+        case .fluent: "Fluent"
+        case .learning: "Learning"
+        case .notYet: "Not yet"
+        }
+    }
+}
+
+enum QuranGoal: String, CaseIterable, Codable {
+    case oneAyah, onePage, tenMinutes, finishInMonth
+    var title: String {
+        switch self {
+        case .oneAyah: "1 ayah a day"
+        case .onePage: "1 page a day"
+        case .tenMinutes: "10 minutes a day"
+        case .finishInMonth: "Finish in 30 days"
+        }
+    }
+}
+
+enum WeeklyReminder: String, CaseIterable, Codable {
+    case alKahf, jumuah, mondayThursdayFasts, whiteDays, ramadan
+    var title: String {
+        switch self {
+        case .alKahf: "Surah Al-Kahf"
+        case .jumuah: "Jumuʿah"
+        case .mondayThursdayFasts: "Monday & Thursday fasts"
+        case .whiteDays: "White Days fasts"
+        case .ramadan: "Ramadan & Eid"
+        }
+    }
+}
+
+struct DuaName: Codable, Hashable, Identifiable {
+    var id = UUID()
+    var name: String
+    var note: String = ""
 }
 
 enum TranslationLanguage: String, CaseIterable {
