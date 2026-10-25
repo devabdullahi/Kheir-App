@@ -137,6 +137,11 @@ private struct OnboardingStage: View {
             let running = flow.turn != nil && (t ?? .infinity) < OnboardingFlow.turnMs
             PaperSounds.shared.turn(t: running ? t : nil, eraseMs: OnboardingFlow.eraseMs, writeMs: OnboardingFlow.writeMs, rows: EraserPath.rows)
         }
+        // The cover whooshes open, lands with a soft thump, the first page rustles.
+        .onChange(of: bookProgress) { _, k in
+            let moving = flow.book != .closed && flow.book != .open
+            PaperSounds.shared.book(k: moving ? k : nil)
+        }
         .onDisappear { PaperSounds.shared.silence() }
         // The stage is the whole screen; everything inside is placed in screen coordinates.
         .frame(width: screen.width, height: screen.height)
