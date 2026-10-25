@@ -287,7 +287,7 @@ private struct PaperSkyScene {
             let w = (54 + CGFloat(i) * 22) * (0.9 + CGFloat(seeded(i, salt: 21)) * 0.2)
             let travel = size.width + w * 2
             let x = CGFloat(loop(t, period: period, phase: seeded(i, salt: 22))) * travel - w
-            // Clouds keep to the upper sky, clear of the greeting and countdown below.
+            // Clouds keep to the upper sky, clear of the countdown below.
             let y = skyY(0.10 + CGFloat(i) * 0.08 + CGFloat(seeded(i, salt: 23)) * 0.04)
             let n = nudge(30 + i)
             let cloud = Self.cloud(center: CGPoint(x: x + n.width, y: y + n.height), width: w, seed: i)

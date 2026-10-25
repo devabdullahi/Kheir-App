@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Home: a paper sky diorama with the greeting and the next prayer, then the
+/// Home: a paper sky diorama with the next prayer, then the
 /// day's cards on the table, ordered by what the user asked Kheir to help with.
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
@@ -170,12 +170,6 @@ struct HomeView: View {
             DynamicSkyView(skyState: skyEngine.currentState)
 
             VStack(spacing: 2) {
-                Text(greeting.uppercased())
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .tracking(2)
-                    .opacity(0.88)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                 if prayerCountdownVM.nextPrayerTime != nil {
                     // Its own view: the per-second tick redraws only this label, not Home.
                     SkyCountdownLabel(viewModel: prayerCountdownVM)
@@ -218,18 +212,6 @@ struct HomeView: View {
         .accessibilityLabel("Open Settings")
         .accessibilityIdentifier("openSettingsButton")
     }
-
-    private var greeting: String {
-        let name = settings.userName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let hello: String
-        if settings.journey == .newToIslam {
-            hello = "Welcome"
-        } else {
-            hello = Calendar.current.component(.hour, from: .now) < 12 ? "Sabāḥ al-khayr" : "Masāʾ al-khayr"
-        }
-        return name.isEmpty ? hello : "\(hello), \(name)"
-    }
-
 
     private var untilLine: String {
         PrayerWindow.caption(
