@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject private var settings = AppSettings.shared
+    private var settings = AppSettings.shared
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedTab: TabItem = .home
     @State private var isTabBarVisible = true

@@ -28,6 +28,12 @@ enum PrayerCardState: Equatable {
 /// ```
 struct PrayerCardView: View {
 
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
     let prayer: PrayerTime
     let state: PrayerCardState
     let colorScheme: ColorScheme
@@ -302,9 +308,7 @@ struct PrayerCardView: View {
     // MARK: - Time Formatting
 
     private var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: prayer.time)
+        Self.timeFormatter.string(from: prayer.time)
     }
 
     // MARK: - Accessibility

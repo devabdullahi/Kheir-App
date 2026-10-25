@@ -2,7 +2,7 @@ import SwiftUI
 import MapKit
 
 struct MasjidFinderView: View {
-    @StateObject private var viewModel = MasjidFinderViewModel()
+    @State private var viewModel = MasjidFinderViewModel()
     @Environment(\.colorScheme) private var colorScheme
     @State private var selectedMasjid: MasjidItem?
     @State private var showFilterSheet = false
@@ -55,10 +55,15 @@ struct MasjidFinderView: View {
             VStack(spacing: 0) {
                 // Map
                 Map(initialPosition: .region(viewModel.region)) {
+                    UserAnnotation()
                     ForEach(viewModel.masjids) { masjid in
                         Marker(masjid.name, coordinate: masjid.coordinate)
                             .tint(Color.adaptivePrimary(colorScheme))
                     }
+                }
+                .mapControls {
+                    MapUserLocationButton()
+                    MapCompass()
                 }
                 .frame(height: viewModel.viewMode == .map ? geo.size.height : geo.size.height * 0.45)
 
@@ -163,7 +168,7 @@ struct MasjidFinderView: View {
             }
             .padding()
             .navigationTitle("Masjid Details")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { selectedMasjid = nil }
@@ -198,7 +203,7 @@ struct MasjidFinderView: View {
                 }
             }
             .navigationTitle("Filter")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { showFilterSheet = false }

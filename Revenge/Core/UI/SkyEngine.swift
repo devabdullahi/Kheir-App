@@ -34,22 +34,27 @@ private struct SkyPeriod {
 ///
 /// Usage:
 /// ```swift
-/// @StateObject private var skyEngine = SkyEngine(dayPrayerTimes: prayerTimes)
+/// @State private var skyEngine = SkyEngine(dayPrayerTimes: prayerTimes)
 /// ```
 @MainActor
-final class SkyEngine: ObservableObject {
+@Observable
+final class SkyEngine {
 
     // MARK: Public API
 
     /// The interpolated sky state for the current moment. Updates every 30 seconds.
-    @Published private(set) var currentState: SkyState = .isha
+    private(set) var currentState: SkyState = .isha
 
     /// Human-readable name of the active prayer period (e.g. "Fajr", "Dhuhr").
-    @Published private(set) var currentPrayerName: String = ""
+    private(set) var currentPrayerName: String = ""
 
     // MARK: Private State
 
     private var periods: [SkyPeriod] = []
+
+    // Timer.publish is kept as a Combine pipeline — it is the idiomatic way to
+    // drive a repeating wall-clock observer on the main RunLoop. The sink
+    // assigns to plain vars; @Observable tracks the mutations automatically.
     private var timer: AnyCancellable?
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "Kheir",
@@ -134,10 +139,11 @@ final class SkyEngine: ObservableObject {
 
         for (index, prayer) in sorted.enumerated() {
             // The period ends when the next prayer begins; the last period runs for one hour.
+            let lastPeriodDuration: TimeInterval = 3600
             let startDate  = prayer.time
             let endDate    = index + 1 < sorted.count
                 ? sorted[index + 1].time
-                : prayer.time.addingTimeInterval(3600)
+                : prayer.time.addingTimeInterval(lastPeriodDuration)
 
             let startState = skyState(for: prayer.name)
             let endState   = index + 1 < sorted.count

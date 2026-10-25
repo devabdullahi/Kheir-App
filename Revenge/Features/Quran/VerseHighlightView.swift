@@ -245,7 +245,7 @@ private struct ActiveVerseShape: Shape {
 
 // MARK: - AnyShape (iOS 17 backport for conditional shape erasure)
 private struct AnyShape: Shape {
-    private let _path: (CGRect) -> Path
+    private let _path: @Sendable (CGRect) -> Path
     init<S: Shape>(_ shape: S) { _path = shape.path(in:) }
     func path(in rect: CGRect) -> Path { _path(rect) }
 }

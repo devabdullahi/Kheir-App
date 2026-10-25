@@ -12,9 +12,9 @@ import Foundation
 ///     requiring a live API call from within the routine itself.
 ///   - `cache` is injected at init so unit tests can supply `MockCacheManager` without
 ///     touching the file system.
-///   - The service is a plain `final class` (not an actor) to match the pattern established
-///     by `StreakService` and to conform to `RoutineProviding: AnyObject` without boxing.
-final class RoutineService {
+///   - The service conforms to `RoutineProviding: AnyObject`.
+@MainActor
+final class RoutineService: RoutineProviding {
 
     // MARK: - Shared Instance
 

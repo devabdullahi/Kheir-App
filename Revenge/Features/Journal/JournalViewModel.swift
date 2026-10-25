@@ -1,12 +1,19 @@
 import Foundation
-import Combine
 import SwiftUI
 
+@Observable
 @MainActor
-final class JournalViewModel: ObservableObject {
-    @Published var entries: [JournalEntry] = []
-    @Published var ayahBookmarks: [BookmarkedAyah] = []
-    @Published var hadithBookmarks: [BookmarkedHadith] = []
+final class JournalViewModel {
+    var entries: [JournalEntry] = []
+    var ayahBookmarks: [BookmarkedAyah] = []
+    var hadithBookmarks: [BookmarkedHadith] = []
+
+    private static let dateGroupFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
 
     private let cache: any CacheManaging
 
@@ -52,12 +59,8 @@ final class JournalViewModel: ObservableObject {
     }
 
     var entriesByDate: [(String, [JournalEntry])] {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-
         let grouped = Dictionary(grouping: entries) { entry in
-            formatter.string(from: entry.date)
+            Self.dateGroupFormatter.string(from: entry.date)
         }
 
         return grouped

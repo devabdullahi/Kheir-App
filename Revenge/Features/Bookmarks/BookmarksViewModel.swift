@@ -1,12 +1,12 @@
 import Foundation
-import Combine
 import SwiftUI
 
+@Observable
 @MainActor
-final class BookmarksViewModel: ObservableObject {
-    @Published var ayahBookmarks: [BookmarkedAyah] = []
-    @Published var hadithBookmarks: [BookmarkedHadith] = []
-    @Published var selectedTab: BookmarkTab = .ayahs
+final class BookmarksViewModel {
+    var ayahBookmarks: [BookmarkedAyah] = []
+    var hadithBookmarks: [BookmarkedHadith] = []
+    var selectedTab: BookmarkTab = .ayahs
 
     enum BookmarkTab: String, CaseIterable {
         case ayahs = "Ayahs"

@@ -1,0 +1,82 @@
+// Project Overview: Kheir
+
+// Introduction
+// Kheir is a modern Swift-based application designed to help users engage with Quranic verses, Hadith, prayer times, routines, and personal reflections. The app is thoughtfully architected with a focus on user experience, performance, and modularity. It leverages SwiftUI for its UI, modern concurrency for async tasks, and robust caching to enable offline functionality.
+
+// Core Features
+// - Daily Ayah: Presents a random verse from the Quran each day, with translation and transliteration.
+// - Daily Hadith: Surfaces a daily hadith from major collections, in both English and Arabic.
+// - Prayer Times: Accurate prayer timings fetched via Aladhan API, with offline fallback using the Adhan Swift library or local computation.
+// - Streak Tracking: Motivates daily engagement by tracking consecutive app opens.
+// - Bookmarks: Users can save favorite ayahs and hadiths for quick access.
+// - Journal: Enables writing and saving daily reflections, optionally linking to specific ayah or hadith.
+// - Routines: Customizable routines to form daily habits or spiritual checklists.
+// - Shareable Cards: Allows sharing of verses/hadiths as visually styled cards.
+// - Offline Support: Caching for bookmarks, daily content, and surah/hadith lists ensures the app works without connectivity.
+// - Settings: Includes appearance, notification controls, and app preferences.
+
+// Architecture & Key Components
+
+// 1. HomeView
+// - The main dashboard, displaying: prayer countdown, dynamic sky, daily ayah, daily hadith, streak card, and routines.
+// - Deeply integrated with view models for data and state management.
+
+// 2. API Layer (APIService)
+// - Centralized async fetcher for Quran, Hadith, and Prayer data.
+// - Handles REST calls, decoding, and error handling.
+// - Supports fetching Surah details, Ayah translations, daily/random Hadith, and generates audio streaming URLs.
+
+// 3. Prayer Times (PrayerTimesService)
+// - Fetches remote timings (via Aladhan API) and provides robust offline fallback calculation using the Adhan Swift package or a legacy solar method.
+
+// 4. LocationService
+// - Handles CoreLocation access, permission requests, location updates, and reverse-geocoding.
+
+// 5. Caching (CacheManager)
+// - Actor-based, thread-safe manager for all on-device persistence.
+// - Persists bookmarks, journal entries, routines, daily content, surah lists, and tracks app-open streaks.
+// - Coordinates between in-memory NSCache and disk (App Group-aware for widget sharing).
+
+// 6. Streak Tracking (StreakService)
+// - Tracks and persists daily app-open streaks.
+// - Handles edge cases around local time zones and daylight saving.
+
+// 7. Protocols & Testability
+// - All major services use protocols to enable dependency injection and comprehensive unit/UI testing.
+// - Includes extensive test suites for caching, streaks, and UI flows.
+
+// SwiftUI & Animations
+// - Uses custom view modifiers for scroll reveal, press-scale, glassmorphism, and skeleton loading.
+// - Dynamic sky header animates based on prayer states.
+// - Card-based UI with adaptive theming for light/dark mode.
+
+// Project Structure
+// - Views/: SwiftUI views for Home, Quran, Hadith, Journal, Bookmarks, Settings, etc.
+// - ViewModels/: State and logic controllers for views, using @StateObject and modern Swift patterns.
+// - Services/: APIService, PrayerTimesService, LocationService, StreakService, and supporting logic.
+// - Models/: Data models for Ayah, Hadith, JournalEntry, BookmarkedAyah, BookmarkedHadith, etc.
+// - Cache/: CacheManager and protocol-based abstractions for persistence.
+// - Shared/: Design tokens, color extensions, fonts, and reusable view modifiers.
+// - Tests/: Unit (Testing) and UI (XCTest) test suites covering major flows and edge cases.
+// - Package.swift: Declares dependencies (notably the Adhan library for accurate prayer time calculations).
+
+// Extensibility & Best Practices
+// - All critical logic is protocol-oriented for easy mocking and test coverage.
+// - Adopts best practices in concurrency (actors, async/await), dependency injection, and modular SwiftUI design.
+// - Respects user privacy: no sensitive data is transmitted or tracked.
+
+// Getting Started
+// - Ensure all Swift package dependencies are resolved (notably Adhan).
+// - App Group must be configured for shared cache between main app and widgets.
+// - See CacheManager for migration details if updating from a previous version.
+
+// Contributing & Testing
+// - Test coverage includes cache logic, streak edge cases, and critical UI navigation.
+// - UI tests simulate splash-to-home, settings navigation, bookmarks flow, and launch performance.
+// - Follow protocol-oriented design for new features to maintain testability.
+
+// Additional Notes
+// - The project emphasizes a frictionless, attractive daily experience for spiritual engagement.
+// - All user-generated content (journals, bookmarks) is stored on-device, not uploaded.
+
+// Generated by the Kheir project code analyzer on 2026-08-04.

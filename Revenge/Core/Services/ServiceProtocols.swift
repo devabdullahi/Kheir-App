@@ -27,7 +27,7 @@ protocol PrayerTimesFetching: Sendable {
 // MARK: - Daily Content Caching
 
 /// Abstracts caching and loading of the daily ayah and hadith content.
-protocol DailyContentCaching: AnyObject {
+protocol DailyContentCaching: Sendable {
     func cacheDailyAyah(_ ayah: DailyAyah) async
     func loadDailyAyah(for date: String) async -> DailyAyah?
     func cacheDailyHadith(_ hadith: DailyHadith) async
@@ -37,7 +37,7 @@ protocol DailyContentCaching: AnyObject {
 // MARK: - Ayah Bookmark Managing
 
 /// Abstracts saving, removing, querying, and loading bookmarked ayahs.
-protocol AyahBookmarkManaging: AnyObject {
+protocol AyahBookmarkManaging: Sendable {
     func saveAyahBookmark(_ bookmark: BookmarkedAyah) async
     func removeAyahBookmark(surah: Int, ayah: Int) async
     func removeAyahBookmark(id: UUID) async
@@ -48,7 +48,7 @@ protocol AyahBookmarkManaging: AnyObject {
 // MARK: - Hadith Bookmark Managing
 
 /// Abstracts saving, removing, querying, and loading bookmarked hadiths.
-protocol HadithBookmarkManaging: AnyObject {
+protocol HadithBookmarkManaging: Sendable {
     func saveHadithBookmark(_ bookmark: BookmarkedHadith) async
     func removeHadithBookmark(text: String, source: String) async
     func removeHadithBookmark(id: UUID) async
@@ -59,7 +59,7 @@ protocol HadithBookmarkManaging: AnyObject {
 // MARK: - Journal Managing
 
 /// Abstracts saving, updating, removing, and loading journal entries.
-protocol JournalManaging: AnyObject {
+protocol JournalManaging: Sendable {
     func saveJournalEntry(_ entry: JournalEntry) async
     func updateJournalEntry(_ entry: JournalEntry) async
     func removeJournalEntry(id: UUID) async
@@ -69,7 +69,7 @@ protocol JournalManaging: AnyObject {
 // MARK: - Surah Caching
 
 /// Abstracts caching and loading of surah data and surah list.
-protocol SurahCaching: AnyObject {
+protocol SurahCaching: Sendable {
     func cacheSurah(_ surah: CachedSurah) async
     func loadCachedSurah(_ number: Int) async -> CachedSurah?
     func cacheSurahList(_ list: [SurahInfo]) async
@@ -79,7 +79,7 @@ protocol SurahCaching: AnyObject {
 // MARK: - Streak Persisting
 
 /// Abstracts raw persistence of `StreakData` (read/write only, no business logic).
-protocol StreakPersisting: AnyObject {
+protocol StreakPersisting: Sendable {
     func saveStreak(_ data: StreakData) async
     func loadStreak() async -> StreakData?
 }
@@ -87,7 +87,7 @@ protocol StreakPersisting: AnyObject {
 // MARK: - Routine Persisting
 
 /// Abstracts raw persistence of a `DailyRoutine` for a given type and date.
-protocol RoutinePersisting: AnyObject {
+protocol RoutinePersisting: Sendable {
     func saveRoutine(_ routine: DailyRoutine) async
     func loadRoutine(type: RoutineType, for date: String) async -> DailyRoutine?
 }
@@ -103,7 +103,7 @@ protocol CacheManaging: DailyContentCaching, AyahBookmarkManaging, HadithBookmar
 
 /// Abstracts routine generation and progress persistence used by RoutineViewModel.
 /// Conforming types: `RoutineService` (production), mock stubs (tests).
-protocol RoutineProviding: AnyObject {
+protocol RoutineProviding: Sendable {
     /// Returns a previously persisted routine, or `nil` if one has not been generated yet.
     func loadRoutine(type: RoutineType, for date: String) async -> DailyRoutine?
 
@@ -118,7 +118,7 @@ protocol RoutineProviding: AnyObject {
 
 /// Abstracts app-open streak computation. Conforming types: `StreakService` (production),
 /// mock stubs (tests).
-protocol StreakTracking: AnyObject {
+protocol StreakTracking: Sendable {
     /// Records that the app was opened today and returns the updated `StreakData`.
     /// Safe to call multiple times per day — idempotent when `lastOpenedDate` equals today.
     func recordAppOpen() async -> StreakData
@@ -131,20 +131,6 @@ protocol StreakTracking: AnyObject {
     func resetStreak() async
 }
 
-// MARK: - APIService Conformances
-
-extension APIService: AyahFetching {}
-extension APIService: HadithFetching {}
-extension APIService: PrayerTimesFetching {}
-
 // MARK: - CacheManager Conformance
 
 extension CacheManager: CacheManaging {}
-
-// MARK: - StreakService Conformance
-
-extension StreakService: StreakTracking {}
-
-// MARK: - RoutineService Conformance
-
-extension RoutineService: RoutineProviding {}

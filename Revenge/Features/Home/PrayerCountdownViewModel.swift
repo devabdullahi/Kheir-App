@@ -1,12 +1,15 @@
 import Foundation
-import Combine
 import CoreLocation
 
+@Observable
 @MainActor
-final class PrayerCountdownViewModel: ObservableObject {
-    @Published var nextPrayerName: String = ""
-    @Published var nextPrayerTime: Date?
-    @Published var countdownText: String = "--:--:--"
+final class PrayerCountdownViewModel {
+    var currentPrayerName: String = ""
+    var nextPrayerName: String = ""
+    var nextPrayerTime: Date?
+    var countdownText: String = "--:--:--"
+
+    private static let locationWaitNanoseconds: UInt64 = 2_000_000_000
 
     private var timer: Timer?
     private let locationService: LocationService
@@ -36,7 +39,7 @@ final class PrayerCountdownViewModel: ObservableObject {
     private func loadPrayerCountdown() {
         guard let location = locationService.currentLocation else {
             Task {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                try? await Task.sleep(nanoseconds: Self.locationWaitNanoseconds)
                 guard !Task.isCancelled else { return }
                 if let loc = locationService.currentLocation {
                     await updateNextPrayer(location: loc)
@@ -58,10 +61,18 @@ final class PrayerCountdownViewModel: ObservableObject {
 
         let now = Date()
         let allTimes = times.all
-        if let next = allTimes.first(where: { $0.time > now }) {
-            nextPrayerName = next.name
-            nextPrayerTime = next.time
+        if let nextIndex = allTimes.firstIndex(where: { $0.time > now }) {
+            nextPrayerName = allTimes[nextIndex].name
+            nextPrayerTime = allTimes[nextIndex].time
+            // Current prayer is the one before next, or Isha if next is Fajr
+            if nextIndex > 0 {
+                currentPrayerName = allTimes[nextIndex - 1].name
+            } else {
+                currentPrayerName = "Isha"
+            }
         } else {
+            // All prayers passed — currently in Isha, next is tomorrow's Fajr
+            currentPrayerName = "Isha"
             nextPrayerName = "Fajr"
             if let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: times.fajr) {
                 nextPrayerTime = nextDay

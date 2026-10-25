@@ -2,7 +2,7 @@ import SwiftUI
 import UserNotifications
 
 struct SettingsView: View {
-    @ObservedObject private var settings = AppSettings.shared
+    @Bindable private var settings = AppSettings.shared
     @Environment(\.colorScheme) private var colorScheme
 
     // Notification permission alert state
@@ -54,7 +54,7 @@ struct SettingsView: View {
             }
         )
         .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.large)
+        .toolbarTitleDisplayMode(.large)
         .alert("Notifications Disabled", isPresented: $showPermissionDeniedAlert) {
             Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -578,22 +578,19 @@ struct SettingsView: View {
                         return
                     }
                     // Turning on — check current authorization status
-                    UNUserNotificationCenter.current().getNotificationSettings { settings in
-                        DispatchQueue.main.async {
-                            switch settings.authorizationStatus {
-                            case .authorized, .provisional, .ephemeral:
-                                binding.wrappedValue = true
-                            case .notDetermined:
-                                Task {
-                                    let granted = await NotificationService.shared.requestPermission()
-                                    binding.wrappedValue = granted
-                                }
-                            case .denied:
-                                showPermissionDeniedAlert = true
-                                // Leave binding as false; user must re-tap after fixing in Settings
-                            @unknown default:
-                                binding.wrappedValue = true
-                            }
+                    Task { @MainActor in
+                        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+                        switch status {
+                        case .authorized, .provisional, .ephemeral:
+                            binding.wrappedValue = true
+                        case .notDetermined:
+                            let granted = await NotificationService.shared.requestPermission()
+                            binding.wrappedValue = granted
+                        case .denied:
+                            showPermissionDeniedAlert = true
+                            // Leave binding as false; user must re-tap after fixing in Settings
+                        @unknown default:
+                            binding.wrappedValue = true
                         }
                     }
                 }

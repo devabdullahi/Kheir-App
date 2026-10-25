@@ -1,7 +1,9 @@
 import Foundation
 
-final class APIService: @unchecked Sendable {
+@MainActor
+final class APIService {
     static let shared = APIService()
+    private static let totalQuranAyahs = 6236
     private static let decoder = JSONDecoder()
     private let session: URLSession
 
@@ -58,7 +60,7 @@ final class APIService: @unchecked Sendable {
 
     // MARK: - Random Ayah (for Daily Ayah)
     func fetchRandomAyah(edition: String = "quran-uthmani") async throws -> Ayah {
-        let randomAyah = Int.random(in: 1...6236)
+        let randomAyah = Int.random(in: 1...Self.totalQuranAyahs)
         let response = try await fetch(AyahResponse.self, from: "\(AppConstants.quranBaseURL)/ayah/\(randomAyah)/\(edition)")
         return response.data
     }
@@ -161,3 +163,9 @@ enum APIError: LocalizedError {
         }
     }
 }
+
+// MARK: - Protocol Conformances
+
+extension APIService: AyahFetching {}
+extension APIService: HadithFetching {}
+extension APIService: PrayerTimesFetching {}

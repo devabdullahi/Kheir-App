@@ -123,7 +123,7 @@ final class MockAPIService: AyahFetching, HadithFetching, @unchecked Sendable {
 
 // MARK: - MockCacheManager
 
-final class MockCacheManager: CacheManaging {
+final class MockCacheManager: CacheManaging, @unchecked Sendable {
 
     // MARK: In-memory stores
     private var dailyAyahStore: [String: DailyAyah] = [:]
@@ -283,7 +283,7 @@ final class MockCacheManager: CacheManaging {
 
 // MARK: - MockRoutineService
 
-final class MockRoutineService: RoutineProviding {
+final class MockRoutineService: RoutineProviding, @unchecked Sendable {
 
     // MARK: In-memory stores
     private var store: [String: DailyRoutine] = [:]

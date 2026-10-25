@@ -7,6 +7,7 @@ import Foundation
 /// Builds a `StreakService` wired to an isolated `MockCacheManager` and a
 /// `Calendar` whose time zone is fixed to UTC so date-key arithmetic is
 /// deterministic regardless of the machine's local time zone.
+@MainActor
 private func makeService(
     cache: MockCacheManager = MockCacheManager()
 ) -> (service: StreakService, cache: MockCacheManager) {
@@ -49,6 +50,7 @@ private func seedStreak(
 // MARK: - StreakTrackingTests
 
 @Suite("StreakService — streak tracking logic", .serialized)
+@MainActor
 struct StreakTrackingTests {
 
     // MARK: First launch

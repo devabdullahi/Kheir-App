@@ -1,18 +1,27 @@
 import Foundation
-import Combine
 import os
 
 @MainActor
-final class SurahListViewModel: ObservableObject {
-    @Published var surahs: [SurahInfo] = []
-    @Published var filteredSurahs: [SurahInfo] = []
-    @Published var searchText: String = ""
-    @Published var isLoading = false
+@Observable
+final class SurahListViewModel {
+    var surahs: [SurahInfo] = []
+    var filteredSurahs: [SurahInfo] = []
+
+    /// Setting this property schedules a 200 ms debounced filter. Each change
+    /// cancels the pending filter task; unchanged queries are skipped.
+    var searchText: String = "" {
+        didSet { scheduleFilter() }
+    }
+
+    var isLoading = false
 
     private let cache: any CacheManaging
     private let settings: AppSettings
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "SurahListViewModel")
-    private var searchCancellable: AnyCancellable?
+
+    @ObservationIgnored private var searchTask: Task<Void, Never>?
+    /// Last query actually applied by `filterSurahs()`, used to drop duplicates.
+    @ObservationIgnored private var lastFilteredQuery: String = ""
 
     var lastReadSurah: Int { settings.lastReadSurah }
     var lastReadAyah: Int { settings.lastReadAyah }
@@ -20,12 +29,21 @@ final class SurahListViewModel: ObservableObject {
     init(cache: any CacheManaging = CacheManager.shared, settings: AppSettings = .shared) {
         self.cache = cache
         self.settings = settings
-        searchCancellable = $searchText
-            .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                self?.filterSurahs()
-            }
+    }
+
+    deinit {
+        searchTask?.cancel()
+    }
+
+    private func scheduleFilter() {
+        searchTask?.cancel()
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled, let self else { return }
+            guard self.searchText != self.lastFilteredQuery else { return }
+            self.lastFilteredQuery = self.searchText
+            self.filterSurahs()
+        }
     }
 
     func onAppear() {

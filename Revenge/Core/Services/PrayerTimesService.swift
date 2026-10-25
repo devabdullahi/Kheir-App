@@ -40,11 +40,14 @@ final class PrayerTimesService: Sendable {
                 longitude: coordinate.longitude,
                 method: methodInt
             )
-            return parsePrayerTimes(data.timings, date: date)
+            if let times = parsePrayerTimes(data.timings, date: date) {
+                return times
+            }
+            logger.error("Prayer times API response could not be parsed, falling back to offline calculation")
         } catch {
             logger.error("Prayer times API error: \(error.localizedDescription)")
-            return calculateOfflinePrayerTimes(coordinate: coordinate, date: date, method: method, madhab: madhab)
         }
+        return calculateOfflinePrayerTimes(coordinate: coordinate, date: date, method: method, madhab: madhab)
     }
 
     private func parsePrayerTimes(_ timings: AladhanTimings, date: Date) -> DayPrayerTimes? {

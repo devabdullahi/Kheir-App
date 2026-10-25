@@ -33,7 +33,7 @@ actor CacheManager {
 
     // MARK: - Private State
 
-    private let fileManager = FileManager.default
+    nonisolated(unsafe) private let fileManager = FileManager.default
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "CacheManager")
 
     /// Root cache directory — either inside the shared App Group container or the Documents
@@ -43,7 +43,7 @@ actor CacheManager {
     /// In-memory store keyed by filename. NSCache evicts automatically under memory pressure and
     /// is thread-safe for concurrent get/set calls, so no extra synchronisation is required on
     /// the memory layer itself.
-    private let memoryCache = NSCache<NSString, CacheBox>()
+    nonisolated(unsafe) private let memoryCache = NSCache<NSString, CacheBox>()
 
     /// O(1) lookup index for ayah bookmarks. Rebuilt from disk on first access.
     private var ayahBookmarkIndex: Set<AyahBookmarkKey> = []
@@ -76,7 +76,6 @@ actor CacheManager {
         warmMemoryCache(filename: ayahBookmarksFile,  type: [BookmarkedAyah].self)
         warmMemoryCache(filename: hadithBookmarksFile, type: [BookmarkedHadith].self)
         warmMemoryCache(filename: journalFile,          type: [JournalEntry].self)
-
         migrateToAppGroupIfNeeded()
         evictStaleDailyContent()
     }
@@ -91,7 +90,7 @@ actor CacheManager {
 
     /// Reads `filename` from disk synchronously on the calling thread (init only) and inserts
     /// the raw bytes into the memory cache so the first real read is instant.
-    private func warmMemoryCache<T: Decodable>(filename: String, type: T.Type) {
+    nonisolated private func warmMemoryCache<T: Decodable>(filename: String, type: T.Type) {
         let url = cacheDirectory.appendingPathComponent(filename)
         guard let data = try? Data(contentsOf: url) else { return }
         memoryCache.setObject(CacheBox(data), forKey: filename as NSString)
@@ -104,7 +103,7 @@ actor CacheManager {
     ///   1. The App Group container is accessible (capability is configured), AND
     ///   2. The legacy Documents cache directory contains files to migrate.
     /// A marker file `migrated_to_app_group_v1` inside the container prevents repeat runs.
-    func migrateToAppGroupIfNeeded() {
+    nonisolated func migrateToAppGroupIfNeeded() {
         guard let groupURL = fileManager.containerURL(
             forSecurityApplicationGroupIdentifier: CacheManager.appGroupIdentifier
         ) else { return }
@@ -147,7 +146,7 @@ actor CacheManager {
 
     /// Removes daily content files (daily_ayah_*, daily_hadith_*, routine_*) older than 30 days.
     /// Runs once at init to prevent unbounded cache growth (~730 files/year without eviction).
-    private func evictStaleDailyContent() {
+    nonisolated private func evictStaleDailyContent() {
         let maxAge: TimeInterval = 30 * 24 * 60 * 60 // 30 days
         let cutoff = Date().addingTimeInterval(-maxAge)
         let prefixes = ["daily_ayah_", "daily_hadith_", "routine_"]

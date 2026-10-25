@@ -1,15 +1,16 @@
 import Foundation
-import Combine
 import SwiftUI
 import os
 
+@Observable
 @MainActor
-final class ReadingViewModel: ObservableObject {
-    @Published var displayAyahs: [DisplayAyah] = []
-    @Published var surahName: String = ""
-    @Published var surahEnglishName: String = ""
-    @Published var isLoading = false
-    @Published var errorMessage: String?
+final class ReadingViewModel {
+    var displayAyahs: [DisplayAyah] = []
+    var surahName: String = ""
+    var surahEnglishName: String = ""
+    var isLoading = false
+    var errorMessage: String?
+    var bookmarkedAyahs: Set<Int> = []
 
     let surahNumber: Int
     let scrollToAyah: Int?
@@ -50,7 +51,7 @@ final class ReadingViewModel: ObservableObject {
     private func fetchSurah() async {
         isLoading = displayAyahs.isEmpty
         errorMessage = nil
-        do {        
+        do {
             let edition = settings.translationLanguage.rawValue
             async let arabicTask = api.fetchSurah(number: surahNumber, edition: "quran-uthmani")
             async let translationTask = api.fetchSurahTranslation(number: surahNumber, edition: edition)
@@ -63,8 +64,11 @@ final class ReadingViewModel: ObservableObject {
 
             var transliteration: [Ayah]? = nil
             if settings.showTransliteration {
-                if let translit = try? await api.fetchSurahTranslation(number: surahNumber, edition: "en.transliteration") {
+                do {
+                    let translit = try await api.fetchSurahTranslation(number: surahNumber, edition: "en.transliteration")
                     transliteration = translit.ayahs
+                } catch {
+                    logger.warning("Transliteration fetch failed, skipping: \(error.localizedDescription)")
                 }
             }
 
@@ -118,8 +122,6 @@ final class ReadingViewModel: ObservableObject {
             settings.lastReadAyah = ayah
         }
     }
-
-    @Published var bookmarkedAyahs: Set<Int> = []
 
     func loadBookmarkStates() async {
         let bookmarks = await cache.loadAyahBookmarks()

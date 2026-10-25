@@ -122,6 +122,7 @@ struct QuranAyahIndexPerformanceTests {
 // MARK: - APIService Configuration Tests
 
 @Suite("Performance - APIService Configuration")
+@MainActor
 struct APIServiceConfigTests {
 
     @Test("URLSession has proper timeout configuration")

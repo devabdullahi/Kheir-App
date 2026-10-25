@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct HomeView: View {
-    @StateObject private var viewModel = HomeViewModel()
-    @StateObject private var prayerCountdownVM = PrayerCountdownViewModel()
-    @StateObject private var skyEngine = SkyEngine()
+    @State private var viewModel = HomeViewModel()
+    @State private var prayerCountdownVM = PrayerCountdownViewModel()
+    @State private var skyEngine = SkyEngine()
     @Environment(\.colorScheme) private var colorScheme
     @State private var showShareSheet = false
     @State private var shareText = ""
@@ -21,20 +21,20 @@ struct HomeView: View {
 
                     // Prayer info overlay on sky
                     VStack(spacing: 4) {
-                        Text(skyEngine.currentPrayerName.uppercased())
-                            .font(.system(size: 11, weight: .regular))
+                        Text(prayerCountdownVM.currentPrayerName.uppercased())
+                            .font(.system(size: 14, weight: .medium))
                             .tracking(2)
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.white.opacity(0.7))
 
                         Text(prayerCountdownVM.countdownText)
-                            .font(.system(.title, design: .rounded, weight: .bold))
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .monospacedDigit()
 
                         if !prayerCountdownVM.nextPrayerName.isEmpty {
                             Text("Next: \(prayerCountdownVM.nextPrayerName)")
-                                .font(.caption)
-                                .foregroundStyle(.white.opacity(0.5))
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundStyle(.white.opacity(0.6))
                         }
                     }
                     .padding(.bottom, DesignTokens.spacingLG)
@@ -71,17 +71,13 @@ struct HomeView: View {
                     case .loading:
                         ayahSkeletonCard
                             .scrollReveal(delay: 0.15)
-                    case .loaded:
+                    case .loaded, .offline:
                         if let ayah = viewModel.dailyAyah {
                             dailyAyahCard(ayah)
                         }
                     case .failed:
                         ayahErrorCard
                             .scrollReveal(delay: 0.15)
-                    case .offline:
-                        if let ayah = viewModel.dailyAyah {
-                            dailyAyahCard(ayah)
-                        }
                     }
 
                     // MARK: - Daily Hadith
@@ -89,17 +85,13 @@ struct HomeView: View {
                     case .loading:
                         hadithSkeletonCard
                             .scrollReveal(delay: 0.2)
-                    case .loaded:
+                    case .loaded, .offline:
                         if let hadith = viewModel.dailyHadith {
                             dailyHadithCard(hadith)
                         }
                     case .failed:
                         hadithErrorCard
                             .scrollReveal(delay: 0.2)
-                    case .offline:
-                        if let hadith = viewModel.dailyHadith {
-                            dailyHadithCard(hadith)
-                        }
                     }
                 }
                 .padding()
@@ -155,32 +147,6 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-    }
-
-    // MARK: - Prayer Countdown
-    private var prayerCountdown: some View {
-        VStack(spacing: 6) {
-            if !prayerCountdownVM.nextPrayerName.isEmpty {
-                Text("Next: \(prayerCountdownVM.nextPrayerName)")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-            }
-            Text(prayerCountdownVM.countdownText)
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                .monospacedDigit()
-                .accessibilityIdentifier("prayerCountdown")
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background {
-            ZStack {
-                Color.adaptiveCardSurface(colorScheme)
-                IslamicPatternBackground(colorScheme: colorScheme)
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, y: 4)
     }
 
     // MARK: - Daily Ayah Card
@@ -251,100 +217,98 @@ struct HomeView: View {
 
     // MARK: - Daily Hadith Card
     private func dailyHadithCard(_ hadith: DailyHadith) -> some View {
-    VStack(alignment: .leading, spacing: 12) {
-        HStack {
-            Text("Daily Hadith")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                .scrollReveal(delay: 0.15)
-
-            Spacer()
-
-            // Language toggle button
-            Button {
-                showArabicHadith.toggle()
-            } label: {
-                Image(systemName: showArabicHadith ? "character.paragraph" : "globe")
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    .padding(6)
-                    .background(Color.adaptivePrimary(colorScheme).opacity(0.10))
-                    .clipShape(Circle())
-            }
-            .accessibilityLabel(showArabicHadith ? "Show English Hadith" : "Show Arabic Hadith")
-            .accessibilityIdentifier("toggleHadithLanguageButton")
-        }
-
-        // Show either English or Arabic text
-        Group {
-            if showArabicHadith, !hadith.arabicText.isEmpty {
-                Text(hadith.arabicText)
-                    .arabicFont(size: CGFloat(AppSettings.shared.arabicFontSize))
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .multilineTextAlignment(.trailing)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                    .scrollReveal(delay: 0.3)
-            } else {
-                Text(hadith.text)
-                    .font(.body)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                    .scrollReveal(delay: 0.3)
-            }
-        }
-
-        VStack(alignment: .leading, spacing: 4) {
-            Text(hadith.source)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-
-            if !hadith.narrator.isEmpty {
-                Text("Narrated by \(hadith.narrator)")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Daily Hadith")
                     .font(.caption)
-                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-            }
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    .scrollReveal(delay: 0.15)
 
-            Text("Grade: \(hadith.grade)")
-                .font(.caption2)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
-                .background(Color.adaptivePrimary(colorScheme).opacity(0.15))
-                .clipShape(Capsule())
-        }
-        .scrollReveal(delay: 0.45)
+                Spacer()
 
-        HStack {
-            Spacer()
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    viewModel.toggleHadithBookmark()
+                Button {
+                    showArabicHadith.toggle()
+                } label: {
+                    Image(systemName: showArabicHadith ? "character.paragraph" : "globe")
+                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                        .padding(6)
+                        .background(Color.adaptivePrimary(colorScheme).opacity(0.10))
+                        .clipShape(Circle())
                 }
-            } label: {
-                Image(systemName: viewModel.isHadithBookmarked ? "bookmark.fill" : "bookmark")
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    .contentTransition(.symbolEffect(.replace))
+                .accessibilityLabel(showArabicHadith ? "Show English Hadith" : "Show Arabic Hadith")
+                .accessibilityIdentifier("toggleHadithLanguageButton")
             }
-            .accessibilityLabel(viewModel.isHadithBookmarked ? "Remove hadith bookmark" : "Bookmark hadith")
 
-            Button {
-                shareCardData = ShareCardData(
-                    content: hadith.text,
-                    arabicText: hadith.arabicText,
-                    reference: hadith.source,
-                    template: .minimal,
-                    type: .hadith
-                )
-            } label: {
-                Image(systemName: "square.and.arrow.up")
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+            Group {
+                if showArabicHadith, !hadith.arabicText.isEmpty {
+                    Text(hadith.arabicText)
+                        .arabicFont(size: CGFloat(AppSettings.shared.arabicFontSize))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .scrollReveal(delay: 0.3)
+                } else {
+                    Text(hadith.text)
+                        .font(.body)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .scrollReveal(delay: 0.3)
+                }
             }
-            .accessibilityLabel("Share hadith")
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(hadith.source)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+
+                if !hadith.narrator.isEmpty {
+                    Text("Narrated by \(hadith.narrator)")
+                        .font(.caption)
+                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                }
+
+                Text("Grade: \(hadith.grade)")
+                    .font(.caption2)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
+                    .background(Color.adaptivePrimary(colorScheme).opacity(0.15))
+                    .clipShape(Capsule())
+            }
+            .scrollReveal(delay: 0.45)
+
+            HStack {
+                Spacer()
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.toggleHadithBookmark()
+                    }
+                } label: {
+                    Image(systemName: viewModel.isHadithBookmarked ? "bookmark.fill" : "bookmark")
+                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                        .contentTransition(.symbolEffect(.replace))
+                }
+                .accessibilityLabel(viewModel.isHadithBookmarked ? "Remove hadith bookmark" : "Bookmark hadith")
+
+                Button {
+                    shareCardData = ShareCardData(
+                        content: hadith.text,
+                        arabicText: hadith.arabicText,
+                        reference: hadith.source,
+                        template: .minimal,
+                        type: .hadith
+                    )
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                }
+                .accessibilityLabel("Share hadith")
+            }
+            .scrollReveal(delay: 0.55)
         }
-        .scrollReveal(delay: 0.55)
+        .cardStyle(colorScheme)
     }
-    .cardStyle(colorScheme)
-}
 
     // MARK: - Offline Banner
     private var offlineBanner: some View {

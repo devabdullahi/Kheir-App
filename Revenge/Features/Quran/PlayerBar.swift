@@ -6,7 +6,7 @@ import SwiftUI
 /// surah name, ayah number, qari name, playback progress, and transport controls.
 /// Entrance animation uses `.move(edge: .bottom).combined(with: .opacity)`.
 struct PlayerBar: View {
-    @ObservedObject var service: AudioPlayerService = .shared
+    var service: AudioPlayerService = .shared
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {

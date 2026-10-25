@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 import SwiftUI
 
 // MARK: - RoutineViewModel
@@ -7,20 +6,21 @@ import SwiftUI
 /// Drives the RoutineView. Handles loading, step completion, and reset.
 ///
 /// Design decisions:
-///   - @MainActor ensures all published-property mutations happen on the main thread
+///   - @MainActor ensures all property mutations happen on the main thread
 ///     without extra `DispatchQueue.main.async` boilerplate in the view layer.
 ///   - `routineService` is injected as the `RoutineProviding` protocol so tests can
 ///     supply `MockRoutineService` without touching the file system.
 ///   - The date key is computed once per `loadRoutine` call to stay consistent with
 ///     the rest of the app's "yyyy-MM-dd" keying convention.
+@Observable
 @MainActor
-final class RoutineViewModel: ObservableObject {
+final class RoutineViewModel {
 
-    // MARK: - Published State
+    // MARK: - State
 
-    @Published private(set) var currentRoutine: DailyRoutine?
-    @Published private(set) var completionPercentage: Double = 0
-    @Published private(set) var showCelebration = false
+    private(set) var currentRoutine: DailyRoutine?
+    private(set) var completionPercentage: Double = 0
+    private(set) var showCelebration = false
 
     // MARK: - Private State
 
@@ -39,8 +39,12 @@ final class RoutineViewModel: ObservableObject {
 
     // MARK: - Initialisation
 
-    init(routineService: any RoutineProviding = RoutineService.shared) {
+    init(routineService: any RoutineProviding) {
         self.routineService = routineService
+    }
+
+    convenience init() {
+        self.init(routineService: RoutineService.shared)
     }
 
     // MARK: - Public API

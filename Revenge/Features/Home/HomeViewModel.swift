@@ -1,24 +1,28 @@
 import Foundation
-import Combine
 import SwiftUI
 import UIKit
 import WidgetKit
 import os
 
+@Observable
 @MainActor
-final class HomeViewModel: ObservableObject {
-    @Published var dailyAyah: DailyAyah?
-    @Published var dailyHadith: DailyHadith?
-    @Published var hijriDate: String = ""
-    @Published var gregorianDate: String = ""
-    @Published var isLoading = false
-    @Published var ayahState: ContentLoadState = .loading
-    @Published var hadithState: ContentLoadState = .loading
-    @Published var streakData: StreakData?
+final class HomeViewModel {
+    var dailyAyah: DailyAyah?
+    var dailyHadith: DailyHadith?
+    var hijriDate: String = ""
+    var gregorianDate: String = ""
+    var isLoading = false
+    var ayahState: ContentLoadState = .loading
+    var hadithState: ContentLoadState = .loading
+    var streakData: StreakData?
 
     // MARK: - Routine State
-    @Published var currentRoutineType: RoutineType = RoutineTimeHelper.currentRoutineType()
-    @Published var routineProgress: Double = 0
+    var currentRoutineType: RoutineType = RoutineTimeHelper.currentRoutineType()
+    var routineProgress: Double = 0
+
+    // MARK: - Bookmarking
+    var isAyahBookmarked = false
+    var isHadithBookmarked = false
 
     private var midnightObserver: NSObjectProtocol?
     private let cache: any CacheManaging
@@ -255,8 +259,6 @@ final class HomeViewModel: ObservableObject {
     }
 
     // MARK: - Bookmarking
-    @Published var isAyahBookmarked = false
-    @Published var isHadithBookmarked = false
 
     func checkBookmarkStates() {
         Task {
@@ -307,6 +309,7 @@ final class HomeViewModel: ObservableObject {
     }
 
     // MARK: - Share
+
     func shareAyahText() -> String {
         guard let ayah = dailyAyah else { return "" }
         return """

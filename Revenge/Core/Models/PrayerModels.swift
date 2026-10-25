@@ -1,6 +1,12 @@
 import Foundation
 
 struct PrayerTime: Identifiable, Sendable {
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
     let name: String
     let time: Date
     let icon: String
@@ -10,9 +16,7 @@ struct PrayerTime: Identifiable, Sendable {
     var id: String { name }
 
     var timeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: time)
+        Self.timeFormatter.string(from: time)
     }
 }
 

@@ -10,11 +10,9 @@ import Foundation
 ///     without touching the file system.
 ///   - All date arithmetic uses `Calendar.dateComponents` as required — no
 ///     `timeIntervalSince` arithmetic that breaks across DST boundaries.
-///   - The service is deliberately free of `@MainActor` because streak computation
-///     is pure value logic that does not drive UI directly. ViewModels calling
-///     `recordAppOpen()` may dispatch to the main actor themselves.
 ///   - No force unwraps: every optional is handled with `guard` / `if let`.
-final class StreakService {
+@MainActor
+final class StreakService: StreakTracking {
 
     // MARK: - Shared Instance
 
@@ -114,10 +112,14 @@ extension StreakService {
             // Compute calendar-day distance using dateComponents (not timeIntervalSince).
             let days = daysBetween(from: existing.lastOpenedDate, to: todayKey)
 
-            if days == 1 {
+            switch days {
+            case 1:
                 // Rule 2: consecutive day.
                 existing.currentStreak += 1
-            } else {
+            case nil:
+                // Corrupted date — preserve current streak rather than resetting.
+                break
+            default:
                 // Rule 3: gap — streak resets. The user did open today, so streak = 1.
                 existing.currentStreak = 1
             }

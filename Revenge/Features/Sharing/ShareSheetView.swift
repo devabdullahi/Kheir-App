@@ -6,12 +6,12 @@ import UIKit
 /// Full-screen modal that shows a preview of share card templates with
 /// template picker, size toggle, share, and save-to-photos actions.
 struct ShareSheetView: View {
-    @StateObject private var viewModel: ShareViewModel
+    @State private var viewModel: ShareViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
     init(data: ShareCardData) {
-        _viewModel = StateObject(wrappedValue: ShareViewModel(data: data))
+        _viewModel = State(wrappedValue: ShareViewModel(data: data))
     }
 
     var body: some View {
@@ -35,7 +35,7 @@ struct ShareSheetView: View {
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle("Share")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }

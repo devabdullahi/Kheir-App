@@ -7,6 +7,7 @@ import Foundation
 private let testDate = "2026-04-20"
 
 /// Returns a `RoutineService` wired to an isolated `MockCacheManager`.
+@MainActor
 private func makeService(
     cache: MockCacheManager = MockCacheManager()
 ) -> (service: RoutineService, cache: MockCacheManager) {
@@ -17,6 +18,7 @@ private func makeService(
 // MARK: - RoutineTests
 
 @Suite("RoutineService — generation and persistence", .serialized)
+@MainActor
 struct RoutineTests {
 
     // MARK: Step count

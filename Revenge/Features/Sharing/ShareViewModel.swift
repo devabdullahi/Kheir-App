@@ -1,21 +1,21 @@
-import Combine
 import SwiftUI
 import Photos
 import UIKit
 
 // MARK: - Share View Model
 
+@Observable
 @MainActor
-final class ShareViewModel: ObservableObject {
+final class ShareViewModel {
 
-    // MARK: - Published State
+    // MARK: - State
 
-    @Published var selectedTemplate: ShareTemplate = .minimal
-    @Published var selectedSize: ShareCardSize = .story
-    @Published var renderedImage: UIImage?
-    @Published var isRendering: Bool = false
-    @Published var saveToPhotosState: SaveState = .idle
-    @Published var showActivitySheet: Bool = false
+    var selectedTemplate: ShareTemplate = .minimal
+    var selectedSize: ShareCardSize = .story
+    var renderedImage: UIImage?
+    var isRendering: Bool = false
+    var saveToPhotosState: SaveState = .idle
+    var showActivitySheet: Bool = false
 
     // MARK: - Types
 

@@ -91,7 +91,11 @@ final class NotificationService: Sendable {
                 let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
                 let id = "prayer_\(prayer.name)_\(date.dayKey)"
                 let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-                try? await center.add(request)
+                do {
+                    try await center.add(request)
+                } catch {
+                    logger.error("Failed to schedule \(prayer.name) notification: \(error.localizedDescription)")
+                }
             }
         }
     }

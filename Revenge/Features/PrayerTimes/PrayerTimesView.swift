@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct PrayerTimesView: View {
-    @StateObject private var viewModel = PrayerTimesViewModel()
-    @StateObject private var skyEngine = SkyEngine()
+    @State private var viewModel = PrayerTimesViewModel()
+    @State private var skyEngine = SkyEngine()
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -57,13 +57,24 @@ struct PrayerTimesView: View {
                             )
                         }
                     }
+
+                    // Empty-state: visible reason why prayers aren't loading
+                    // (location denied, network down, manual city typo'd, etc.)
+                    if viewModel.prayers.isEmpty {
+                        EmptyPrayerStateView(
+                            statusMessage: viewModel.statusMessage,
+                            isLoading: viewModel.isLoading || !viewModel.hasAttemptedLoad,
+                            retry: { viewModel.retry() }
+                        )
+                        .padding(.top, 8)
+                    }
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 100) // Space for tab bar
             }
         }
         .navigationTitle("Prayer Times")
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .onAppear { viewModel.onAppear() }
         .onDisappear { viewModel.onDisappear() }
@@ -94,5 +105,56 @@ struct PrayerTimesView: View {
         let distance = Double(index - nextIndex)
         let dimLevel = min(1.0, 0.4 + distance * 0.15)
         return .future(dimLevel: dimLevel)
+    }
+}
+
+// MARK: - Empty State
+//
+// Shown when `viewModel.prayers` is empty so the user isn't staring at a blank
+// sky background wondering what went wrong. Always pairs a status message with
+// a manual retry button — the previous version silently dropped every failure.
+struct EmptyPrayerStateView: View {
+    let statusMessage: String
+    let isLoading: Bool
+    let retry: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: isLoading ? "icloud.and.arrow.down" : "location.slash")
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(Color(red: 0.910, green: 0.863, blue: 0.784).opacity(0.7))
+
+            Text(isLoading ? "Loading prayer times…" : (statusMessage.isEmpty ? "Prayer times unavailable" : statusMessage))
+                .font(.subheadline)
+                .foregroundStyle(.white.opacity(0.85))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+
+            if !isLoading {
+                Button(action: retry) {
+                    Text("Retry")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(red: 0.831, green: 0.659, blue: 0.278))
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .overlay(
+                            Capsule().stroke(
+                                Color(red: 0.831, green: 0.659, blue: 0.278).opacity(0.6),
+                                lineWidth: 1
+                            )
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .padding(.horizontal, 16)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        )
     }
 }
