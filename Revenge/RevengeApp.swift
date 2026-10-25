@@ -12,7 +12,9 @@ struct RevengeApp: App {
         WindowGroup {
             SplashScreenView()
                 .task {
-                    // Request location after UI is up — non-blocking
+                    // New users are asked on the onboarding location page, after it
+                    // explains why; returning users just resume updates.
+                    guard UserDefaults.standard.bool(forKey: "hasCompletedOnboarding") else { return }
                     LocationService.shared.requestPermission()
                     LocationService.shared.startUpdating()
                 }
