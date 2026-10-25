@@ -1,23 +1,32 @@
 import Foundation
 import MapKit
-import Combine
 import SwiftUI
+import os
 
 @MainActor
-final class MasjidFinderViewModel: ObservableObject {
-    @Published var masjids: [MasjidItem] = []
-    @Published var region = MKCoordinateRegion(
+@Observable
+final class MasjidFinderViewModel {
+    var masjids: [MasjidItem] = []
+    var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 21.4225, longitude: 39.8262),
         span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
     )
-    @Published var selectedMasjid: MasjidItem?
-    @Published var isLoading = false
-    @Published var searchRadius: SearchRadius = .fiveKm
-    @Published var viewMode: ViewMode = .split
-    @Published var locationDenied = false
+    var isLoading = false
+    var searchRadius: SearchRadius = .fiveKm
+    var viewMode: ViewMode = .split
+    var locationDenied = false
+
+    private static let metersPerMile: Double = 1609.34
 
     private let locationService = LocationService.shared
-    private var cancellables = Set<AnyCancellable>()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "MasjidFinder")
+    @ObservationIgnored private var firstLocationTask: Task<Void, Never>?
+    @ObservationIgnored private var authorizationTask: Task<Void, Never>?
+
+    deinit {
+        firstLocationTask?.cancel()
+        authorizationTask?.cancel()
+    }
 
     enum ViewMode: String, CaseIterable {
         case split = "Split"
@@ -44,23 +53,30 @@ final class MasjidFinderViewModel: ObservableObject {
         locationService.requestPermission()
         locationService.startUpdating()
 
-        locationService.$currentLocation
-            .compactMap { $0 }
-            .first()
-            .sink { [weak self] coordinate in
-                self?.region = MKCoordinateRegion(
+        // React to the first non-nil location (the sequence emits the current
+        // value immediately, then on each change) and to authorization changes.
+        let locationService = locationService
+        firstLocationTask?.cancel()
+        firstLocationTask = Task { [weak self] in
+            for await coordinate in Observations({ locationService.currentLocation }) {
+                guard let coordinate else { continue }
+                guard let self else { return }
+                self.region = MKCoordinateRegion(
                     center: coordinate,
                     span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
                 )
-                Task { await self?.searchMasjids(near: coordinate) }
+                await self.searchMasjids(near: coordinate)
+                return
             }
-            .store(in: &cancellables)
+        }
 
-        locationService.$authorizationStatus
-            .sink { [weak self] status in
-                self?.locationDenied = (status == .denied || status == .restricted)
+        authorizationTask?.cancel()
+        authorizationTask = Task { [weak self] in
+            for await status in Observations({ locationService.authorizationStatus }) {
+                guard let self else { return }
+                self.locationDenied = (status == .denied || status == .restricted)
             }
-            .store(in: &cancellables)
+        }
     }
 
     func searchMasjids(near coordinate: CLLocationCoordinate2D) async {
@@ -82,23 +98,25 @@ final class MasjidFinderViewModel: ObservableObject {
             let unit = AppSettings.shared.distanceUnit
 
             masjids = response.mapItems.map { item in
-                let distance = item.placemark.location?.distance(from: userLocation) ?? 0
+                let distance = item.location.distance(from: userLocation)
                 let distanceValue: Double
                 let distanceUnit: String
                 if unit == .miles {
-                    distanceValue = distance / 1609.34
+                    distanceValue = distance / Self.metersPerMile
                     distanceUnit = "mi"
                 } else {
                     distanceValue = distance / 1000
                     distanceUnit = "km"
                 }
 
+                let itemCoordinate = item.location.coordinate
+                let addressString = item.address?.shortAddress ?? item.address?.fullAddress ?? ""
+
                 return MasjidItem(
                     id: UUID(),
                     name: item.name ?? "Unknown Masjid",
-                    coordinate: item.placemark.coordinate,
-                    address: [item.placemark.thoroughfare, item.placemark.locality, item.placemark.administrativeArea]
-                        .compactMap { $0 }.joined(separator: ", "),
+                    coordinate: itemCoordinate,
+                    address: addressString,
                     distance: distanceValue,
                     distanceUnit: distanceUnit,
                     phoneNumber: item.phoneNumber,
@@ -108,7 +126,7 @@ final class MasjidFinderViewModel: ObservableObject {
             }
             .sorted { $0.distance < $1.distance }
         } catch {
-            print("Masjid search error: \(error)")
+            logger.error("Masjid search error: \(error.localizedDescription)")
         }
         isLoading = false
     }

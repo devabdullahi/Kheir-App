@@ -1,6 +1,6 @@
 import Foundation
 
-struct BookmarkedAyah: Codable, Identifiable {
+struct BookmarkedAyah: Codable, Identifiable, Sendable {
     let id: UUID
     let surahNumber: Int
     let surahName: String
@@ -20,7 +20,7 @@ struct BookmarkedAyah: Codable, Identifiable {
     }
 }
 
-struct BookmarkedHadith: Codable, Identifiable {
+struct BookmarkedHadith: Codable, Identifiable, Sendable {
     let id: UUID
     let text: String
     let source: String

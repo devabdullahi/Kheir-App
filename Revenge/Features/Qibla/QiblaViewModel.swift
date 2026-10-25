@@ -1,58 +1,70 @@
 import Foundation
 import CoreLocation
-import Combine
 import SwiftUI
 
 @MainActor
-final class QiblaViewModel: ObservableObject {
-    @Published var qiblaBearing: Double = 0
-    @Published var compassHeading: Double = 0
-    @Published var rotationAngle: Double = 0
-    @Published var bearingText: String = ""
-    @Published var needsCalibration = false
-    @Published var hasLocation = false
-    @Published var manualCity: String = ""
-    @Published var locationDenied = false
+@Observable
+final class QiblaViewModel {
+    var qiblaBearing: Double = 0
+    var compassHeading: Double = 0
+    var rotationAngle: Double = 0
+    var bearingText: String = ""
+    var needsCalibration = false
+    var hasLocation = false
+    var manualCity: String = ""
+    var locationDenied = false
 
     private let locationService = LocationService.shared
-    private var cancellables = Set<AnyCancellable>()
+    @ObservationIgnored private var observationTasks: [Task<Void, Never>] = []
+
+    deinit {
+        observationTasks.forEach { $0.cancel() }
+    }
 
     func onAppear() {
         locationService.requestPermission()
         locationService.startUpdating()
         locationService.startHeadingUpdates()
 
-        locationService.$authorizationStatus
-            .sink { [weak self] status in
-                self?.locationDenied = (status == .denied || status == .restricted)
+        // Each `Observations` sequence emits the current value immediately and
+        // then on every change to the observed LocationService property.
+        let locationService = locationService
+        observationTasks.forEach { $0.cancel() }
+        observationTasks = [
+            Task { [weak self] in
+                for await status in Observations({ locationService.authorizationStatus }) {
+                    guard let self else { return }
+                    self.locationDenied = (status == .denied || status == .restricted)
+                }
+            },
+            Task { [weak self] in
+                for await coordinate in Observations({ locationService.currentLocation }) {
+                    guard let coordinate else { continue }
+                    guard let self else { return }
+                    self.updateBearing(from: coordinate)
+                }
+            },
+            Task { [weak self] in
+                for await magneticHeading in Observations({ locationService.magneticHeading }) {
+                    guard let magneticHeading else { continue }
+                    guard let self else { return }
+                    self.compassHeading = magneticHeading
+                    self.rotationAngle = self.qiblaBearing - magneticHeading
+                }
+            },
+            Task { [weak self] in
+                for await accuracy in Observations({ locationService.headingAccuracy }) {
+                    guard let self else { return }
+                    self.needsCalibration = accuracy < 0 || accuracy > 25
+                }
             }
-            .store(in: &cancellables)
-
-        locationService.$currentLocation
-            .compactMap { $0 }
-            .sink { [weak self] coordinate in
-                self?.updateBearing(from: coordinate)
-            }
-            .store(in: &cancellables)
-
-        locationService.$heading
-            .compactMap { $0 }
-            .sink { [weak self] heading in
-                guard let self = self else { return }
-                self.compassHeading = heading.magneticHeading
-                self.rotationAngle = self.qiblaBearing - heading.magneticHeading
-            }
-            .store(in: &cancellables)
-
-        locationService.$headingAccuracy
-            .sink { [weak self] accuracy in
-                self?.needsCalibration = accuracy < 0 || accuracy > 25
-            }
-            .store(in: &cancellables)
+        ]
     }
 
     func onDisappear() {
         locationService.stopHeadingUpdates()
+        observationTasks.forEach { $0.cancel() }
+        observationTasks = []
     }
 
     private func updateBearing(from coordinate: CLLocationCoordinate2D) {

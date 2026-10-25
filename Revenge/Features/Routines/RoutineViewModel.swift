@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 import SwiftUI
 
 // MARK: - RoutineViewModel
@@ -7,20 +6,21 @@ import SwiftUI
 /// Drives the RoutineView. Handles loading, step completion, and reset.
 ///
 /// Design decisions:
-///   - @MainActor ensures all published-property mutations happen on the main thread
+///   - @MainActor ensures all property mutations happen on the main thread
 ///     without extra `DispatchQueue.main.async` boilerplate in the view layer.
 ///   - `routineService` is injected as the `RoutineProviding` protocol so tests can
 ///     supply `MockRoutineService` without touching the file system.
 ///   - The date key is computed once per `loadRoutine` call to stay consistent with
 ///     the rest of the app's "yyyy-MM-dd" keying convention.
+@Observable
 @MainActor
-final class RoutineViewModel: ObservableObject {
+final class RoutineViewModel {
 
-    // MARK: - Published State
+    // MARK: - State
 
-    @Published private(set) var currentRoutine: DailyRoutine?
-    @Published private(set) var completionPercentage: Double = 0
-    @Published private(set) var showCelebration = false
+    private(set) var currentRoutine: DailyRoutine?
+    private(set) var completionPercentage: Double = 0
+    private(set) var showCelebration = false
 
     // MARK: - Private State
 
@@ -39,16 +39,20 @@ final class RoutineViewModel: ObservableObject {
 
     // MARK: - Initialisation
 
-    init(routineService: any RoutineProviding = RoutineService.shared) {
+    init(routineService: any RoutineProviding) {
         self.routineService = routineService
+    }
+
+    convenience init() {
+        self.init(routineService: RoutineService.shared)
     }
 
     // MARK: - Public API
 
     /// Loads (or generates) the routine for the given type and today's date.
-    func loadRoutine(type: RoutineType) {
+    func loadRoutine(type: RoutineType) async {
         let date = todayKey()
-        let routine = routineService.generateRoutine(type: type, for: date)
+        let routine = await routineService.generateRoutine(type: type, for: date)
         currentRoutine = routine
         updateCompletion(from: routine)
     }
@@ -68,8 +72,8 @@ final class RoutineViewModel: ObservableObject {
         }
 
         currentRoutine = routine
-        routineService.saveRoutineProgress(routine)
         updateCompletion(from: routine)
+        Task { await routineService.saveRoutineProgress(routine) }
 
         if routine.isCompleted && !showCelebration {
             showCelebration = true
@@ -82,10 +86,10 @@ final class RoutineViewModel: ObservableObject {
     func resetRoutine() {
         guard var routine = currentRoutine else { return }
         routine.completedSteps = []
-        routineService.saveRoutineProgress(routine)
         currentRoutine = routine
         updateCompletion(from: routine)
         showCelebration = false
+        Task { await routineService.saveRoutineProgress(routine) }
     }
 
     /// Dismisses the celebration overlay without resetting progress.

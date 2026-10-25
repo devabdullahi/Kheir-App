@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct JournalComposeView: View {
-    @ObservedObject var viewModel: JournalViewModel
+    var viewModel: JournalViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
 
@@ -32,7 +32,7 @@ struct JournalComposeView: View {
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle(isEditing ? "Edit Entry" : "New Entry")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") {
@@ -225,7 +225,7 @@ struct JournalComposeView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Select Ayah")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") { showAyahPicker = false }
@@ -261,7 +261,7 @@ struct JournalComposeView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Select Hadith")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Cancel") { showHadithPicker = false }

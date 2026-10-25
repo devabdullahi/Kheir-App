@@ -1,6 +1,6 @@
 import Foundation
 
-struct JournalEntry: Codable, Identifiable {
+struct JournalEntry: Codable, Identifiable, Sendable {
     let id: UUID
     var text: String
     var date: Date
@@ -16,7 +16,7 @@ struct JournalEntry: Codable, Identifiable {
     }
 }
 
-struct LinkedAyah: Codable, Equatable {
+struct LinkedAyah: Codable, Equatable, Sendable {
     let surahNumber: Int
     let surahName: String
     let ayahNumber: Int
@@ -24,7 +24,7 @@ struct LinkedAyah: Codable, Equatable {
     let translationText: String
 }
 
-struct LinkedHadith: Codable, Equatable {
+struct LinkedHadith: Codable, Equatable, Sendable {
     let text: String
     let source: String
 }

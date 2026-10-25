@@ -6,7 +6,7 @@ import SwiftUI
 struct RoutineView: View {
     let routineType: RoutineType
 
-    @StateObject private var viewModel = RoutineViewModel()
+    @State private var viewModel = RoutineViewModel()
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
 
@@ -50,7 +50,7 @@ struct RoutineView: View {
                 }
             }
             .navigationTitle(routineType.displayName)
-            .navigationBarTitleDisplayMode(.large)
+            .toolbarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -63,8 +63,8 @@ struct RoutineView: View {
                     .accessibilityIdentifier("resetRoutineButton")
                 }
             }
-            .onAppear {
-                viewModel.loadRoutine(type: routineType)
+            .task {
+                await viewModel.loadRoutine(type: routineType)
             }
         }
     }

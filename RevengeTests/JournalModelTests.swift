@@ -53,13 +53,13 @@ struct JournalModelTests {
     }
 
     @Test("Multiple journal entries persist in order")
-    func multipleEntriesOrder() {
+    func multipleEntriesOrder() async {
         let e1 = JournalEntry(text: "First entry test_order_1")
         let e2 = JournalEntry(text: "Second entry test_order_2")
-        cache.saveJournalEntry(e1)
-        cache.saveJournalEntry(e2)
+        await cache.saveJournalEntry(e1)
+        await cache.saveJournalEntry(e2)
 
-        let loaded = cache.loadJournalEntries()
+        let loaded = await cache.loadJournalEntries()
         let idx1 = loaded.firstIndex { $0.id == e1.id }
         let idx2 = loaded.firstIndex { $0.id == e2.id }
         // Newest (e2) should be before oldest (e1)
@@ -67,33 +67,35 @@ struct JournalModelTests {
             #expect(i2 < i1)
         }
 
-        cache.removeJournalEntry(id: e1.id)
-        cache.removeJournalEntry(id: e2.id)
+        await cache.removeJournalEntry(id: e1.id)
+        await cache.removeJournalEntry(id: e2.id)
     }
 
     @Test("Update preserves entry position")
-    func updatePreservesPosition() {
+    func updatePreservesPosition() async {
         // Use a unique ID prefix to avoid cross-suite interference
         let uniqueText = "Position test original \(UUID().uuidString)"
         var entry = JournalEntry(text: uniqueText)
-        cache.saveJournalEntry(entry)
-        defer { cache.removeJournalEntry(id: entry.id) }
+        await cache.saveJournalEntry(entry)
 
         // Verify save succeeded before proceeding
-        let afterSave = cache.loadJournalEntries()
+        let afterSave = await cache.loadJournalEntries()
         guard let originalIndex = afterSave.firstIndex(where: { $0.id == entry.id }) else {
             Issue.record("Entry not found after save")
+            await cache.removeJournalEntry(id: entry.id)
             return
         }
 
         entry.text = "Position test updated \(entry.id.uuidString)"
-        cache.updateJournalEntry(entry)
+        await cache.updateJournalEntry(entry)
 
-        let afterUpdate = cache.loadJournalEntries()
+        let afterUpdate = await cache.loadJournalEntries()
         let updatedIndex = afterUpdate.firstIndex { $0.id == entry.id }
         #expect(originalIndex == updatedIndex)
 
         let found = afterUpdate.first { $0.id == entry.id }
         #expect(found?.text == entry.text)
+
+        await cache.removeJournalEntry(id: entry.id)
     }
 }

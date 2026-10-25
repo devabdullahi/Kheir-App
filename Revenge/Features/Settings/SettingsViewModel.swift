@@ -1,9 +1,10 @@
 import Foundation
 import SwiftUI
-import Combine
 
-final class SettingsViewModel: ObservableObject {
-    @Published var settings = AppSettings.shared
+@Observable
+@MainActor
+final class SettingsViewModel {
+    var settings = AppSettings.shared
 
     let appVersion: String = {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"

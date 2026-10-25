@@ -1,16 +1,47 @@
 import SwiftUI
 
 struct HomeView: View {
-    @StateObject private var viewModel = HomeViewModel()
+    @State private var viewModel = HomeViewModel()
+    @State private var prayerCountdownVM = PrayerCountdownViewModel()
+    @State private var skyEngine = SkyEngine()
     @Environment(\.colorScheme) private var colorScheme
     @State private var showShareSheet = false
     @State private var shareText = ""
     @State private var shareCardData: ShareCardData?
+    @State private var showArabicHadith = false
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
+        ScrollView {
+            VStack(spacing: 0) {
+                // MARK: - Sky Header
+                ZStack(alignment: .bottom) {
+                    DynamicSkyView(skyState: skyEngine.currentState)
+                        .frame(height: DesignTokens.skyHeaderHeight)
+                        .ignoresSafeArea(edges: .top)
+
+                    // Prayer info overlay on sky
+                    VStack(spacing: 4) {
+                        Text(prayerCountdownVM.currentPrayerName.uppercased())
+                            .font(.system(size: 14, weight: .medium))
+                            .tracking(2)
+                            .foregroundStyle(.white.opacity(0.7))
+
+                        Text(prayerCountdownVM.countdownText)
+                            .font(.system(size: 40, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .monospacedDigit()
+
+                        if !prayerCountdownVM.nextPrayerName.isEmpty {
+                            Text("Next: \(prayerCountdownVM.nextPrayerName)")
+                                .font(.system(size: 15, weight: .regular))
+                                .foregroundStyle(.white.opacity(0.6))
+                        }
+                    }
+                    .padding(.bottom, DesignTokens.spacingLG)
+                }
+
+                // MARK: - Content Cards
+                VStack(spacing: DesignTokens.spacingXXL) {
                     // MARK: - Date Header
                     dateHeader
                         .scrollReveal(delay: 0)
@@ -27,11 +58,7 @@ struct HomeView: View {
                         progress: viewModel.routineProgress
                     )
                     .scrollReveal(delay: 0.08)
-                    .onAppear { viewModel.refreshRoutineProgress() }
-
-                    // MARK: - Prayer Countdown
-                    prayerCountdown
-                        .scrollReveal(delay: 0.1)
+                    .task { await viewModel.refreshRoutineProgress() }
 
                     // MARK: - Offline Banner
                     if viewModel.ayahState == .offline || viewModel.hadithState == .offline {
@@ -44,17 +71,13 @@ struct HomeView: View {
                     case .loading:
                         ayahSkeletonCard
                             .scrollReveal(delay: 0.15)
-                    case .loaded:
+                    case .loaded, .offline:
                         if let ayah = viewModel.dailyAyah {
                             dailyAyahCard(ayah)
                         }
                     case .failed:
                         ayahErrorCard
                             .scrollReveal(delay: 0.15)
-                    case .offline:
-                        if let ayah = viewModel.dailyAyah {
-                            dailyAyahCard(ayah)
-                        }
                     }
 
                     // MARK: - Daily Hadith
@@ -62,53 +85,53 @@ struct HomeView: View {
                     case .loading:
                         hadithSkeletonCard
                             .scrollReveal(delay: 0.2)
-                    case .loaded:
+                    case .loaded, .offline:
                         if let hadith = viewModel.dailyHadith {
                             dailyHadithCard(hadith)
                         }
                     case .failed:
                         hadithErrorCard
                             .scrollReveal(delay: 0.2)
-                    case .offline:
-                        if let hadith = viewModel.dailyHadith {
-                            dailyHadithCard(hadith)
-                        }
                     }
                 }
                 .padding()
             }
-            .refreshable {
-                await viewModel.refresh()
-            }
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-            .navigationTitle("Kheir")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(destination: SettingsView()) {
-                        Image(systemName: "gearshape")
-                            .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    }
-                    .accessibilityLabel("Open Settings")
-                    .accessibilityIdentifier("openSettingsButton")
+        }
+        .refreshable {
+            await viewModel.refresh()
+        }
+        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .navigationTitle("Kheir")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink(destination: SettingsView()) {
+                    Image(systemName: "gearshape")
+                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
                 }
+                .accessibilityLabel("Open Settings")
+                .accessibilityIdentifier("openSettingsButton")
             }
-            .onAppear {
-                viewModel.onAppear()
-                viewModel.checkBookmarkStates()
-            }
-            .onChange(of: viewModel.dailyAyah?.surahNumber) { _, _ in
-                viewModel.checkBookmarkStates()
-            }
-            .onChange(of: viewModel.dailyHadith?.text) { _, _ in
-                viewModel.checkBookmarkStates()
-            }
-            .onDisappear { viewModel.onDisappear() }
-            .sheet(isPresented: $showShareSheet) {
-                ShareSheet(text: shareText)
-            }
-            .sheet(item: $shareCardData) { cardData in
-                ShareSheetView(data: cardData)
-            }
+        }
+        .onAppear {
+            viewModel.onAppear()
+            viewModel.checkBookmarkStates()
+            prayerCountdownVM.onAppear()
+        }
+        .onChange(of: viewModel.dailyAyah?.surahNumber) { _, _ in
+            viewModel.checkBookmarkStates()
+        }
+        .onChange(of: viewModel.dailyHadith?.text) { _, _ in
+            viewModel.checkBookmarkStates()
+        }
+        .onDisappear {
+            viewModel.onDisappear()
+            prayerCountdownVM.onDisappear()
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(text: shareText)
+        }
+        .sheet(item: $shareCardData) { cardData in
+            ShareSheetView(data: cardData)
         }
     }
 
@@ -124,32 +147,6 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-    }
-
-    // MARK: - Prayer Countdown
-    private var prayerCountdown: some View {
-        VStack(spacing: 6) {
-            if !viewModel.nextPrayerName.isEmpty {
-                Text("Next: \(viewModel.nextPrayerName)")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-            }
-            Text(viewModel.countdownText)
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                .monospacedDigit()
-                .accessibilityIdentifier("prayerCountdown")
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background {
-            ZStack {
-                Color.adaptiveCardSurface(colorScheme)
-                IslamicPatternBackground(colorScheme: colorScheme)
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, y: 4)
     }
 
     // MARK: - Daily Ayah Card
@@ -211,6 +208,7 @@ struct HomeView: View {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundStyle(Color.adaptivePrimary(colorScheme))
                 }
+                .accessibilityLabel("Share ayah")
             }
             .scrollReveal(delay: 0.55)
         }
@@ -220,16 +218,43 @@ struct HomeView: View {
     // MARK: - Daily Hadith Card
     private func dailyHadithCard(_ hadith: DailyHadith) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Daily Hadith")
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                .scrollReveal(delay: 0.15)
+            HStack {
+                Text("Daily Hadith")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    .scrollReveal(delay: 0.15)
 
-            Text(hadith.text)
-                .font(.body)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
-                .scrollReveal(delay: 0.3)
+                Spacer()
+
+                Button {
+                    showArabicHadith.toggle()
+                } label: {
+                    Image(systemName: showArabicHadith ? "character.paragraph" : "globe")
+                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                        .padding(6)
+                        .background(Color.adaptivePrimary(colorScheme).opacity(0.10))
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel(showArabicHadith ? "Show English Hadith" : "Show Arabic Hadith")
+                .accessibilityIdentifier("toggleHadithLanguageButton")
+            }
+
+            Group {
+                if showArabicHadith, !hadith.arabicText.isEmpty {
+                    Text(hadith.arabicText)
+                        .arabicFont(size: CGFloat(AppSettings.shared.arabicFontSize))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .scrollReveal(delay: 0.3)
+                } else {
+                    Text(hadith.text)
+                        .font(.body)
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                        .scrollReveal(delay: 0.3)
+                }
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(hadith.source)
@@ -269,7 +294,7 @@ struct HomeView: View {
                 Button {
                     shareCardData = ShareCardData(
                         content: hadith.text,
-                        arabicText: nil,
+                        arabicText: hadith.arabicText,
                         reference: hadith.source,
                         template: .minimal,
                         type: .hadith
@@ -278,6 +303,7 @@ struct HomeView: View {
                     Image(systemName: "square.and.arrow.up")
                         .foregroundStyle(Color.adaptivePrimary(colorScheme))
                 }
+                .accessibilityLabel("Share hadith")
             }
             .scrollReveal(delay: 0.55)
         }
@@ -404,15 +430,4 @@ struct HomeView: View {
         }
         .cardStyle(colorScheme)
     }
-}
-
-// MARK: - Share Sheet
-struct ShareSheet: UIViewControllerRepresentable {
-    let text: String
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [text], applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

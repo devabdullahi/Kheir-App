@@ -1,17 +1,19 @@
 import Foundation
 
-struct DailyHadith: Codable, Identifiable {
+struct DailyHadith: Codable, Identifiable, Sendable {
     let id: UUID
     let text: String
+    let arabicText: String
     let source: String
     let chapter: String
     let narrator: String
     let grade: String
     let dateString: String
 
-    init(text: String, source: String, chapter: String, narrator: String, grade: String, dateString: String) {
+    init(text: String, arabicText: String = "", source: String, chapter: String, narrator: String, grade: String, dateString: String) {
         self.id = UUID()
         self.text = text
+        self.arabicText = arabicText
         self.source = source
         self.chapter = chapter
         self.narrator = narrator
@@ -23,12 +25,12 @@ struct DailyHadith: Codable, Identifiable {
 // MARK: - fawazahmed0/hadith-api Response Models
 
 /// Response for a single hadith section: /editions/{edition}/{sectionNo}.json
-struct HadithSectionResponse: Codable {
+struct HadithSectionResponse: Codable, Sendable {
     let metadata: HadithMetadata
     let hadiths: [HadithAPIEntry]
 }
 
-struct HadithMetadata: Codable {
+struct HadithMetadata: Codable, Sendable {
     let name: String
     let section: [String: String]?
     let sectionDetail: [String: HadithSectionDetail]?
@@ -40,7 +42,7 @@ struct HadithMetadata: Codable {
     }
 }
 
-struct HadithSectionDetail: Codable {
+struct HadithSectionDetail: Codable, Sendable {
     let hadithNumberFirst: Int
     let hadithNumberLast: Int
 
@@ -50,7 +52,7 @@ struct HadithSectionDetail: Codable {
     }
 }
 
-struct HadithAPIEntry: Codable {
+struct HadithAPIEntry: Codable, Sendable {
     let hadithNumber: Int
     let arabicNumber: Int
     let text: String
@@ -66,18 +68,18 @@ struct HadithAPIEntry: Codable {
     }
 }
 
-struct HadithGradeEntry: Codable {
+struct HadithGradeEntry: Codable, Sendable {
     let name: String
     let grade: String
 }
 
-struct HadithReference: Codable {
+struct HadithReference: Codable, Sendable {
     let book: Int
     let hadith: Int
 }
 
 /// Edition info from /editions.json
-struct HadithEditionInfo: Codable {
+struct HadithEditionInfo: Codable, Sendable {
     let name: String
     let book: String
     let author: String?
@@ -96,7 +98,7 @@ struct HadithEditionInfo: Codable {
 
 // MARK: - Hadith Collection Mapping
 
-enum HadithCollection: String, CaseIterable {
+enum HadithCollection: String, CaseIterable, Sendable {
     case bukhari = "eng-bukhari"
     case muslim = "eng-muslim"
     case abuDawud = "eng-abudawud"
@@ -112,6 +114,17 @@ enum HadithCollection: String, CaseIterable {
         case .tirmidhi: return "Jami at-Tirmidhi"
         case .nasai: return "Sunan an-Nasai"
         case .ibnMajah: return "Sunan Ibn Majah"
+        }
+    }
+
+    var arabicEdition: String {
+        switch self {
+        case .bukhari: return "ara-bukhari"
+        case .muslim: return "ara-muslim"
+        case .abuDawud: return "ara-abudawud"
+        case .tirmidhi: return "ara-tirmidhi"
+        case .nasai: return "ara-nasai"
+        case .ibnMajah: return "ara-ibnmajah"
         }
     }
 

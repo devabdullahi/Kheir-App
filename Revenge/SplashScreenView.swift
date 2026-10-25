@@ -3,10 +3,15 @@ import SwiftUI
 struct SplashScreenView: View {
     @State private var isActive = false
     @State private var opacity: Double = 1.0
+    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
     var body: some View {
         if isActive {
-            ContentView()
+            if hasCompletedOnboarding {
+                ContentView()
+            } else {
+                OnboardingView()
+            }
         } else {
             ZStack {
                 Color(red: 0.118, green: 0.361, blue: 0.165)

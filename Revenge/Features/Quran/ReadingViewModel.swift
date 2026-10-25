@@ -1,43 +1,58 @@
 import Foundation
-import Combine
 import SwiftUI
 import os
 
+@Observable
 @MainActor
-final class ReadingViewModel: ObservableObject {
-    @Published var displayAyahs: [DisplayAyah] = []
-    @Published var surahName: String = ""
-    @Published var surahEnglishName: String = ""
-    @Published var isLoading = false
-    @Published var errorMessage: String?
+final class ReadingViewModel {
+    var displayAyahs: [DisplayAyah] = []
+    var surahName: String = ""
+    var surahEnglishName: String = ""
+    var isLoading = false
+    var errorMessage: String?
+    var bookmarkedAyahs: Set<Int> = []
 
     let surahNumber: Int
     let scrollToAyah: Int?
 
-    private let cache = CacheManager.shared
-    private let api = APIService.shared
-    let audioPlayer = AudioPlayerService.shared
+    private let cache: any CacheManaging
+    private let api: APIService
+    let audioPlayer: AudioPlayerService
+    private let settings: AppSettings
     private var savePositionTask: Task<Void, Never>?
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "ReadingViewModel")
 
-    init(surahNumber: Int, scrollToAyah: Int? = nil) {
+    init(
+        surahNumber: Int,
+        scrollToAyah: Int? = nil,
+        cache: any CacheManaging = CacheManager.shared,
+        api: APIService = .shared,
+        audioPlayer: AudioPlayerService = .shared,
+        settings: AppSettings = .shared
+    ) {
         self.surahNumber = surahNumber
         self.scrollToAyah = scrollToAyah
+        self.cache = cache
+        self.api = api
+        self.audioPlayer = audioPlayer
+        self.settings = settings
     }
 
     func onAppear() {
-        if let cached = cache.loadCachedSurah(surahNumber) {
-            buildDisplay(arabic: cached.arabicAyahs, translation: cached.translationAyahs, transliteration: cached.transliterationAyahs)
+        Task {
+            if let cached = await cache.loadCachedSurah(surahNumber) {
+                buildDisplay(arabic: cached.arabicAyahs, translation: cached.translationAyahs, transliteration: cached.transliterationAyahs)
+            }
+            await loadBookmarkStates()
+            await fetchSurah()
         }
-        loadBookmarkStates()
-        Task { await fetchSurah() }
     }
 
     private func fetchSurah() async {
         isLoading = displayAyahs.isEmpty
         errorMessage = nil
         do {
-            let edition = AppSettings.shared.translationLanguage.rawValue
+            let edition = settings.translationLanguage.rawValue
             async let arabicTask = api.fetchSurah(number: surahNumber, edition: "quran-uthmani")
             async let translationTask = api.fetchSurahTranslation(number: surahNumber, edition: edition)
 
@@ -48,9 +63,12 @@ final class ReadingViewModel: ObservableObject {
             surahEnglishName = arabic.englishName
 
             var transliteration: [Ayah]? = nil
-            if AppSettings.shared.showTransliteration {
-                if let translit = try? await api.fetchSurahTranslation(number: surahNumber, edition: "en.transliteration") {
+            if settings.showTransliteration {
+                do {
+                    let translit = try await api.fetchSurahTranslation(number: surahNumber, edition: "en.transliteration")
                     transliteration = translit.ayahs
+                } catch {
+                    logger.warning("Transliteration fetch failed, skipping: \(error.localizedDescription)")
                 }
             }
 
@@ -63,7 +81,7 @@ final class ReadingViewModel: ObservableObject {
                 transliterationAyahs: transliteration,
                 cachedDate: Date()
             )
-            cache.cacheSurah(cached)
+            await cache.cacheSurah(cached)
 
             audioPlayer.configure(surah: surahNumber, totalAyahs: arabic.ayahs.count)
         } catch {
@@ -88,7 +106,7 @@ final class ReadingViewModel: ObservableObject {
                 translationText: index < translation.count ? translation[index].text : "",
                 transliteration: transliteration.flatMap { index < $0.count ? $0[index].text : nil } ?? "",
                 audioURL: {
-                    let q = Qari.resolve(AppSettings.shared.selectedQari)
+                    let q = Qari.resolve(settings.selectedQari)
                     return api.audioURL(qari: q.identifier, surah: surahNumber, ayah: arabicAyah.numberInSurah, bitrate: q.bitrate)
                 }()
             )
@@ -100,15 +118,13 @@ final class ReadingViewModel: ObservableObject {
         savePositionTask = Task {
             try? await Task.sleep(for: .milliseconds(500))
             guard !Task.isCancelled else { return }
-            AppSettings.shared.lastReadSurah = surahNumber
-            AppSettings.shared.lastReadAyah = ayah
+            settings.lastReadSurah = surahNumber
+            settings.lastReadAyah = ayah
         }
     }
 
-    @Published var bookmarkedAyahs: Set<Int> = []
-
-    func loadBookmarkStates() {
-        let bookmarks = cache.loadAyahBookmarks()
+    func loadBookmarkStates() async {
+        let bookmarks = await cache.loadAyahBookmarks()
         bookmarkedAyahs = Set(
             bookmarks
                 .filter { $0.surahNumber == surahNumber }
@@ -122,9 +138,10 @@ final class ReadingViewModel: ObservableObject {
 
     func toggleBookmark(_ ayah: DisplayAyah) {
         if bookmarkedAyahs.contains(ayah.numberInSurah) {
-            cache.removeAyahBookmark(surah: surahNumber, ayah: ayah.numberInSurah)
             bookmarkedAyahs.remove(ayah.numberInSurah)
+            Task { await cache.removeAyahBookmark(surah: surahNumber, ayah: ayah.numberInSurah) }
         } else {
+            bookmarkedAyahs.insert(ayah.numberInSurah)
             let bookmark = BookmarkedAyah(
                 surahNumber: surahNumber,
                 surahName: surahEnglishName,
@@ -132,8 +149,7 @@ final class ReadingViewModel: ObservableObject {
                 arabicText: ayah.arabicText,
                 translationText: ayah.translationText
             )
-            cache.saveAyahBookmark(bookmark)
-            bookmarkedAyahs.insert(ayah.numberInSurah)
+            Task { await cache.saveAyahBookmark(bookmark) }
         }
     }
 

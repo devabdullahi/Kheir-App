@@ -1,20 +1,26 @@
 import Foundation
 
-struct PrayerTime: Identifiable {
-    let id = UUID()
+struct PrayerTime: Identifiable, Sendable {
+    private static let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "h:mm a"
+        return f
+    }()
+
     let name: String
     let time: Date
     let icon: String
     var isNext: Bool = false
 
+    /// Stable identity based on prayer name — prevents SwiftUI diffing issues in ForEach.
+    var id: String { name }
+
     var timeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "h:mm a"
-        return formatter.string(from: time)
+        Self.timeFormatter.string(from: time)
     }
 }
 
-struct DayPrayerTimes {
+struct DayPrayerTimes: Sendable {
     let fajr: Date
     let sunrise: Date
     let dhuhr: Date
@@ -35,17 +41,17 @@ struct DayPrayerTimes {
 }
 
 // MARK: - Aladhan API Fallback Response
-struct AladhanResponse: Codable {
+struct AladhanResponse: Codable, Sendable {
     let code: Int
     let data: AladhanData
 }
 
-struct AladhanData: Codable {
+struct AladhanData: Codable, Sendable {
     let timings: AladhanTimings
     let date: AladhanDate
 }
 
-struct AladhanTimings: Codable {
+struct AladhanTimings: Codable, Sendable {
     let Fajr: String
     let Sunrise: String
     let Dhuhr: String
@@ -54,18 +60,18 @@ struct AladhanTimings: Codable {
     let Isha: String
 }
 
-struct AladhanDate: Codable {
+struct AladhanDate: Codable, Sendable {
     let hijri: HijriDate
 }
 
-struct HijriDate: Codable {
+struct HijriDate: Codable, Sendable {
     let date: String
     let day: String
     let month: HijriMonth
     let year: String
 }
 
-struct HijriMonth: Codable {
+struct HijriMonth: Codable, Sendable {
     let number: Int
     let en: String
     let ar: String

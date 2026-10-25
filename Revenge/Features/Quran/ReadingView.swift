@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct ReadingView: View {
-    @StateObject private var viewModel: ReadingViewModel
-    @ObservedObject private var audioPlayer = AudioPlayerService.shared
-    @ObservedObject private var settings = AppSettings.shared
+    @State private var viewModel: ReadingViewModel
+    private var audioPlayer = AudioPlayerService.shared
+    @Bindable private var settings = AppSettings.shared
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -11,7 +11,7 @@ struct ReadingView: View {
     @State private var copiedAyahID: Int?
 
     init(surahNumber: Int, scrollToAyah: Int? = nil) {
-        _viewModel = StateObject(wrappedValue: ReadingViewModel(surahNumber: surahNumber, scrollToAyah: scrollToAyah))
+        _viewModel = State(wrappedValue: ReadingViewModel(surahNumber: surahNumber, scrollToAyah: scrollToAyah))
     }
 
     var body: some View {
@@ -41,7 +41,8 @@ struct ReadingView: View {
                 }
                 .onAppear {
                     if let scrollTo = viewModel.scrollToAyah {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(500))
                             withAnimation(reduceMotion ? .none : .easeOut(duration: 0.4)) {
                                 proxy.scrollTo(scrollTo, anchor: .top)
                             }
@@ -58,7 +59,7 @@ struct ReadingView: View {
         }
         .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
         .navigationTitle(viewModel.surahEnglishName)
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -195,7 +196,7 @@ struct ReadingView: View {
                 )
         )
         .shadow(color: .black.opacity(colorScheme == .dark ? 0.25 : 0.06), radius: 6, y: 3)
-        .scrollReveal(delay: reduceMotion ? 0 : min(Double(index) * 0.03, 0.3))
+        .scrollReveal(delay: (reduceMotion || index >= 15) ? 0 : min(Double(index) * 0.03, 0.3))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Ayah \(ayah.numberInSurah)")
     }
@@ -325,7 +326,8 @@ struct ReadingView: View {
         withAnimation {
             copiedAyahID = ayah.id
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        Task {
+            try? await Task.sleep(for: .seconds(2))
             withAnimation {
                 if copiedAyahID == ayah.id {
                     copiedAyahID = nil
@@ -451,7 +453,7 @@ struct ReadingView: View {
             }
             .listStyle(.insetGrouped)
             .navigationTitle("Select Reciter")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") {

@@ -1,0 +1,12 @@
+# Code Owners for Kheir App
+# These users are automatically requested for review on PRs
+
+# Default owner for everything
+* @devabdullahi
+
+# CI and security configs require owner review
+.github/ @devabdullahi
+SECURITY.md @devabdullahi
+CODEOWNERS @devabdullahi
+.swiftlint.yml @devabdullahi
+.swiftformat @devabdullahi

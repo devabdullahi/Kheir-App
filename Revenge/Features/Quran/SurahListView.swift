@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct SurahListView: View {
-    @StateObject private var viewModel = SurahListViewModel()
+    @State private var viewModel = SurahListViewModel()
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showSearchPill = false
 
     var body: some View {
         NavigationStack {
@@ -27,6 +28,51 @@ struct SurahListView: View {
                     }
                 }
 
+                if showSearchPill {
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                            .font(.subheadline)
+                        TextField("Search by name or number", text: $viewModel.searchText)
+                            .font(.subheadline)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 4)
+                            .background(Color.clear)
+                        if !viewModel.searchText.isEmpty {
+                            Button(action: { viewModel.searchText = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme).opacity(0.8))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        Button(action: {
+                            showSearchPill = false
+                            viewModel.searchText = ""
+                        }) {
+                            Text("Cancel")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(Color.adaptiveCardSurface(colorScheme).opacity(0.82))
+                            .shadow(color: .black.opacity(0.07), radius: 6, y: 2)
+                    )
+                    .overlay(
+                        Capsule()
+                            .stroke(Color.adaptiveSecondaryText(colorScheme).opacity(0.12), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .animation(.easeInOut(duration: 0.18), value: showSearchPill)
+                }
+
                 // Surah List
                 List(viewModel.filteredSurahs) { surah in
                     NavigationLink(destination: ReadingView(surahNumber: surah.number)) {
@@ -35,10 +81,16 @@ struct SurahListView: View {
                     .listRowBackground(Color.adaptiveCardSurface(colorScheme))
                 }
                 .listStyle(.plain)
-                .searchable(text: $viewModel.searchText, prompt: "Search by name or number")
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle("Quran")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Search Surah") {
+                        showSearchPill = true
+                    }
+                }
+            }
             .onAppear { viewModel.onAppear() }
             .overlay {
                 if viewModel.isLoading && viewModel.surahs.isEmpty {

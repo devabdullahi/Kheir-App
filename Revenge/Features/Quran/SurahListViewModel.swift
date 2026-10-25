@@ -1,46 +1,70 @@
 import Foundation
-import Combine
+import os
 
 @MainActor
-final class SurahListViewModel: ObservableObject {
-    @Published var surahs: [SurahInfo] = []
-    @Published var filteredSurahs: [SurahInfo] = []
-    @Published var searchText: String = ""
-    @Published var isLoading = false
+@Observable
+final class SurahListViewModel {
+    var surahs: [SurahInfo] = []
+    var filteredSurahs: [SurahInfo] = []
 
-    private let cache = CacheManager.shared
-    private var searchCancellable: AnyCancellable?
+    /// Setting this property schedules a 200 ms debounced filter. Each change
+    /// cancels the pending filter task; unchanged queries are skipped.
+    var searchText: String = "" {
+        didSet { scheduleFilter() }
+    }
 
-    var lastReadSurah: Int { AppSettings.shared.lastReadSurah }
-    var lastReadAyah: Int { AppSettings.shared.lastReadAyah }
+    var isLoading = false
 
-    init() {
-        searchCancellable = $searchText
-            .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
-            .removeDuplicates()
-            .sink { [weak self] _ in
-                self?.filterSurahs()
-            }
+    private let cache: any CacheManaging
+    private let settings: AppSettings
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "SurahListViewModel")
+
+    @ObservationIgnored private var searchTask: Task<Void, Never>?
+    /// Last query actually applied by `filterSurahs()`, used to drop duplicates.
+    @ObservationIgnored private var lastFilteredQuery: String = ""
+
+    var lastReadSurah: Int { settings.lastReadSurah }
+    var lastReadAyah: Int { settings.lastReadAyah }
+
+    init(cache: any CacheManaging = CacheManager.shared, settings: AppSettings = .shared) {
+        self.cache = cache
+        self.settings = settings
+    }
+
+    deinit {
+        searchTask?.cancel()
+    }
+
+    private func scheduleFilter() {
+        searchTask?.cancel()
+        searchTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled, let self else { return }
+            guard self.searchText != self.lastFilteredQuery else { return }
+            self.lastFilteredQuery = self.searchText
+            self.filterSurahs()
+        }
     }
 
     func onAppear() {
-        if let cached = cache.loadSurahList() {
-            surahs = cached
-            filteredSurahs = cached
+        Task {
+            if let cached = await cache.loadSurahList() {
+                surahs = cached
+                filteredSurahs = cached
+            }
+            await fetchSurahs()
         }
-        Task { await fetchSurahs() }
     }
 
     private func fetchSurahs() async {
-        guard surahs.isEmpty else { return }
-        isLoading = true
+        isLoading = surahs.isEmpty
         do {
             let list = try await APIService.shared.fetchSurahList()
             surahs = list
             filteredSurahs = list
-            cache.cacheSurahList(list)
+            await cache.cacheSurahList(list)
         } catch {
-            print("Surah list error: \(error)")
+            logger.error("Surah list error: \(error.localizedDescription)")
         }
         isLoading = false
     }

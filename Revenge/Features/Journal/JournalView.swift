@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct JournalView: View {
-    @StateObject private var viewModel = JournalViewModel()
+    @State private var viewModel = JournalViewModel()
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @State private var showCompose = false
@@ -18,7 +18,7 @@ struct JournalView: View {
             }
             .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
             .navigationTitle("Journal")
-            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Done") {

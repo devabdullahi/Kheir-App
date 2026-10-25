@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct QiblaView: View {
-    @StateObject private var viewModel = QiblaViewModel()
+    @State private var viewModel = QiblaViewModel()
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {

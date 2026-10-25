@@ -1,8 +1,8 @@
 import Foundation
 import AVFoundation
-import Combine
 import SwiftUI
 import MediaPlayer
+import os
 
 // MARK: - Supporting Types
 
@@ -38,41 +38,42 @@ struct NowPlayingInfo {
 // MARK: - AudioPlayerService
 
 @MainActor
-final class AudioPlayerService: ObservableObject {
+@Observable
+final class AudioPlayerService {
 
     // MARK: Singleton
     static let shared = AudioPlayerService()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Kheir", category: "AudioPlayerService")
 
-    // MARK: - Legacy Published State (preserved for existing call sites)
+    // MARK: - Observed State
 
-    /// Derived from `playerState`; kept as a stored `@Published` so existing
-    /// SwiftUI `.animation(value:)` subscribers in ReadingView continue to fire.
-    @Published var isPlaying = false
+    /// Derived from `playerState`; kept as a plain var so existing SwiftUI
+    /// `.animation(value:)` subscribers in ReadingView continue to fire via
+    /// @Observable tracking.
+    var isPlaying = false
 
     /// True while the item is buffering/loading; derived from `playerState`.
-    @Published var isLoading = false
+    var isLoading = false
 
     /// Zero-based index of the ayah currently playing within the loaded surah.
-    @Published var currentAyahIndex: Int = 0
+    var currentAyahIndex: Int = 0
 
     /// The identifier string of the active qari (e.g. "ar.alafasy").
-    @Published var selectedQari: String = AppSettings.shared.selectedQari
-
-    // MARK: - New Published State (Phase 2a additions)
+    var selectedQari: String = AppSettings.shared.selectedQari
 
     /// Unified playback state. Drives `isPlaying` and `isLoading` as a side effect.
-    @Published var playerState: PlayerState = .idle {
+    var playerState: PlayerState = .idle {
         didSet { syncDerivedState() }
     }
 
     /// Elapsed playback position in seconds, updated every 0.5 s.
-    @Published var currentTime: TimeInterval = 0
+    var currentTime: TimeInterval = 0
 
     /// Total duration of the current item in seconds. Non-zero once item is ready.
-    @Published var duration: TimeInterval = 0
+    var duration: TimeInterval = 0
 
     /// Metadata for the track currently loaded into the player.
-    @Published var nowPlaying: NowPlayingInfo?
+    var nowPlaying: NowPlayingInfo?
 
     // MARK: - Private State
 
@@ -82,16 +83,15 @@ final class AudioPlayerService: ObservableObject {
     private var timeObserverToken: Any?
 
     /// KVO observation on the current AVPlayerItem's status.
-    private var itemStatusObservation: AnyCancellable?
+    @ObservationIgnored private var itemStatusObservation: NSKeyValueObservation?
 
-    /// Retains long-lived Combine subscriptions (interruptions, route changes,
-    /// remote commands).
-    private var cancellables = Set<AnyCancellable>()
+    /// Long-lived notification listeners (interruptions, route changes).
+    @ObservationIgnored private var sessionNotificationTasks: [Task<Void, Never>] = []
 
-    /// Retains the end-of-track subscription scoped to the current AVPlayerItem.
-    /// Replaced on each call to wireObservers(to:) so the old item's notification
+    /// Listens for end-of-track on the current AVPlayerItem. Cancelled and
+    /// replaced on each call to wireObservers(to:) so the old item's notification
     /// does not leak into the new item's lifecycle.
-    private var itemCancellable: AnyCancellable?
+    @ObservationIgnored private var itemEndTask: Task<Void, Never>?
 
     /// Tracks whether the audio session has been fully configured at least once.
     private var sessionConfigured = false
@@ -123,7 +123,7 @@ final class AudioPlayerService: ObservableObject {
             )
             sessionConfigured = true
         } catch {
-            print("[AudioPlayerService] AVAudioSession category error: \(error)")
+            logger.error("AVAudioSession category error: \(error.localizedDescription)")
         }
     }
 
@@ -132,7 +132,7 @@ final class AudioPlayerService: ObservableObject {
         do {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
-            print("[AudioPlayerService] AVAudioSession activate error: \(error)")
+            logger.error("AVAudioSession activate error: \(error.localizedDescription)")
         }
     }
 
@@ -145,21 +145,33 @@ final class AudioPlayerService: ObservableObject {
                 options: .notifyOthersOnDeactivation
             )
         } catch {
-            print("[AudioPlayerService] AVAudioSession deactivate error: \(error)")
+            logger.error("AVAudioSession deactivate error: \(error.localizedDescription)")
         }
     }
 
     // MARK: - Interruption & Route-Change Handling
 
+    // AVAudioSession posts these notifications on arbitrary threads. Each
+    // listener iterates `NotificationCenter.notifications(named:)` inside a
+    // main-actor Task, extracting only Sendable payload values, so state is
+    // always mutated on the main actor.
+
     private func subscribeToInterruptions() {
-        NotificationCenter.default
-            .publisher(for: AVAudioSession.interruptionNotification)
-            .sink { [weak self] notification in
+        let notifications = NotificationCenter.default
+            .notifications(named: AVAudioSession.interruptionNotification)
+            .map { notification -> (type: UInt?, options: UInt) in
+                let info = notification.userInfo
+                return (
+                    info?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                    info?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+                )
+            }
+        sessionNotificationTasks.append(Task { [weak self] in
+            for await payload in notifications {
                 guard let self,
-                      let info = notification.userInfo,
-                      let typeValue = info[AVAudioSessionInterruptionTypeKey] as? UInt,
+                      let typeValue = payload.type,
                       let type = AVAudioSession.InterruptionType(rawValue: typeValue)
-                else { return }
+                else { continue }
 
                 switch type {
                 case .began:
@@ -169,8 +181,7 @@ final class AudioPlayerService: ObservableObject {
                     self.isPlaying = false
 
                 case .ended:
-                    let optionsValue = info[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
-                    let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                    let options = AVAudioSession.InterruptionOptions(rawValue: payload.options)
                     if options.contains(.shouldResume) {
                         self.player?.play()
                         self.playerState = .playing
@@ -180,26 +191,27 @@ final class AudioPlayerService: ObservableObject {
                     break
                 }
             }
-            .store(in: &cancellables)
+        })
     }
 
     private func subscribeToRouteChanges() {
-        NotificationCenter.default
-            .publisher(for: AVAudioSession.routeChangeNotification)
-            .sink { [weak self] notification in
+        let reasons = NotificationCenter.default
+            .notifications(named: AVAudioSession.routeChangeNotification)
+            .map { $0.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt }
+        sessionNotificationTasks.append(Task { [weak self] in
+            for await reasonValue in reasons {
                 guard let self,
-                      let info = notification.userInfo,
-                      let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
+                      let reasonValue,
                       let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
                       reason == .oldDeviceUnavailable
-                else { return }
+                else { continue }
 
                 // Headphones unplugged — pause per Apple HIG.
                 self.player?.pause()
                 self.playerState = .paused
                 self.isPlaying = false
             }
-            .store(in: &cancellables)
+        })
     }
 
     // MARK: - MPRemoteCommandCenter
@@ -276,8 +288,11 @@ final class AudioPlayerService: ObservableObject {
 
     // MARK: - Item Wiring Helpers
 
-    /// Attaches the periodic time observer and Combine end-of-track subscription
-    /// to `item`. Cleans up any prior observers first.
+    /// Attaches the status KVO observer and end-of-track listener to `item`.
+    /// Cleans up any prior observers first.
+    ///
+    /// KVO change handlers may fire on any thread, so the handler only reads
+    /// the Sendable status value and hops to the main actor to apply it.
     private func wireObservers(to item: AVPlayerItem) {
         // Remove stale time observer from the old player before we replace it.
         if let token = timeObserverToken {
@@ -286,36 +301,44 @@ final class AudioPlayerService: ObservableObject {
         }
 
         // KVO on item status to capture duration once the item is ready.
-        itemStatusObservation = item.publisher(for: \.status)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] status in
-                guard let self else { return }
-                switch status {
-                case .readyToPlay:
-                    let secs = item.duration.seconds
-                    if secs.isFinite && secs > 0 {
-                        self.duration = secs
-                        self.updateNowPlayingInfo()
-                    }
-                case .failed:
-                    let desc = item.error?.localizedDescription ?? "Unknown playback error"
-                    self.playerState = .failed(desc)
-                    self.updateNowPlayingInfo()
-                default:
-                    break
-                }
+        itemStatusObservation = item.observe(\.status, options: [.initial, .new]) { @Sendable [weak self] observedItem, _ in
+            let status = observedItem.status
+            Task { @MainActor [weak self] in
+                self?.handleItemStatus(status, for: item)
             }
+        }
 
-        // Combine end-of-track — stored in itemCancellable so replacing it on
-        // the next wireObservers(to:) call automatically cancels the old
-        // subscription. This prevents a stale item from triggering auto-advance.
-        itemCancellable = NotificationCenter.default
-            .publisher(for: .AVPlayerItemDidPlayToEndTime, object: item)
-            .sink { [weak self] _ in
-                Task { @MainActor [weak self] in
-                    self?.handleTrackEnd()
-                }
+        // End-of-track — cancelling and replacing itemEndTask on the next
+        // wireObservers(to:) call prevents a stale item from triggering auto-advance.
+        itemEndTask?.cancel()
+        let ends = NotificationCenter.default
+            .notifications(named: AVPlayerItem.didPlayToEndTimeNotification, object: item)
+            .map { _ in () }
+        itemEndTask = Task { [weak self] in
+            for await _ in ends {
+                self?.handleTrackEnd()
             }
+        }
+    }
+
+    /// Applies an AVPlayerItem status change on the main actor. Ignores
+    /// callbacks for items that are no longer current.
+    private func handleItemStatus(_ status: AVPlayerItem.Status, for item: AVPlayerItem) {
+        guard player?.currentItem === item else { return }
+        switch status {
+        case .readyToPlay:
+            let secs = item.duration.seconds
+            if secs.isFinite && secs > 0 {
+                duration = secs
+                updateNowPlayingInfo()
+            }
+        case .failed:
+            let desc = item.error?.localizedDescription ?? "Unknown playback error"
+            playerState = .failed(desc)
+            updateNowPlayingInfo()
+        default:
+            break
+        }
     }
 
     /// Adds the 0.5-second periodic time observer after `player` has been set.
@@ -326,14 +349,17 @@ final class AudioPlayerService: ObservableObject {
             forInterval: interval,
             queue: .main
         ) { [weak self] time in
-            guard let self else { return }
-            let secs = time.seconds
-            if secs.isFinite {
-                self.currentTime = secs
-                // Keep elapsed time in the lock-screen widget current.
-                if var info = MPNowPlayingInfoCenter.default().nowPlayingInfo {
-                    info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = secs
-                    MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+            // Delivered on `.main`, so we are already on the main actor.
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let secs = time.seconds
+                if secs.isFinite {
+                    self.currentTime = secs
+                    // Keep elapsed time in the lock-screen widget current.
+                    if var info = MPNowPlayingInfoCenter.default().nowPlayingInfo {
+                        info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = secs
+                        MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+                    }
                 }
             }
         }
@@ -550,13 +576,13 @@ final class AudioPlayerService: ObservableObject {
             timeObserverToken = nil
         }
 
+        itemStatusObservation?.invalidate()
         itemStatusObservation = nil
 
-        // Cancel the per-item end-of-track subscription. Setting to nil
-        // deallocates the AnyCancellable and cancels the underlying subscription.
-        // Interruption/route-change subscriptions in `cancellables` are
-        // intentionally left alive.
-        itemCancellable = nil
+        // Cancel the per-item end-of-track listener. Interruption/route-change
+        // listeners in `sessionNotificationTasks` are intentionally left alive.
+        itemEndTask?.cancel()
+        itemEndTask = nil
 
         player?.pause()
         player = nil

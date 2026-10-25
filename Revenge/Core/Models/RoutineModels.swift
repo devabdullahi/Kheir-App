@@ -3,7 +3,7 @@ import Foundation
 // MARK: - RoutineType
 
 /// Identifies which time-of-day spiritual routine is being referenced.
-enum RoutineType: String, Codable, CaseIterable {
+enum RoutineType: String, Codable, CaseIterable, Sendable {
     case morning
     case evening
 
@@ -32,7 +32,7 @@ enum RoutineType: String, Codable, CaseIterable {
 // MARK: - RoutineStepType
 
 /// Categorises the nature of a single step within a routine.
-enum RoutineStepType: String, Codable {
+enum RoutineStepType: String, Codable, Sendable {
     case dua
     case ayah
     case hadith
@@ -45,7 +45,7 @@ enum RoutineStepType: String, Codable {
 /// A single item inside a `DailyRoutine`.
 ///
 /// `arabicText` is optional — reflection prompts and hadith steps may omit it.
-struct RoutineStep: Codable, Identifiable, Equatable {
+struct RoutineStep: Codable, Identifiable, Equatable, Sendable {
 
     let id: UUID
     let type: RoutineStepType
@@ -77,7 +77,7 @@ struct RoutineStep: Codable, Identifiable, Equatable {
 ///
 /// `completedSteps` stores the `id` of each `RoutineStep` the user has checked off.
 /// `isCompleted` is a computed convenience that returns `true` when every step is done.
-struct DailyRoutine: Codable, Identifiable {
+struct DailyRoutine: Codable, Identifiable, Sendable {
 
     let id: UUID
     let type: RoutineType

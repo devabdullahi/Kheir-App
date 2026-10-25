@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct BookmarksView: View {
-    @StateObject private var viewModel = BookmarksViewModel()
+    @State private var viewModel = BookmarksViewModel()
     @Environment(\.colorScheme) private var colorScheme
     @State private var showJournal = false
     @State private var shareText = ""

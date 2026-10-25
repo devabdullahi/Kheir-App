@@ -1,40 +1,112 @@
 import Foundation
 import SwiftUI
-import Combine
+import Observation
 
-class AppSettings: ObservableObject {
+/// App-wide user preferences backed by `UserDefaults.standard`.
+///
+/// `@AppStorage` cannot be used inside an `@Observable` class, so each property
+/// is a plain stored value that is hydrated from `UserDefaults` in `init` and
+/// written back in `didSet`. Keys and defaults match the previous `@AppStorage`
+/// declarations so existing user data carries over unchanged.
+@MainActor
+@Observable
+final class AppSettings {
     static let shared = AppSettings()
 
+    @ObservationIgnored private let defaults: UserDefaults
+
     // MARK: - Display
-    @AppStorage("appTheme") var appTheme: AppTheme = .system
-    @AppStorage("arabicFontSize") var arabicFontSize: Double = 28
-    @AppStorage("showTransliteration") var showTransliteration: Bool = true
+    var appTheme: AppTheme = .system {
+        didSet { defaults.set(appTheme.rawValue, forKey: "appTheme") }
+    }
+    var arabicFontSize: Double = 28 {
+        didSet { defaults.set(arabicFontSize, forKey: "arabicFontSize") }
+    }
+    var showTransliteration: Bool = true {
+        didSet { defaults.set(showTransliteration, forKey: "showTransliteration") }
+    }
 
     // MARK: - Quran
-    @AppStorage("translationLanguage") var translationLanguage: TranslationLanguage = .english
-    @AppStorage("selectedQari") var selectedQari: String = "ar.alafasy"
+    var translationLanguage: TranslationLanguage = .english {
+        didSet { defaults.set(translationLanguage.rawValue, forKey: "translationLanguage") }
+    }
+    var selectedQari: String = "ar.alafasy" {
+        didSet { defaults.set(selectedQari, forKey: "selectedQari") }
+    }
 
     // MARK: - Prayer Times
-    @AppStorage("calculationMethod") var calculationMethod: CalculationMethodOption = .muslimWorldLeague
-    @AppStorage("madhab") var madhab: MadhabOption = .shafi
-    @AppStorage("fajrNotification") var fajrNotification: Bool = true
-    @AppStorage("sunriseNotification") var sunriseNotification: Bool = false
-    @AppStorage("dhuhrNotification") var dhuhrNotification: Bool = true
-    @AppStorage("asrNotification") var asrNotification: Bool = true
-    @AppStorage("maghribNotification") var maghribNotification: Bool = true
-    @AppStorage("ishaNotification") var ishaNotification: Bool = true
-    @AppStorage("azanSound") var azanSound: String = "azan_makkah"
+    var calculationMethod: CalculationMethodOption = .muslimWorldLeague {
+        didSet { defaults.set(calculationMethod.rawValue, forKey: "calculationMethod") }
+    }
+    var madhab: MadhabOption = .shafi {
+        didSet { defaults.set(madhab.rawValue, forKey: "madhab") }
+    }
+    var fajrNotification: Bool = true {
+        didSet { defaults.set(fajrNotification, forKey: "fajrNotification") }
+    }
+    var sunriseNotification: Bool = false {
+        didSet { defaults.set(sunriseNotification, forKey: "sunriseNotification") }
+    }
+    var dhuhrNotification: Bool = true {
+        didSet { defaults.set(dhuhrNotification, forKey: "dhuhrNotification") }
+    }
+    var asrNotification: Bool = true {
+        didSet { defaults.set(asrNotification, forKey: "asrNotification") }
+    }
+    var maghribNotification: Bool = true {
+        didSet { defaults.set(maghribNotification, forKey: "maghribNotification") }
+    }
+    var ishaNotification: Bool = true {
+        didSet { defaults.set(ishaNotification, forKey: "ishaNotification") }
+    }
+    var azanSound: String = "azan_makkah" {
+        didSet { defaults.set(azanSound, forKey: "azanSound") }
+    }
 
     // MARK: - Location
-    @AppStorage("useAutoLocation") var useAutoLocation: Bool = true
-    @AppStorage("manualCity") var manualCity: String = ""
-    @AppStorage("distanceUnit") var distanceUnit: DistanceUnit = .kilometers
+    var useAutoLocation: Bool = true {
+        didSet { defaults.set(useAutoLocation, forKey: "useAutoLocation") }
+    }
+    var manualCity: String = "" {
+        didSet { defaults.set(manualCity, forKey: "manualCity") }
+    }
+    var distanceUnit: DistanceUnit = .kilometers {
+        didSet { defaults.set(distanceUnit.rawValue, forKey: "distanceUnit") }
+    }
 
     // MARK: - Reading Position
-    @AppStorage("lastReadSurah") var lastReadSurah: Int = 1
-    @AppStorage("lastReadAyah") var lastReadAyah: Int = 1
+    var lastReadSurah: Int = 1 {
+        didSet { defaults.set(lastReadSurah, forKey: "lastReadSurah") }
+    }
+    var lastReadAyah: Int = 1 {
+        didSet { defaults.set(lastReadAyah, forKey: "lastReadAyah") }
+    }
 
-    private init() {}
+    private init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        // Hydrate from persisted values. Once `defaults` is set every property is
+        // initialized, so these assignments go through `didSet` and re-write the
+        // same value — harmless, and it keeps a single code path for persistence.
+        if let raw = defaults.string(forKey: "appTheme"), let value = AppTheme(rawValue: raw) { appTheme = value }
+        if defaults.object(forKey: "arabicFontSize") != nil { arabicFontSize = defaults.double(forKey: "arabicFontSize") }
+        if defaults.object(forKey: "showTransliteration") != nil { showTransliteration = defaults.bool(forKey: "showTransliteration") }
+        if let raw = defaults.string(forKey: "translationLanguage"), let value = TranslationLanguage(rawValue: raw) { translationLanguage = value }
+        if let value = defaults.string(forKey: "selectedQari") { selectedQari = value }
+        if let raw = defaults.string(forKey: "calculationMethod"), let value = CalculationMethodOption(rawValue: raw) { calculationMethod = value }
+        if let raw = defaults.string(forKey: "madhab"), let value = MadhabOption(rawValue: raw) { madhab = value }
+        if defaults.object(forKey: "fajrNotification") != nil { fajrNotification = defaults.bool(forKey: "fajrNotification") }
+        if defaults.object(forKey: "sunriseNotification") != nil { sunriseNotification = defaults.bool(forKey: "sunriseNotification") }
+        if defaults.object(forKey: "dhuhrNotification") != nil { dhuhrNotification = defaults.bool(forKey: "dhuhrNotification") }
+        if defaults.object(forKey: "asrNotification") != nil { asrNotification = defaults.bool(forKey: "asrNotification") }
+        if defaults.object(forKey: "maghribNotification") != nil { maghribNotification = defaults.bool(forKey: "maghribNotification") }
+        if defaults.object(forKey: "ishaNotification") != nil { ishaNotification = defaults.bool(forKey: "ishaNotification") }
+        if let value = defaults.string(forKey: "azanSound") { azanSound = value }
+        if defaults.object(forKey: "useAutoLocation") != nil { useAutoLocation = defaults.bool(forKey: "useAutoLocation") }
+        if let value = defaults.string(forKey: "manualCity") { manualCity = value }
+        if let raw = defaults.string(forKey: "distanceUnit"), let value = DistanceUnit(rawValue: raw) { distanceUnit = value }
+        if defaults.object(forKey: "lastReadSurah") != nil { lastReadSurah = defaults.integer(forKey: "lastReadSurah") }
+        if defaults.object(forKey: "lastReadAyah") != nil { lastReadAyah = defaults.integer(forKey: "lastReadAyah") }
+    }
 }
 
 // MARK: - Enums

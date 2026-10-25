@@ -115,7 +115,8 @@ struct StreakCardView: View {
         withAnimation(.easeInOut(duration: 0.4).repeatCount(2, autoreverses: true)) {
             celebrationScale = 1.2
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+        Task {
+            try? await Task.sleep(for: .milliseconds(800))
             celebrationScale = 1.0
         }
     }
