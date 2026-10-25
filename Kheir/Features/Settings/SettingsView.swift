@@ -1,60 +1,42 @@
 import SwiftUI
 import UserNotifications
 
+/// Settings as separate card sheets on the table, each headed by a torn kraft
+/// label. Native controls (toggles, pickers, sliders) keep their shape and sit
+/// on the paper.
 struct SettingsView: View {
     @Bindable private var settings = AppSettings.shared
+    private var backup = CloudBackupService.shared
     @Environment(\.colorScheme) private var colorScheme
 
-    // Notification permission alert state
     @State private var showPermissionDeniedAlert = false
+    @State private var showDeleteBackupConfirm = false
+    @State private var newDuaName = ""
+    @State private var newDuaNote = ""
+
+    /// Display order for the paper picker.
+    private let themes: [AppTheme] = [.light, .dark, .system, .sky]
+
+    @State private var liveActivityMessage: String?
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
-                // MARK: - Header
-                settingsHeader
-                    .scrollReveal(delay: 0)
-
-                // MARK: - Appearance
-                appearanceCard
-                    .scrollReveal(delay: 0.1)
-
-                // MARK: - Quran
-                quranCard
-                    .scrollReveal(delay: 0.2)
-
-                // MARK: - Prayer Times
-                prayerCard
-                    .scrollReveal(delay: 0.3)
-
-                // MARK: - Notifications
-                notificationsCard
-                    .scrollReveal(delay: 0.4)
-
-                // MARK: - Location
-                locationCard
-                    .scrollReveal(delay: 0.5)
-
-                // MARK: - About
-                aboutCard
-                    .scrollReveal(delay: 0.6)
-
-                // MARK: - Credits
-                creditsCard
-                    .scrollReveal(delay: 0.7)
+            VStack(alignment: .leading, spacing: 14) {
+                profileStrip
+                    .quickPlace(0)
+                menuCard(index: 1, [.prayer, .quran, .appearance])
+                menuCard(index: 2, [.duas, .backup])
+                menuCard(index: 3, [.about])
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 120) // clear the tab bar
         }
-        .background(
-            ZStack {
-                Color.adaptiveBackground(colorScheme).ignoresSafeArea()
-                IslamicPatternBackground(colorScheme: colorScheme)
-                    .opacity(0.04)
-                    .ignoresSafeArea()
-            }
-        )
+        .scrollDismissesKeyboard(.interactively)
+        .paperBackground()
         .navigationTitle("Settings")
         .toolbarTitleDisplayMode(.large)
+        .onAppear { backup.start() }
         .alert("Notifications Disabled", isPresented: $showPermissionDeniedAlert) {
             Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -65,82 +47,310 @@ struct SettingsView: View {
         } message: {
             Text("Prayer notifications are blocked. Open Settings to allow Kheir to send notifications.")
         }
+        .confirmationDialog("Delete your iCloud backup?", isPresented: $showDeleteBackupConfirm, titleVisibility: .visible) {
+            Button("Delete Backup", role: .destructive) {
+                backup.deleteBackup()
+                backup.setEnabled(false)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Everything stays on this iPhone. A new iPhone won't be able to restore it.")
+        }
         .accessibilityIdentifier("settingsScrollView")
+        .navigationDestination(for: SettingsPage.self) { page in
+            pageView(page)
+        }
     }
 
-    // MARK: - Settings Header
+    // MARK: - Menu
 
-    private var settingsHeader: some View {
-        VStack(spacing: 6) {
-            Text("Settings")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
-            Text("Personalise your Kheir experience")
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+    /// Settings is a short menu; each topic opens its own page.
+    enum SettingsPage: Hashable {
+        case you, prayer, quran, appearance, duas, backup, about
+
+        var title: String {
+            switch self {
+            case .you: "You"
+            case .prayer: "Prayer & athan"
+            case .quran: "Quran"
+            case .appearance: "Appearance & sound"
+            case .duas: "Duas"
+            case .backup: "Back up & transfer"
+            case .about: "About Kheir"
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, 4)
+
+        var icon: PaperIcon {
+            switch self {
+            case .you: .sprout
+            case .prayer: .bell
+            case .quran: .book
+            case .appearance: .sun
+            case .duas: .star
+            case .backup: .shield
+            case .about: .masjid
+            }
+        }
+    }
+
+    /// The current state of each topic, so the menu answers questions on its own.
+    private func summary(_ page: SettingsPage) -> String {
+        switch page {
+        case .you:
+            return settings.journey.title
+        case .prayer:
+            let on = [settings.fajrNotification, settings.dhuhrNotification, settings.asrNotification,
+                      settings.maghribNotification, settings.ishaNotification].filter { $0 }.count
+            let asr = settings.madhab == .hanafi ? "Ḥanafī Asr" : "Standard Asr"
+            return "\(settings.calculationMethod.rawValue) · \(asr) · athan \(on)/5"
+        case .quran:
+            return "\(settings.translationLanguage.displayName) · \(settings.quranGoal.title)"
+        case .appearance:
+            return "\(settings.appTheme == .sky ? "Follow the sky" : settings.appTheme.displayName) · sounds \(settings.soundEffects ? "on" : "off")"
+        case .duas:
+            return settings.duaNames.isEmpty ? "Add people to remember" : "\(settings.duaNames.count) \(settings.duaNames.count == 1 ? "person" : "people")"
+        case .backup:
+            return settings.iCloudBackup ? "iCloud backup on" : "Off · on this iPhone only"
+        case .about:
+            return "Version, privacy, data providers"
+        }
+    }
+
+    private func menuCard(index: Int, _ pages: [SettingsPage]) -> some View {
+        card(seed: 190 + index) {
+            ForEach(Array(pages.enumerated()), id: \.element) { i, page in
+                if i > 0 { PaperRowDivider() }
+                NavigationLink(value: page) {
+                    HStack(spacing: 12) {
+                        PaperIconView(page.icon, size: 26)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(page.title)
+                                .font(.system(size: 16, weight: .heavy, design: .rounded))
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                            Text(summary(page))
+                                .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(PaperPressStyle())
+                .accessibilityHint(summary(page))
+            }
+        }
+        .quickPlace(index)
+    }
+
+    /// Name, journey and today's flower in one strip; opens "You".
+    private var profileStrip: some View {
+        NavigationLink(value: SettingsPage.you) {
+            HStack(spacing: 12) {
+                DailyFlowerView(date: .now, size: 34)
+                    .frame(width: 42, height: 46)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(settings.userName.isEmpty ? "As-salāmu ʿalaykum" : settings.userName)
+                        .font(.system(size: 20, weight: .black, design: .rounded))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    Text("\(settings.journey.title) · Kheir")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+            }
+            .paperPiece(Color.adaptiveCardElevated(colorScheme), material: .card, depth: 1.2, seed: 170, padding: 14)
+        }
+        .buttonStyle(PaperPressStyle())
         .accessibilityIdentifier("settingsHeader")
     }
 
-    // MARK: - Section Label Helper
+    // MARK: - Pages
 
-    private func sectionLabel(_ title: String, systemImage: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: systemImage)
-                .font(.caption)
-                .fontWeight(.semibold)
-            Text(title.uppercased())
-                .font(.caption)
-                .fontWeight(.semibold)
-                .kerning(0.5)
+    @ViewBuilder
+    private func pageView(_ page: SettingsPage) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                switch page {
+                case .you:
+                    personalCard.quickPlace(0)
+                case .prayer:
+                    section("Times", seed: 174, index: 0) { prayerCard }
+                    section("Athan", seed: 175, index: 1) { notificationsCard }
+                    section("Reminders", seed: 176, index: 2) { remindersCard }
+                    section("Location", seed: 178, index: 3) { locationCard }
+                case .quran:
+                    quranCard.quickPlace(0)
+                case .appearance:
+                    appearanceCard.quickPlace(0)
+                    soundCard.quickPlace(1)
+                case .duas:
+                    duasCard.quickPlace(0)
+                case .backup:
+                    backupCard.quickPlace(0)
+                case .about:
+                    section("About", seed: 180, index: 0) { aboutCard }
+                    section("Data providers", seed: 181, index: 1) { creditsCard }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 120)
         }
-        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+        .scrollDismissesKeyboard(.interactively)
+        .paperBackground()
+        .navigationTitle(page.title)
+        .toolbarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Row Divider
-
-    private var rowDivider: some View {
-        Divider()
-            .background(Color.adaptiveSecondaryText(colorScheme).opacity(0.2))
+    private var soundCard: some View {
+        card(seed: 189) {
+            Toggle(isOn: $settings.soundEffects) {
+                rowLabel("Paper sounds", icon: .pen)
+            }
+            .tint(Color.adaptivePrimary(colorScheme))
+            caption("The book opening, the eraser and the pencil in onboarding. Follows the silent switch.")
+        }
     }
 
-    // MARK: - Appearance Card
+    // MARK: - Layout helpers
+
+    private func section<Content: View>(_ title: String, seed: Int, index: Int, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            PaperSectionTag(title: title, seed: seed)
+                .padding(.top, 14)
+                .padding(.leading, 4)
+            content()
+        }
+        .quickPlace(index)
+    }
+
+    private func card<Content: View>(seed: Int, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1, radius: 18, seed: seed, padding: 16)
+        .rotationEffect(.degrees((seeded(seed, salt: 9) - 0.5) * 0.8))
+    }
+
+    private func rowLabel(_ title: String, icon: PaperIcon? = nil) -> some View {
+        HStack(spacing: 10) {
+            if let icon { PaperIconView(icon, size: 20) }
+            Text(title)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.adaptiveText(colorScheme))
+        }
+    }
+
+    private func caption(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 12.5, weight: .medium, design: .rounded))
+            .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    // MARK: - Header
+
+    // MARK: - You (personalisation)
+
+    private var personalCard: some View {
+        card(seed: 182) {
+            HStack(spacing: 10) {
+                rowLabel("Name", icon: .pen)
+                TextField("Optional", text: $settings.userName)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .multilineTextAlignment(.trailing)
+                    .textContentType(.givenName)
+                    .submitLabel(.done)
+                    .accessibilityIdentifier("userNameField")
+            }
+
+            PaperRowDivider()
+
+            pickerRow("Your journey", icon: .star, id: "journeyPicker") {
+                Picker("Your journey", selection: $settings.journey) {
+                    ForEach(Journey.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+            }
+
+            PaperRowDivider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                rowLabel("Your intentions", icon: .sprout)
+                caption("Decides which cards come first on Home.")
+                ForEach(Array(Intention.allCases.enumerated()), id: \.element) { index, intention in
+                    let isOn = settings.intentions.contains(intention)
+                    Button {
+                        withAnimation(.open(0.2)) {
+                            if isOn { settings.intentions.remove(intention) } else { settings.intentions.insert(intention) }
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            PaperCheckbox(isOn: isOn, size: 22, seed: 600 + index)
+                            Text(intention.title)
+                                .font(.system(size: 14.5, weight: .medium, design: .rounded))
+                                .foregroundStyle(Color.adaptiveText(colorScheme))
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(intention.title)
+                    .accessibilityAddTraits(isOn ? [.isSelected, .isButton] : .isButton)
+                }
+            }
+
+            PaperRowDivider()
+
+            pickerRow("Arabic reading", icon: .book, id: "arabicLevelPicker") {
+                Picker("Arabic reading", selection: $settings.arabicLevel) {
+                    ForEach(ArabicLevel.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+            }
+
+            PaperRowDivider()
+
+            pickerRow("Quran goal", icon: .bookmark, id: "quranGoalPicker") {
+                Picker("Quran goal", selection: $settings.quranGoal) {
+                    ForEach(QuranGoal.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+            }
+        }
+    }
+
+    // MARK: - Appearance
 
     private var appearanceCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("Appearance", systemImage: "paintpalette")
-
-            rowDivider
-
-            // Theme picker
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Theme")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
+        card(seed: 183) {
+            VStack(alignment: .leading, spacing: 8) {
+                rowLabel("Paper", icon: .sun)
                 Picker("Theme", selection: $settings.appTheme) {
-                    ForEach(AppTheme.allCases, id: \.self) { theme in
-                        Text(theme.displayName).tag(theme)
+                    ForEach(themes, id: \.self) { theme in
+                        Text(theme == .sky ? "Sky" : theme.displayName).tag(theme)
                     }
                 }
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("themePicker")
+                caption(settings.appTheme == .sky
+                        ? "Follow the sky: kraft from Fajr to Maghrib, night paper after."
+                        : "Sky follows the prayer times: kraft from Fajr to Maghrib, night paper after.")
             }
 
-            rowDivider
+            PaperRowDivider()
 
-            // Arabic font size slider
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Arabic Font Size")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
+                    rowLabel("Arabic Font Size", icon: .aa)
                     Spacer()
                     Text("\(Int(settings.arabicFontSize))")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.adaptivePrimary(colorScheme))
                         .monospacedDigit()
                         .accessibilityIdentifier("arabicFontSizeValue")
@@ -149,7 +359,6 @@ struct SettingsView: View {
                     .tint(Color.adaptivePrimary(colorScheme))
                     .accessibilityIdentifier("arabicFontSizeSlider")
 
-                // Live preview
                 Text("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")
                     .arabicFont(size: CGFloat(settings.arabicFontSize))
                     .foregroundStyle(Color.adaptiveText(colorScheme))
@@ -157,401 +366,455 @@ struct SettingsView: View {
                     .accessibilityLabel("Arabic font preview: In the name of Allah, the Most Gracious, the Most Merciful")
             }
 
-            // MVP: hidden per PM decision; transliteration deferred to Phase 2
-            // Toggle("Show Transliteration", isOn: $settings.showTransliteration)
-            //     .tint(Color.adaptivePrimary(colorScheme))
+            PaperRowDivider()
+
+            Toggle(isOn: $settings.showTransliteration) {
+                rowLabel("Show Transliteration", icon: .pen)
+            }
+            .tint(Color.adaptivePrimary(colorScheme))
+            .accessibilityIdentifier("showTransliterationToggle")
         }
-        .cardStyle(colorScheme)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("appearanceCard")
     }
 
-    // MARK: - Quran Card
+    // MARK: - Quran
 
     private var quranCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("Quran", systemImage: "book.closed")
-
-            rowDivider
-
-            settingsPickerRow(
-                label: "Translation",
-                systemImage: "translate",
-                accessibilityId: "translationLanguagePicker"
-            ) {
+        card(seed: 184) {
+            pickerRow("Translation", icon: .book, id: "translationLanguagePicker") {
                 Picker("Translation Language", selection: $settings.translationLanguage) {
-                    ForEach(TranslationLanguage.allCases, id: \.self) { lang in
-                        Text(lang.displayName).tag(lang)
-                    }
+                    ForEach(TranslationLanguage.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
-                .labelsHidden()
             }
 
-            rowDivider
+            PaperRowDivider()
 
-            settingsPickerRow(
-                label: "Default Reciter",
-                systemImage: "waveform",
-                accessibilityId: "reciterPicker"
-            ) {
+            pickerRow("Default Reciter", icon: .play, id: "reciterPicker") {
                 Picker("Default Reciter", selection: $settings.selectedQari) {
-                    ForEach(Qari.defaults) { qari in
-                        Text(qari.name).tag(qari.identifier)
-                    }
+                    ForEach(Qari.defaults) { Text($0.name).tag($0.identifier) }
                 }
-                .labelsHidden()
             }
         }
-        .cardStyle(colorScheme)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("quranCard")
     }
 
-    // MARK: - Prayer Times Card
+    // MARK: - Prayer Times
 
     private var prayerCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("Prayer Times", systemImage: "clock")
-
-            rowDivider
-
-            settingsPickerRow(
-                label: "Calculation Method",
-                systemImage: "function",
-                accessibilityId: "calculationMethodPicker"
-            ) {
+        card(seed: 185) {
+            pickerRow("Calculation Method", icon: .clock, id: "calculationMethodPicker") {
                 Picker("Calculation Method", selection: $settings.calculationMethod) {
-                    ForEach(CalculationMethodOption.allCases, id: \.self) { method in
-                        Text(method.displayName).tag(method)
-                    }
+                    ForEach(CalculationMethodOption.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
-                .labelsHidden()
             }
 
-            rowDivider
+            PaperRowDivider()
 
-            settingsPickerRow(
-                label: "Madhab",
-                systemImage: "rays",
-                accessibilityId: "madhabPicker"
-            ) {
+            pickerRow("Madhab", icon: .asr, id: "madhabPicker") {
                 Picker("Madhab", selection: $settings.madhab) {
-                    ForEach(MadhabOption.allCases, id: \.self) { madhab in
-                        Text(madhab.rawValue).tag(madhab)
-                    }
+                    ForEach(MadhabOption.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }
-                .labelsHidden()
             }
         }
-        .cardStyle(colorScheme)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("prayerCard")
     }
 
-    // MARK: - Notifications Card
+    // MARK: - Notifications
 
     private var notificationsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("Notifications", systemImage: "bell")
-
-            rowDivider
-
+        card(seed: 186) {
             notificationToggle("Fajr", isOn: $settings.fajrNotification)
                 .accessibilityIdentifier("fajrNotificationToggle")
-
-            rowDivider
-
+            PaperRowDivider()
             notificationToggle("Sunrise", isOn: $settings.sunriseNotification)
                 .accessibilityIdentifier("sunriseNotificationToggle")
-
-            rowDivider
-
+            PaperRowDivider()
             notificationToggle("Dhuhr", isOn: $settings.dhuhrNotification)
                 .accessibilityIdentifier("dhuhrNotificationToggle")
-
-            rowDivider
-
+            PaperRowDivider()
             notificationToggle("Asr", isOn: $settings.asrNotification)
                 .accessibilityIdentifier("asrNotificationToggle")
-
-            rowDivider
-
+            PaperRowDivider()
             notificationToggle("Maghrib", isOn: $settings.maghribNotification)
                 .accessibilityIdentifier("maghribNotificationToggle")
-
-            rowDivider
-
+            PaperRowDivider()
             notificationToggle("Isha", isOn: $settings.ishaNotification)
                 .accessibilityIdentifier("ishaNotificationToggle")
-
-            rowDivider
+            PaperRowDivider()
 
             Button {
                 NotificationService.shared.sendTestNotification()
             } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "bell.badge")
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    PaperIconView(.bell, size: 20)
                     Text("Send Test Notification")
-                        .font(.subheadline)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.adaptivePrimary(colorScheme))
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.caption)
+                        .font(.caption.weight(.bold))
                         .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(PaperPressStyle())
             .accessibilityLabel("Send Test Notification")
             .accessibilityIdentifier("sendTestNotificationButton")
+            PaperRowDivider()
+
+            Button {
+                Task {
+                    liveActivityMessage = await PrayerLiveActivityManager.shared.startNow()
+                        ?? "Countdown started. Lock your iPhone or look at the Dynamic Island."
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    PaperIconView(.clock, size: 20)
+                    Text("Show Prayer Countdown Now")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PaperPressStyle())
+            .accessibilityHint("Starts the Live Activity for the next prayer")
+            if let liveActivityMessage {
+                caption(liveActivityMessage)
+            }
         }
-        .cardStyle(colorScheme)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("notificationsCard")
     }
 
-    // MARK: - Location Card
+    // MARK: - Reminders (Fajr help, adhkar, weekly sunnahs)
 
-    private var locationCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("Location", systemImage: "location")
+    private var remindersCard: some View {
+        card(seed: 187) {
+            pickerRow("Help with Fajr", icon: .fajr, id: "fajrHelpPicker") {
+                Picker("Help with Fajr", selection: $settings.fajrWakeOffset) {
+                    Text("Off").tag(Int?.none)
+                    Text("At Fajr").tag(Int?.some(0))
+                    Text("10 min before").tag(Int?.some(10))
+                    Text("20 min before").tag(Int?.some(20))
+                    Text("30 min before").tag(Int?.some(30))
+                }
+            }
+            caption("A gentle sound that builds up before the athan.")
 
-            rowDivider
+            PaperRowDivider()
 
-            HStack {
-                Image(systemName: "location.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    .frame(width: 20)
-                Toggle("Use GPS Location", isOn: $settings.useAutoLocation)
-                    .font(.subheadline)
+            Toggle(isOn: $settings.adhkarRemindersOn) {
+                rowLabel("Adhkar reminders", icon: .beads)
+            }
+            .tint(Color.adaptivePrimary(colorScheme))
+
+            PaperRowDivider()
+
+            VStack(alignment: .leading, spacing: 10) {
+                rowLabel("Weekly sunnahs", icon: .moon)
+                ForEach(WeeklyReminder.allCases, id: \.self) { reminder in
+                    Toggle(reminder.title, isOn: Binding(
+                        get: { settings.weeklyReminders.contains(reminder) },
+                        set: { on in
+                            if on { settings.weeklyReminders.insert(reminder) } else { settings.weeklyReminders.remove(reminder) }
+                        }
+                    ))
+                    .font(.system(size: 14.5, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.adaptiveText(colorScheme))
                     .tint(Color.adaptivePrimary(colorScheme))
-                    .accessibilityIdentifier("useGPSToggle")
+                }
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("remindersCard")
+    }
+
+    // MARK: - Duas
+
+    private var duasCard: some View {
+        card(seed: 188) {
+            caption("People you'd like to remember in dua. Kheir reminds you on Fridays. Names never leave your phone unless iCloud backup is on.")
+
+            ForEach(Array(settings.duaNames.enumerated()), id: \.element.id) { index, dua in
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(dua.name)
+                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                        if !dua.note.isEmpty {
+                            Text(dua.note)
+                                .font(.system(size: 13, design: .serif))
+                                .italic()
+                                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                        }
+                    }
+                    Spacer()
+                    Button {
+                        withAnimation(.open(0.2)) { settings.duaNames.removeAll { $0.id == dua.id } }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PaperPressStyle())
+                    .accessibilityLabel("Remove \(dua.name)")
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .paperPiece(Color.adaptiveCardElevated(colorScheme), material: .card, depth: 0.5, radius: 6, seed: 620 + index, padding: nil)
+                .overlay(alignment: .topLeading) {
+                    PaperTape(seed: 620 + index).scaleEffect(0.55).offset(x: -4, y: -8)
+                }
             }
 
-            if !settings.useAutoLocation {
-                rowDivider
+            HStack(spacing: 8) {
+                VStack(spacing: 6) {
+                    TextField("Name", text: $newDuaName)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .textContentType(.name)
+                    TextField("For… (optional)", text: $newDuaNote)
+                        .font(.system(size: 13.5, design: .rounded))
+                }
+                Button(action: addDua) {
+                    PaperIconView(.plus, size: 22)
+                        .frame(width: 44, height: 44)
+                        .paperPiece(.lightPrimary, material: .construction, depth: 0.9, radius: 10, seed: 640, padding: nil)
+                }
+                .buttonStyle(PaperPressStyle())
+                .disabled(newDuaName.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityLabel("Add to duas")
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("duasCard")
+    }
 
-                HStack {
-                    Image(systemName: "building.2")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                        .frame(width: 20)
+    private func addDua() {
+        let name = newDuaName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        withAnimation(.open(0.2)) {
+            settings.duaNames.append(DuaName(name: name, note: newDuaNote.trimmingCharacters(in: .whitespacesAndNewlines)))
+        }
+        newDuaName = ""
+        newDuaNote = ""
+    }
+
+    // MARK: - Location
+
+    private var locationCard: some View {
+        card(seed: 189) {
+            Toggle(isOn: $settings.useAutoLocation) {
+                rowLabel("Use GPS Location", icon: .pin)
+            }
+            .tint(Color.adaptivePrimary(colorScheme))
+            .accessibilityIdentifier("useGPSToggle")
+
+            if !settings.useAutoLocation {
+                PaperRowDivider()
+                HStack(spacing: 10) {
+                    PaperIconView(.masjid, size: 20)
                     TextField("Enter city name", text: $settings.manualCity)
-                        .font(.subheadline)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                         .accessibilityIdentifier("manualCityField")
                 }
             }
 
-            rowDivider
+            PaperRowDivider()
 
-            settingsPickerRow(
-                label: "Distance Unit",
-                systemImage: "ruler",
-                accessibilityId: "distanceUnitPicker"
-            ) {
+            pickerRow("Distance Unit", icon: .compass, id: "distanceUnitPicker") {
                 Picker("Distance Unit", selection: $settings.distanceUnit) {
-                    ForEach(DistanceUnit.allCases, id: \.self) { unit in
-                        Text(unit.displayName).tag(unit)
-                    }
+                    ForEach(DistanceUnit.allCases, id: \.self) { Text($0.displayName).tag($0) }
                 }
-                .labelsHidden()
             }
         }
-        .cardStyle(colorScheme)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("locationCard")
     }
 
-    // MARK: - About Card
+    // MARK: - Back up & transfer
+
+    private var backupCard: some View {
+        card(seed: 190) {
+            Toggle(isOn: Binding(
+                get: { settings.iCloudBackup },
+                set: { backup.setEnabled($0) }
+            )) {
+                rowLabel("iCloud Backup", icon: .shield)
+            }
+            .tint(Color.adaptivePrimary(colorScheme))
+            .accessibilityIdentifier("iCloudBackupToggle")
+
+            caption("Your streak, goals, journal and garden come back on a new iPhone signed into the same Apple ID.")
+
+            if settings.iCloudBackup {
+                PaperRowDivider()
+
+                HStack(spacing: 8) {
+                    if backup.isSyncing {
+                        ProgressView().controlSize(.small)
+                        caption("Backing up…")
+                    } else if !backup.isICloudAvailable {
+                        caption("Sign in to iCloud in the Settings app to back up.")
+                    } else if let last = backup.lastSynced {
+                        caption("Last backed up \(last.formatted(.relative(presentation: .named)))")
+                    } else {
+                        caption("Not backed up yet")
+                    }
+                    Spacer()
+                    Button("Back up now") {
+                        Task { await backup.syncNow() }
+                    }
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    .disabled(backup.isSyncing)
+                    .accessibilityIdentifier("backupNowButton")
+                }
+            }
+
+            PaperRowDivider()
+
+            Button(role: .destructive) {
+                showDeleteBackupConfirm = true
+            } label: {
+                HStack {
+                    Text("Delete backup")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.destructive)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PaperPressStyle())
+            .accessibilityIdentifier("deleteBackupButton")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("backupCard")
+    }
+
+    // MARK: - About
 
     private var aboutCard: some View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
 
-        return VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("About", systemImage: "info.circle")
-
-            rowDivider
-
-            // App identity block
+        return card(seed: 191) {
             HStack(spacing: 14) {
                 Image("AppIcon")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                    .frame(width: 52, height: 52)
+                    .clipShape(CutShape(cornerRadius: 12, seed: 192))
+                    .paperShadow(depth: 0.8)
                     .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text("Kheir")
-                        .font(.headline)
+                        .font(.system(size: 17, weight: .black, design: .rounded))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                     Text("Your daily Islamic companion")
-                        .font(.caption)
+                        .font(.system(size: 12.5, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                     Text("Version \(version) (\(build))")
-                        .font(.caption2)
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                         .accessibilityIdentifier("appVersionLabel")
                 }
             }
 
-            rowDivider
+            PaperRowDivider()
 
-            // Rate on App Store
-            Button {
-                // Replace with actual App Store ID when available
-                if let url = URL(string: "https://apps.apple.com/app/idYOUR_APP_ID") {
-                    UIApplication.shared.open(url)
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    Text("Rate Kheir on the App Store")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                }
-            }
-            .accessibilityIdentifier("rateAppButton")
+            linkRow("Rate Kheir on the App Store", icon: .star, url: "https://apps.apple.com/app/idYOUR_APP_ID")
+                .accessibilityIdentifier("rateAppButton")
 
-            rowDivider
+            PaperRowDivider()
 
-            // Privacy Policy
-            Button {
-                if let url = URL(string: "https://kheir.app/privacy") {
-                    UIApplication.shared.open(url)
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "lock.shield")
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    Text("Privacy Policy")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                    Spacer()
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                }
-            }
-            .accessibilityIdentifier("privacyPolicyButton")
+            linkRow("Privacy Policy", icon: .shield, url: "https://kheir.app/privacy")
+                .accessibilityIdentifier("privacyPolicyButton")
         }
-        .cardStyle(colorScheme)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("aboutCard")
     }
 
-    // MARK: - Credits Card
+    private func linkRow(_ title: String, icon: PaperIcon, url: String) -> some View {
+        Button {
+            if let link = URL(string: url) { UIApplication.shared.open(link) }
+        } label: {
+            HStack(spacing: 10) {
+                PaperIconView(icon, size: 20)
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PaperPressStyle())
+    }
+
+    // MARK: - Credits
 
     private var creditsCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("Data Providers", systemImage: "server.rack")
-
-            rowDivider
-
-            creditRow(
-                name: "Al-Quran Cloud",
-                description: "Quran text & translations",
-                url: "https://alquran.cloud",
-                systemImage: "book.pages"
-            )
-
-            rowDivider
-
-            creditRow(
-                name: "Fawazahmed0 Hadith API",
-                description: "Hadith collections & grades",
-                url: "https://github.com/fawazahmed0/hadith-api",
-                systemImage: "text.quote"
-            )
-
-            rowDivider
-
-            creditRow(
-                name: "Aladhan Prayer Times",
-                description: "Prayer time calculations",
-                url: "https://aladhan.com",
-                systemImage: "clock.badge"
-            )
-
-            rowDivider
-
-            creditRow(
-                name: "Adhan Swift",
-                description: "Prayer times library by Batoul Apps",
-                url: "https://github.com/batoulapps/adhan-swift",
-                systemImage: "waveform.path.ecg"
-            )
+        card(seed: 193) {
+            creditRow(name: "Al-Quran Cloud", description: "Quran text & translations", url: "https://alquran.cloud", icon: .book)
+            PaperRowDivider()
+            creditRow(name: "Fawazahmed0 Hadith API", description: "Hadith collections & grades", url: "https://github.com/fawazahmed0/hadith-api", icon: .beads)
+            PaperRowDivider()
+            creditRow(name: "Aladhan Prayer Times", description: "Prayer time calculations", url: "https://aladhan.com", icon: .clock)
+            PaperRowDivider()
+            creditRow(name: "Adhan Swift", description: "Prayer times library by Batoul Apps", url: "https://github.com/batoulapps/adhan-swift", icon: .compass)
         }
-        .cardStyle(colorScheme)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("creditsCard")
     }
 
-    // MARK: - Credit Row Helper
-
-    private func creditRow(
-        name: String,
-        description: String,
-        url: String,
-        systemImage: String
-    ) -> some View {
+    private func creditRow(name: String, description: String, url: String, icon: PaperIcon) -> some View {
         Button {
-            if let link = URL(string: url) {
-                UIApplication.shared.open(link)
-            }
+            if let link = URL(string: url) { UIApplication.shared.open(link) }
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    .frame(width: 22)
-
+                PaperIconView(icon, size: 20)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .font(.system(size: 14.5, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
                     Text(description)
-                        .font(.caption)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                 }
-
                 Spacer()
-
                 Image(systemName: "arrow.up.right")
-                    .font(.caption2)
+                    .font(.caption2.weight(.bold))
                     .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(PaperPressStyle())
         .accessibilityLabel("\(name): \(description). Opens in browser.")
     }
 
-    // MARK: - Settings Picker Row Helper
+    // MARK: - Picker row
 
-    @ViewBuilder
-    private func settingsPickerRow<P: View>(
-        label: String,
-        systemImage: String,
-        accessibilityId: String,
-        @ViewBuilder picker: () -> P
-    ) -> some View {
+    private func pickerRow<P: View>(_ label: String, icon: PaperIcon, id: String, @ViewBuilder picker: () -> P) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: systemImage)
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                .frame(width: 22)
-
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
-
-            Spacer()
-
+            rowLabel(label, icon: icon)
+            Spacer(minLength: 4)
             picker()
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                .accessibilityIdentifier(accessibilityId)
+                .labelsHidden()
+                .tint(Color.adaptivePrimary(colorScheme))
+                .accessibilityIdentifier(id)
         }
     }
 
@@ -560,44 +823,32 @@ struct SettingsView: View {
     /// Wraps a prayer notification toggle with contextual permission handling.
     /// - When flipping to true with `.notDetermined` status: requests permission first.
     /// - When flipping to true with `.denied` status: shows "Open Settings" alert.
-    @ViewBuilder
     private func notificationToggle(_ label: String, isOn binding: Binding<Bool>) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: binding.wrappedValue ? "bell.fill" : "bell")
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                .frame(width: 22)
-                .contentTransition(.symbolEffect(.replace))
-
-            Toggle(label, isOn: Binding(
-                get: { binding.wrappedValue },
-                set: { newValue in
-                    guard newValue else {
-                        // Turning off — no permission check needed
-                        binding.wrappedValue = false
-                        return
-                    }
-                    // Turning on — check current authorization status
-                    Task { @MainActor in
-                        let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
-                        switch status {
-                        case .authorized, .provisional, .ephemeral:
-                            binding.wrappedValue = true
-                        case .notDetermined:
-                            let granted = await NotificationService.shared.requestPermission()
-                            binding.wrappedValue = granted
-                        case .denied:
-                            showPermissionDeniedAlert = true
-                            // Leave binding as false; user must re-tap after fixing in Settings
-                        @unknown default:
-                            binding.wrappedValue = true
-                        }
+        Toggle(isOn: Binding(
+            get: { binding.wrappedValue },
+            set: { newValue in
+                guard newValue else {
+                    binding.wrappedValue = false
+                    return
+                }
+                Task { @MainActor in
+                    let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+                    switch status {
+                    case .authorized, .provisional, .ephemeral:
+                        binding.wrappedValue = true
+                    case .notDetermined:
+                        let granted = await NotificationService.shared.requestPermission()
+                        binding.wrappedValue = granted
+                    case .denied:
+                        showPermissionDeniedAlert = true
+                    @unknown default:
+                        binding.wrappedValue = true
                     }
                 }
-            ))
-            .font(.subheadline)
-            .foregroundStyle(Color.adaptiveText(colorScheme))
-            .tint(Color.adaptivePrimary(colorScheme))
+            }
+        )) {
+            rowLabel(label, icon: PaperIcon.forPrayer(label))
         }
+        .tint(Color.adaptivePrimary(colorScheme))
     }
 }

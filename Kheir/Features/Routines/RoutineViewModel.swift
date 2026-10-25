@@ -73,7 +73,10 @@ final class RoutineViewModel {
 
         currentRoutine = routine
         updateCompletion(from: routine)
-        Task { await routineService.saveRoutineProgress(routine) }
+        Task {
+            await routineService.saveRoutineProgress(routine)
+            CloudBackupService.shared.scheduleUpload()
+        }
 
         if routine.isCompleted && !showCelebration {
             showCelebration = true
@@ -89,7 +92,10 @@ final class RoutineViewModel {
         currentRoutine = routine
         updateCompletion(from: routine)
         showCelebration = false
-        Task { await routineService.saveRoutineProgress(routine) }
+        Task {
+            await routineService.saveRoutineProgress(routine)
+            CloudBackupService.shared.scheduleUpload()
+        }
     }
 
     /// Dismisses the celebration overlay without resetting progress.

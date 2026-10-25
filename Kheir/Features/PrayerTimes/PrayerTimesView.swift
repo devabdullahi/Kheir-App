@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// Today's prayers as paper cards over the full-height paper sky.
 struct PrayerTimesView: View {
     @State private var viewModel = PrayerTimesViewModel()
     @State private var skyEngine = SkyEngine()
@@ -7,56 +8,32 @@ struct PrayerTimesView: View {
 
     var body: some View {
         ZStack {
-            // Full-screen sky background
-            DynamicSkyView(skyState: skyEngine.currentState)
+            DynamicSkyView(skyState: skyEngine.currentState, showsHills: false)
                 .ignoresSafeArea()
 
             ScrollView {
                 VStack(spacing: DesignTokens.spacingLG) {
-                    // Date Header
-                    VStack(spacing: 4) {
-                        Text(viewModel.gregorianDate)
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.6))
-                        Text(viewModel.hijriDate)
-                            .font(.headline)
-                            .foregroundStyle(.white.opacity(0.9))
-                    }
-                    .padding(.top, 60)
+                    dateHeader
+                        .padding(.top, 8)
+                        .quickPlace(0)
 
-                    // Next Prayer Countdown
                     if let next = viewModel.nextPrayer {
-                        VStack(spacing: 8) {
-                            Text(next.name)
-                                .font(.title3)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.white)
-
-                            Text(next.timeString)
-                                .font(.system(size: 32, weight: .bold, design: .rounded))
-                                .foregroundStyle(Color.islamicGold)
-                                .monospacedDigit()
-
-                            Text(viewModel.countdownText)
-                                .font(.title3)
-                                .monospacedDigit()
-                                .foregroundStyle(.white.opacity(0.6))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(DesignTokens.cardPadding)
-                        .glassmorphismCard(colorScheme)
+                        countdownCard(next)
+                            .quickPlace(1)
                     }
 
-                    // Prayer Cards
-                    VStack(spacing: DesignTokens.spacingSM) {
+                    VStack(spacing: 10) {
                         ForEach(Array(viewModel.prayers.enumerated()), id: \.element.id) { index, prayer in
                             PrayerCardView(
                                 prayer: prayer,
                                 state: cardState(for: prayer, at: index),
-                                colorScheme: colorScheme
+                                colorScheme: colorScheme,
+                                seed: 102 + index
                             )
+                            .quickPlace(index + 2)
                         }
                     }
+                    .padding(.top, 2)
 
                     // Empty-state: visible reason why prayers aren't loading
                     // (location denied, network down, manual city typo'd, etc.)
@@ -69,92 +46,126 @@ struct PrayerTimesView: View {
                         .padding(.top, 8)
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 20)
                 .padding(.bottom, 100) // Space for tab bar
             }
+            .scrollContentBackground(.hidden)
         }
         .navigationTitle("Prayer Times")
         .toolbarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
-        .onAppear { viewModel.onAppear() }
+        .onAppear {
+            viewModel.onAppear()
+            feedSky()
+        }
         .onDisappear { viewModel.onDisappear() }
+        .onChange(of: viewModel.prayers.map(\.time)) { _, _ in feedSky() }
     }
 
-    private func cardState(for prayer: PrayerTime, at index: Int) -> PrayerCardState {
-        guard let nextPrayer = viewModel.nextPrayer else {
-            return .future(dimLevel: 0.5)
-        }
+    // MARK: - Header
 
-        if prayer.id == nextPrayer.id {
-            let remaining = prayer.time.timeIntervalSince(Date())
+    private var dateHeader: some View {
+        VStack(spacing: 3) {
+            Text(viewModel.gregorianDate)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white.opacity(0.85))
+            Text(viewModel.hijriDate)
+                .font(.system(size: 17, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+        }
+        .shadow(color: .black.opacity(0.3), radius: 0, x: 0, y: 1)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func countdownCard(_ next: PrayerTime) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 8) {
+                PaperIconView(PaperIcon.forPrayer(next.name), size: 26)
+                Text(next.name)
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+            }
+            Text(next.timeString)
+                .font(.system(size: 32, weight: .black, design: .rounded))
+                .foregroundStyle(Color.adaptiveGold(colorScheme))
+                .monospacedDigit()
+            Text("in \(viewModel.countdownText)")
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                .contentTransition(.numericText(countsDown: true))
+        }
+        .frame(maxWidth: .infinity)
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.8, seed: 101)
+        .rotationEffect(.degrees(-0.4))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Next prayer \(next.name) at \(next.timeString), in \(viewModel.countdownText)")
+    }
+
+    // MARK: - State
+
+    private func feedSky() {
+        guard !viewModel.prayers.isEmpty else { return }
+        skyEngine.loadPrayerTimes(viewModel.prayers.map { (name: $0.name, time: $0.time) })
+    }
+
+    /// The prayer we are in now is the last one whose time has come; the next
+    /// prayer is the one being counted down to.
+    private func cardState(for prayer: PrayerTime, at index: Int) -> PrayerCardState {
+        let now = Date()
+        let currentIndex = viewModel.prayers.lastIndex(where: { $0.time <= now })
+
+        if index == currentIndex {
+            let remaining = viewModel.nextPrayer.map { $0.time.timeIntervalSince(now) } ?? 0
             return .current(remaining: max(0, remaining))
         }
-
-        // Prayers before the next prayer are passed
-        if prayer.time < Date() && prayer.id != nextPrayer.id {
+        if prayer.time <= now {
             return .passed
         }
-
-        // First prayer after next
-        let nextIndex = viewModel.prayers.firstIndex(where: { $0.id == nextPrayer.id }) ?? 0
-        if index == nextIndex + 1 {
+        if prayer.id == viewModel.nextPrayer?.id {
             return .next
         }
-
-        // Future prayers with progressive dimming
-        let distance = Double(index - nextIndex)
-        let dimLevel = min(1.0, 0.4 + distance * 0.15)
-        return .future(dimLevel: dimLevel)
+        let nextIndex = viewModel.prayers.firstIndex(where: { $0.id == viewModel.nextPrayer?.id }) ?? index
+        let distance = Double(max(0, index - nextIndex))
+        return .future(dimLevel: min(1.0, distance * 0.25))
     }
 }
 
 // MARK: - Empty State
 //
 // Shown when `viewModel.prayers` is empty so the user isn't staring at a blank
-// sky background wondering what went wrong. Always pairs a status message with
-// a manual retry button — the previous version silently dropped every failure.
+// sky wondering what went wrong. Always pairs a status message with a manual
+// retry button.
 struct EmptyPrayerStateView: View {
     let statusMessage: String
     let isLoading: Bool
     let retry: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(spacing: 12) {
-            Image(systemName: isLoading ? "icloud.and.arrow.down" : "location.slash")
-                .font(.system(size: 28, weight: .light))
-                .foregroundStyle(Color(red: 0.910, green: 0.863, blue: 0.784).opacity(0.7))
+            PaperIconView(isLoading ? .clock : .pin, size: 34)
 
             Text(isLoading ? "Loading prayer times…" : (statusMessage.isEmpty ? "Prayer times unavailable" : statusMessage))
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.85))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.adaptiveText(colorScheme))
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 12)
 
             if !isLoading {
                 Button(action: retry) {
                     Text("Retry")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.831, green: 0.659, blue: 0.278))
-                        .padding(.horizontal, 24)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.lightCardSurface)
+                        .padding(.horizontal, 26)
                         .padding(.vertical, 10)
-                        .overlay(
-                            Capsule().stroke(
-                                Color(red: 0.831, green: 0.659, blue: 0.278).opacity(0.6),
-                                lineWidth: 1
-                            )
-                        )
+                        .paperPiece(.lightPrimary, material: .construction, depth: 1, radius: 12, seed: 118, padding: nil)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PaperPressStyle())
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .padding(.horizontal, 16)
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
+        .padding(.vertical, 12)
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.2, seed: 117)
     }
 }

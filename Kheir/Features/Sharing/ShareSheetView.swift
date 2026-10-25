@@ -33,7 +33,7 @@ struct ShareSheetView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 32)
             }
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            .paperBackground()
             .navigationTitle("Share")
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -63,11 +63,11 @@ struct ShareSheetView: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .shadow(color: .black.opacity(colorScheme == .dark ? 0.4 : 0.12),
-                            radius: 16, y: 6)
+                    .clipShape(CutShape(cornerRadius: 10, seed: 190))
+                    .paperShadow(depth: 2)
+                    .rotationEffect(.degrees(-1))
                     .transition(.opacity.combined(with: .scale(scale: 0.97)))
-                    .animation(.easeOut(duration: 0.25), value: viewModel.renderedImage != nil)
+                    .animation(.open(0.25), value: viewModel.renderedImage != nil)
             }
         }
         .frame(maxWidth: .infinity)
@@ -76,59 +76,46 @@ struct ShareSheetView: View {
     }
 
     private var renderingPlaceholder: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.adaptiveCardSurface(colorScheme))
-                .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
-            VStack(spacing: 12) {
-                ProgressView()
-                    .tint(Color.adaptivePrimary(colorScheme))
-                Text("Rendering...")
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-            }
+        VStack(spacing: 12) {
+            ProgressView()
+                .tint(Color.adaptivePrimary(colorScheme))
+            Text("Cutting paper…")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
         }
-        .frame(height: viewModel.selectedSize == .story ? 400 : 320)
+        .frame(width: viewModel.selectedSize == .story ? 225 : 320, height: viewModel.selectedSize == .story ? 400 : 320)
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1, radius: 10, seed: 190, padding: nil)
     }
 
     // MARK: - Size Toggle
 
     private var sizeToggle: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Size")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+            PaperSectionTag(title: "Size", seed: 199)
 
-            HStack(spacing: 12) {
-                ForEach(ShareCardSize.allCases, id: \.self) { size in
+            HStack(spacing: 10) {
+                ForEach(Array(ShareCardSize.allCases.enumerated()), id: \.element) { index, size in
+                    let selected = viewModel.selectedSize == size
                     Button {
                         viewModel.selectSize(size)
                     } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: size == .story ? "iphone" : "square")
-                                .font(.system(size: 14))
-                            Text(size.rawValue)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                        }
-                        .foregroundStyle(
-                            viewModel.selectedSize == size
-                                ? Color.adaptiveCardSurface(colorScheme)
-                                : Color.adaptivePrimary(colorScheme)
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(
-                                    viewModel.selectedSize == size
-                                        ? Color.adaptivePrimary(colorScheme)
-                                        : Color.adaptivePrimary(colorScheme).opacity(0.1)
-                                )
-                        )
+                        Text(size.rawValue)
+                            .font(.system(size: 13.5, weight: .bold, design: .rounded))
+                            .foregroundStyle(selected ? Color.lightBodyText : Color.adaptiveSecondaryText(colorScheme))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .paperPiece(
+                                selected ? PaperInk.mustard : Color.adaptiveCardElevated(colorScheme),
+                                material: .construction,
+                                depth: selected ? 1.2 : 0.4,
+                                edge: .torn,
+                                radius: 3,
+                                seed: 200 + index,
+                                padding: nil
+                            )
                     }
-                    .animation(.easeInOut(duration: 0.15), value: viewModel.selectedSize)
+                    .buttonStyle(PaperPressStyle())
+                    .accessibilityAddTraits(selected ? .isSelected : [])
                 }
                 Spacer()
             }
@@ -140,65 +127,51 @@ struct ShareSheetView: View {
 
     private var templatePicker: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Template")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+            PaperSectionTag(title: "Template", seed: 198)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(ShareTemplate.allCases) { template in
-                        templateCard(template)
-                    }
+            HStack(spacing: 12) {
+                ForEach(Array(ShareTemplate.allCases.enumerated()), id: \.element.id) { index, template in
+                    templateCard(template, index: index)
                 }
-                .padding(.horizontal, 2)
-                .padding(.vertical, 4)
+                Spacer(minLength: 0)
             }
+            .padding(.vertical, 4)
         }
     }
 
-    private func templateCard(_ template: ShareTemplate) -> some View {
+    private func swatch(for template: ShareTemplate) -> Color {
+        switch template {
+        case .minimal: return .lightCardSurface
+        case .geometric: return .paperTerracotta
+        case .calligraphy: return .darkBackground
+        case .nature: return .lightPrimary
+        }
+    }
+
+    private func templateCard(_ template: ShareTemplate, index: Int) -> some View {
         let isSelected = viewModel.selectedTemplate == template
         return Button {
             viewModel.selectTemplate(template)
         } label: {
             VStack(spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.adaptiveCardSurface(colorScheme))
-                        .frame(width: 80, height: 80)
-                        .shadow(
-                            color: .black.opacity(isSelected ? 0.2 : 0.06),
-                            radius: isSelected ? 8 : 4,
-                            y: 2
-                        )
-
-                    Image(systemName: template.symbolName)
-                        .font(.system(size: 28))
-                        .foregroundStyle(
-                            isSelected
-                                ? Color.adaptivePrimary(colorScheme)
-                                : Color.adaptiveSecondaryText(colorScheme)
-                        )
-
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.adaptivePrimary(colorScheme), lineWidth: 2.5)
-                            .frame(width: 80, height: 80)
+                Color.clear
+                    .frame(width: 58, height: 72)
+                    .paperPiece(swatch(for: template), material: .construction, depth: isSelected ? 1.8 : 0.6, radius: 8, seed: 195 + index, padding: nil)
+                    .overlay {
+                        if isSelected { BrassBrad(size: 8).offset(y: -26) }
                     }
-                }
+                    .rotationEffect(.degrees((seeded(index, salt: 1) - 0.5) * 4))
+                    .scaleEffect(isSelected ? 1.04 : 1)
 
                 Text(template.displayName)
-                    .font(.caption)
-                    .fontWeight(isSelected ? .semibold : .regular)
-                    .foregroundStyle(
-                        isSelected
-                            ? Color.adaptivePrimary(colorScheme)
-                            : Color.adaptiveSecondaryText(colorScheme)
-                    )
+                    .font(.system(size: 12, weight: isSelected ? .heavy : .medium, design: .rounded))
+                    .foregroundStyle(isSelected ? Color.adaptiveText(colorScheme) : Color.adaptiveSecondaryText(colorScheme))
             }
         }
-        .animation(.easeInOut(duration: 0.15), value: isSelected)
+        .buttonStyle(PaperPressStyle())
+        .animation(.open(0.2), value: isSelected)
+        .accessibilityLabel("\(template.displayName) template")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     // MARK: - Action Buttons
@@ -209,20 +182,9 @@ struct ShareSheetView: View {
             Button {
                 viewModel.shareImage()
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 16, weight: .medium))
-                    Text("Share")
-                        .font(.headline)
-                }
-                .foregroundStyle(Color.adaptiveCardSurface(colorScheme))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.adaptivePrimary(colorScheme))
-                )
+                PaperButtonLabel(title: "Share", icon: .share, seed: 205)
             }
+            .buttonStyle(PaperPressStyle())
             .disabled(viewModel.isRendering || viewModel.renderedImage == nil)
             .opacity(viewModel.isRendering || viewModel.renderedImage == nil ? 0.5 : 1)
 
@@ -236,15 +198,13 @@ struct ShareSheetView: View {
                 }
                 .foregroundStyle(Color.adaptivePrimary(colorScheme))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.adaptivePrimary(colorScheme).opacity(0.1))
-                )
+                .padding(.vertical, 14)
+                .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 0.8, radius: 14, seed: 206, padding: nil)
             }
+            .buttonStyle(PaperPressStyle())
             .disabled(viewModel.isRendering || viewModel.renderedImage == nil || isSaving)
             .opacity(viewModel.isRendering || viewModel.renderedImage == nil ? 0.5 : 1)
-            .animation(.easeInOut(duration: 0.2), value: viewModel.saveToPhotosState.description)
+            .animation(.open(0.2), value: viewModel.saveToPhotosState.description)
         }
     }
 

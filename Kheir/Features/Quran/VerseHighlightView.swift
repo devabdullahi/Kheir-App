@@ -63,14 +63,9 @@ struct VerseHighlightView: View {
             reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.7),
             value: isPressed
         )
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in isPressed = true }
-                .onEnded { _ in
-                    isPressed = false
-                    onTap()
-                }
-        )
+        // A plain tap (a zero-distance drag also fired after scrolling, playing verses
+        // by accident and fighting the scroll view for touches).
+        .onTapGesture(perform: onTap)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Verse \(verseNumber). \(translation)")
         .accessibilityHint("Double tap to play from this verse")

@@ -16,7 +16,7 @@ struct JournalView: View {
                     journalList
                 }
             }
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            .paperBackground()
             .navigationTitle("Journal")
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -31,8 +31,7 @@ struct JournalView: View {
                     Button {
                         showCompose = true
                     } label: {
-                        Image(systemName: "square.and.pencil")
-                            .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                        PaperIconView(.plus, size: 22)
                     }
                     .accessibilityLabel("New journal entry")
                 }
@@ -48,13 +47,18 @@ struct JournalView: View {
     }
 
     // MARK: - Journal List
+
     private var journalList: some View {
         List {
-            ForEach(viewModel.entriesByDate, id: \.0) { dateString, entries in
+            ForEach(Array(viewModel.entriesByDate.enumerated()), id: \.element.0) { groupIndex, group in
+                let (dateString, entries) = group
                 Section {
-                    ForEach(entries) { entry in
-                        journalRow(entry)
-                            .listRowBackground(Color.adaptiveCardSurface(colorScheme))
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        journalRow(entry, seed: 130 + groupIndex * 7 + index)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 14, leading: 20, bottom: 8, trailing: 20))
+                            .quickPlace(min(groupIndex + index, 8))
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
                                     viewModel.deleteEntry(entry)
@@ -72,48 +76,57 @@ struct JournalView: View {
                             }
                     }
                 } header: {
-                    Text(dateString)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                    PaperSectionTag(title: dateString, seed: 140 + groupIndex)
+                        .padding(.top, 6)
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
     }
 
-    private func journalRow(_ entry: JournalEntry) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(entry.date, style: .time)
-                    .font(.caption2)
-                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                Spacer()
-                if entry.linkedAyah != nil {
-                    Image(systemName: "book")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                }
-                if entry.linkedHadith != nil {
-                    Image(systemName: "text.book.closed")
-                        .font(.caption2)
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                }
-            }
+    /// A sheet of lined notepaper held to the table with washi tape. A linked
+    /// ayah or hadith is a small kraft label clipped on at the bottom.
+    private func journalRow(_ entry: JournalEntry, seed: Int) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(entry.date, style: .time)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .tracking(1.2)
+                .textCase(.uppercase)
+                .foregroundStyle(Color.adaptiveGold(colorScheme))
+                .frame(height: 22, alignment: .bottom)
 
             Text(entry.text)
-                .font(.body)
+                .font(.system(size: 15, design: .serif))
+                .lineSpacing(22 - 18)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
-                .lineLimit(4)
+                .lineLimit(6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 2)
 
-            if let ayah = entry.linkedAyah {
-                linkedAyahBadge(ayah)
-            }
-
-            if let hadith = entry.linkedHadith {
-                linkedHadithBadge(hadith)
+            if entry.linkedAyah != nil || entry.linkedHadith != nil {
+                HStack(spacing: 8) {
+                    if let ayah = entry.linkedAyah {
+                        linkedLabel(icon: .book, text: "\(ayah.surahName) \(ayah.surahNumber):\(ayah.ayahNumber)", seed: seed + 1)
+                    }
+                    if let hadith = entry.linkedHadith {
+                        linkedLabel(icon: .beads, text: hadith.source, seed: seed + 2)
+                    }
+                }
+                .padding(.top, 10)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.leading, 22)
+        .padding(DesignTokens.cardPadding)
+        .background {
+            NotepaperLines(lineHeight: 22, topInset: DesignTokens.cardPadding)
+                .clipShape(CutShape(cornerRadius: 6, seed: seed))
+        }
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.1, radius: 6, seed: seed, padding: nil)
+        .overlay(alignment: .top) {
+            PaperTape(seed: seed).offset(y: -10)
+        }
+        .paperTilt(seed, max: 1)
         .contentShape(Rectangle())
         .onTapGesture {
             editingEntry = entry
@@ -124,65 +137,50 @@ struct JournalView: View {
         .accessibilityHint("Double tap to edit")
     }
 
-    private func linkedAyahBadge(_ ayah: LinkedAyah) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "book")
-                .font(.caption2)
-            Text("\(ayah.surahName) \(ayah.surahNumber):\(ayah.ayahNumber)")
-                .font(.caption2.weight(.medium))
+    private func linkedLabel(icon: PaperIcon, text: String, seed: Int) -> some View {
+        HStack(spacing: 5) {
+            PaperIconView(icon, size: 14)
+            Text(text)
+                .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                .foregroundStyle(Color.lightBodyText)
+                .lineLimit(1)
         }
-        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 9)
         .padding(.vertical, 4)
-        .background(Color.adaptivePrimary(colorScheme).opacity(0.1))
-        .clipShape(Capsule())
-    }
-
-    private func linkedHadithBadge(_ hadith: LinkedHadith) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "text.book.closed")
-                .font(.caption2)
-            Text(hadith.source)
-                .font(.caption2.weight(.medium))
-        }
-        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.adaptivePrimary(colorScheme).opacity(0.1))
-        .clipShape(Capsule())
+        .paperPiece(PaperInk.kraftLabel, material: .kraft, depth: 0.6, edge: .torn, radius: 3, seed: seed, padding: nil)
+        .rotationEffect(.degrees((seeded(seed, salt: 9) - 0.5) * 4))
     }
 
     // MARK: - Empty State
+
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack {
             Spacer()
-            Image(systemName: "book.closed")
-                .font(.system(size: 48))
-                .foregroundStyle(Color.adaptivePrimary(colorScheme).opacity(0.3))
-                .accessibilityHidden(true)
-            Text("Your Journal is Empty")
-                .font(.headline)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
-            Text("Capture your reflections, thoughts, and spiritual insights. Link them to specific Ayahs or Hadiths.")
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Button {
-                showCompose = true
-            } label: {
-                Text("Start Writing")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
-                    .background(Color.adaptivePrimary(colorScheme))
-                    .clipShape(Capsule())
+            VStack(spacing: 12) {
+                PaperIconView(.pen, size: 40)
+                Text("Your Journal is Empty")
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text("Capture your reflections, thoughts, and spiritual insights. Link them to specific Ayahs or Hadiths.")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                    .multilineTextAlignment(.center)
+                Button {
+                    showCompose = true
+                } label: {
+                    PaperButtonLabel(title: "Start Writing", icon: .pen, seed: 136)
+                }
+                .buttonStyle(PaperPressStyle())
+                .padding(.top, 6)
             }
-            .padding(.top, 8)
+            .frame(maxWidth: .infinity)
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.1, radius: 8, seed: 135)
+            .overlay(alignment: .top) { PaperTape(seed: 135).offset(y: -10) }
+            .paperTilt(135)
+            .padding(.horizontal, 28)
+            .quickPlace(0)
             Spacer()
         }
         .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
     }
 }

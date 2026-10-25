@@ -2,108 +2,93 @@ import SwiftUI
 
 // MARK: - RoutineView
 
-/// Full-screen checklist view for a morning or evening spiritual routine.
+/// A morning or evening routine as a checklist of paper cards, with a paper
+/// progress ring that fills like a strip being laid around a disc.
 struct RoutineView: View {
     let routineType: RoutineType
 
     @State private var viewModel = RoutineViewModel()
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.adaptiveBackground(colorScheme).ignoresSafeArea()
+        ZStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    progressHeader
+                        .quickPlace(0)
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Progress bar
-                        progressHeader
-                            .scrollReveal(delay: 0)
-
-                        // Step list
-                        if let routine = viewModel.currentRoutine {
-                            ForEach(Array(routine.steps.enumerated()), id: \.element.id) { index, step in
-                                RoutineStepRow(
-                                    step: step,
-                                    isCompleted: routine.completedSteps.contains(step.id),
-                                    colorScheme: colorScheme
-                                ) {
-                                    withAnimation(.easeInOut(duration: 0.2)) {
-                                        viewModel.markStepComplete(index: index)
-                                    }
+                    if let routine = viewModel.currentRoutine {
+                        ForEach(Array(routine.steps.enumerated()), id: \.element.id) { index, step in
+                            RoutineStepRow(
+                                step: step,
+                                isCompleted: routine.completedSteps.contains(step.id),
+                                colorScheme: colorScheme,
+                                seed: 155 + index
+                            ) {
+                                withAnimation(reduceMotion ? nil : .open(0.22)) {
+                                    viewModel.markStepComplete(index: index)
                                 }
-                                .scrollReveal(delay: Double(index) * 0.06)
                             }
+                            .quickPlace(index + 1)
                         }
-
-                        Spacer(minLength: 40)
                     }
-                    .padding()
                 }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 120)
+            }
 
-                // Celebration overlay
-                if viewModel.showCelebration {
-                    celebrationOverlay
-                        .transition(.opacity.combined(with: .scale))
-                        .zIndex(1)
+            if viewModel.showCelebration {
+                celebrationOverlay
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    .zIndex(1)
+            }
+        }
+        .paperBackground()
+        .navigationTitle(routineType.displayName)
+        .toolbarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    withAnimation(.open(0.25)) { viewModel.resetRoutine() }
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
                 }
+                .accessibilityLabel("Reset routine")
+                .accessibilityIdentifier("resetRoutineButton")
             }
-            .navigationTitle(routineType.displayName)
-            .toolbarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        viewModel.resetRoutine()
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    }
-                    .accessibilityLabel("Reset routine")
-                    .accessibilityIdentifier("resetRoutineButton")
-                }
-            }
-            .task {
-                await viewModel.loadRoutine(type: routineType)
-            }
+        }
+        .task {
+            await viewModel.loadRoutine(type: routineType)
         }
     }
 
     // MARK: - Progress Header
 
     private var progressHeader: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Text(routineType.subtitle)
-                    .font(.subheadline)
+        let total = viewModel.currentRoutine?.steps.count ?? 0
+        let done = viewModel.currentRoutine?.completedSteps.count ?? 0
+        let left = max(0, total - done)
+
+        return HStack(spacing: 16) {
+            PaperProgressRing(progress: viewModel.completionPercentage)
+                .frame(width: 76, height: 76)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(done) of \(total) complete")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .contentTransition(.numericText())
+                Text(left == 0 && total > 0 ? "All done. Alhamdulillah." : "\(routineType.subtitle) · \(left) left")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-
-                Spacer()
-
-                Text("\(Int(viewModel.completionPercentage * 100))%")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    .monospacedDigit()
             }
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.adaptiveCardSurface(colorScheme))
-                        .frame(height: 8)
-
-                    Capsule()
-                        .fill(Color.adaptivePrimary(colorScheme))
-                        .frame(width: geo.size.width * viewModel.completionPercentage, height: 8)
-                        .animation(.easeInOut(duration: 0.4), value: viewModel.completionPercentage)
-                }
-            }
-            .frame(height: 8)
+            Spacer(minLength: 0)
         }
-        .padding(16)
-        .background(Color.adaptiveCardSurface(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, y: 4)
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.2, seed: 150)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Routine progress: \(Int(viewModel.completionPercentage * 100)) percent complete")
         .accessibilityIdentifier("routineProgressBar")
@@ -113,135 +98,136 @@ struct RoutineView: View {
 
     private var celebrationOverlay: some View {
         ZStack {
-            Color.black.opacity(0.55)
+            Color.black.opacity(0.45)
                 .ignoresSafeArea()
                 .onTapGesture { viewModel.dismissCelebration() }
 
-            VStack(spacing: 24) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+            VStack(spacing: 18) {
+                PaperIconView(routineType == .morning ? .sunrise : .moon, size: 56)
 
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     Text("Alhamdulillah!")
-                        .font(.title.bold())
-                        .foregroundStyle(.white)
+                        .font(.system(size: 26, weight: .black, design: .rounded))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
 
                     Text("You have completed your \(routineType.rawValue) routine.")
-                        .font(.body)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .padding(.horizontal)
+                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                 }
 
                 Button {
                     viewModel.dismissCelebration()
                 } label: {
-                    Text("Continue")
-                        .font(.headline)
-                        .foregroundStyle(Color.adaptiveCardSurface(colorScheme))
-                        .padding(.horizontal, 40)
-                        .padding(.vertical, 14)
-                        .background(Color.adaptivePrimary(colorScheme))
-                        .clipShape(Capsule())
+                    PaperButtonLabel(title: "Continue", seed: 171)
                 }
+                .buttonStyle(PaperPressStyle())
                 .accessibilityIdentifier("celebrationDismissButton")
             }
-            .padding(32)
-            .background(Color.adaptiveCardSurface(colorScheme).opacity(0.15))
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .padding(.horizontal, 24)
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 2.6, seed: 170, padding: 28)
+            .overlay(alignment: .top) { PaperTape(seed: 170).offset(y: -10) }
+            .rotationEffect(.degrees(-1))
+            .padding(.horizontal, 32)
         }
+    }
+}
+
+// MARK: - Paper progress ring
+
+/// A card disc with a strip of leaf-green paper laid around it.
+struct PaperProgressRing: View {
+    let progress: Double
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.adaptiveSecondaryText(scheme).opacity(0.14), lineWidth: 11)
+            Circle()
+                .trim(from: 0, to: max(0.001, progress))
+                .stroke(Color.adaptivePrimary(scheme), style: StrokeStyle(lineWidth: 11, lineCap: .butt))
+                .rotationEffect(.degrees(-90))
+                .shadow(color: .black.opacity(0.25), radius: 0.6, x: 0.5, y: 1)
+                .shadow(color: .black.opacity(0.12), radius: 2, x: 1, y: 2)
+                .animation(reduceMotion ? nil : .travel(0.5), value: progress)
+            Text("\(Int(progress * 100))%")
+                .font(.system(size: 15, weight: .black, design: .rounded).monospacedDigit())
+                .foregroundStyle(Color.adaptiveText(scheme))
+                .contentTransition(.numericText())
+        }
+        .padding(6)
+        .accessibilityHidden(true)
     }
 }
 
 // MARK: - RoutineStepRow
 
-/// A single checklist row showing the step's Arabic text (if any), English content, and reference.
+/// A single checklist card: a paper checkbox, the step's Arabic (if any),
+/// English content, a count/kind tag and the reference.
 struct RoutineStepRow: View {
     let step: RoutineStep
     let isCompleted: Bool
     let colorScheme: ColorScheme
+    var seed: Int = 155
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: 14) {
-                // Checkbox
-                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 24))
-                    .foregroundStyle(
-                        isCompleted
-                            ? Color.adaptivePrimary(colorScheme)
-                            : Color.adaptiveSecondaryText(colorScheme)
-                    )
-                    .contentTransition(.symbolEffect(.replace))
+                PaperCheckbox(isOn: isCompleted, size: 26, seed: seed)
                     .padding(.top, 2)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    // Step label badge
                     HStack(spacing: 6) {
-                        Image(systemName: stepIcon)
-                            .font(.caption2)
+                        PaperIconView(stepIcon, size: 16)
                         Text(step.title)
-                            .font(.caption)
-                            .fontWeight(.semibold)
+                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
+                            .strikethrough(isCompleted, color: Color.adaptiveSecondaryText(colorScheme))
+                        Spacer(minLength: 4)
+                        PaperTag(
+                            text: step.type.rawValue,
+                            color: isCompleted ? PaperInk.parkTissue : PaperInk.mustard,
+                            ink: .lightBodyText,
+                            seed: seed + 5
+                        )
                     }
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
 
-                    // Arabic text
                     if let arabic = step.arabicText, !arabic.isEmpty {
                         Text(arabic)
                             .arabicFont(size: 20)
                             .frame(maxWidth: .infinity, alignment: .trailing)
                             .multilineTextAlignment(.trailing)
-                            .foregroundStyle(
-                                isCompleted
-                                    ? Color.adaptiveText(colorScheme).opacity(0.5)
-                                    : Color.adaptiveText(colorScheme)
-                            )
+                            .foregroundStyle(Color.adaptiveText(colorScheme))
                     }
 
-                    // English content
                     Text(step.content)
-                        .font(.body)
-                        .foregroundStyle(
-                            isCompleted
-                                ? Color.adaptiveText(colorScheme).opacity(0.5)
-                                : Color.adaptiveText(colorScheme)
-                        )
+                        .font(.system(size: 15, design: .serif))
+                        .foregroundStyle(Color.adaptiveText(colorScheme))
                         .fixedSize(horizontal: false, vertical: true)
 
-                    // Reference
                     Text(step.reference)
-                        .font(.caption2)
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                 }
+                .opacity(isCompleted ? 0.6 : 1)
             }
-            .padding(16)
-            .background(Color.adaptiveCardSurface(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, y: 4)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        isCompleted ? Color.adaptivePrimary(colorScheme).opacity(0.4) : Color.clear,
-                        lineWidth: 1.5
-                    )
-            )
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: isCompleted ? 0.5 : 1, radius: 16, seed: seed, padding: 16)
+            .paperTilt(seed, max: 0.6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PaperPressStyle())
         .accessibilityLabel("\(step.title): \(step.content). \(isCompleted ? "Completed" : "Not completed")")
         .accessibilityAddTraits(isCompleted ? [.isSelected] : [])
     }
 
-    private var stepIcon: String {
+    private var stepIcon: PaperIcon {
         switch step.type {
-        case .dua:        return "hands.sparkles"
-        case .ayah:       return "book"
-        case .hadith:     return "text.quote"
-        case .dhikr:      return "circle.grid.3x3"
-        case .reflection: return "pencil.and.list.clipboard"
+        case .dua:        return .lantern
+        case .ayah:       return .book
+        case .hadith:     return .beads
+        case .dhikr:      return .beads
+        case .reflection: return .pen
         }
     }
 }

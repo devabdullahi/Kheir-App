@@ -1,13 +1,15 @@
 import SwiftUI
 
-/// A floating inline audio player bar that shows current ayah recitation status.
+/// The recitation player: a strip of green felt pinned with two brass brads.
 ///
-/// Renders only when `AudioPlayerService.nowPlaying` is non-nil. Displays the
-/// surah name, ayah number, qari name, playback progress, and transport controls.
-/// Entrance animation uses `.move(edge: .bottom).combined(with: .opacity)`.
+/// Renders only when `AudioPlayerService.nowPlaying` is non-nil. Shows the qari,
+/// the ayah being recited, a thin paper progress strip and transport controls.
 struct PlayerBar: View {
     var service: AudioPlayerService = .shared
-    @Environment(\.colorScheme) private var colorScheme
+    /// Number of ayahs in the surah, for "Ayah 3 of 110". 0 hides the total.
+    var totalAyahs: Int = 0
+
+    private let ink = Color.lightCardSurface
 
     var body: some View {
         if let nowPlaying = service.nowPlaying {
@@ -19,70 +21,74 @@ struct PlayerBar: View {
 
     private func playerContent(nowPlaying: NowPlayingInfo) -> some View {
         VStack(spacing: 6) {
-            // Main row
-            HStack(spacing: 12) {
-                // Leading icon
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.body)
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    .accessibilityHidden(true)
+            HStack(spacing: 10) {
+                BrassBrad(size: 8)
 
-                // Title / subtitle stack
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(nowPlaying.surahName) — Ayah \(nowPlaying.ayahNumber)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-                        .lineLimit(1)
-
+                VStack(alignment: .leading, spacing: 1) {
                     Text(nowPlaying.qariName)
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                        .font(.system(size: 13.5, weight: .heavy, design: .rounded))
+                        .foregroundStyle(ink)
+                        .lineLimit(1)
+                    Text(subtitle(nowPlaying))
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                        .foregroundStyle(ink.opacity(0.78))
                         .lineLimit(1)
                 }
 
-                Spacer()
+                Spacer(minLength: 4)
 
-                // Transport controls — state-dependent
                 transportControls(nowPlaying: nowPlaying)
 
-                // Close / stop button
                 Button {
                     service.stop()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                        .frame(width: 44, height: 44)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(ink.opacity(0.75))
+                        .frame(width: 36, height: 44)
                         .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PaperPressStyle())
                 .accessibilityLabel("Stop playback")
                 .accessibilityIdentifier("playerCloseButton")
+
+                BrassBrad(size: 8)
             }
 
-            // Progress bar row
-            ProgressView(
-                value: service.currentTime,
-                total: max(service.duration, 0.001)
-            )
-            .progressViewStyle(.linear)
-            .tint(Color.adaptivePrimary(colorScheme))
-            .accessibilityLabel("Playback progress")
+            progressStrip
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.adaptiveCardSurface(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(
-            color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08),
-            radius: 8,
-            y: 4
-        )
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .paperPiece(.lightPrimary, material: .felt, depth: 1.6, edge: .torn, radius: 10, seed: 73, padding: nil)
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .transition(.offset(y: 24).combined(with: .opacity))
         .accessibilityIdentifier("playerBar")
         .accessibilityElement(children: .contain)
+    }
+
+    private func subtitle(_ nowPlaying: NowPlayingInfo) -> String {
+        totalAyahs > 0
+            ? "\(nowPlaying.surahName) · Ayah \(nowPlaying.ayahNumber) of \(totalAyahs)"
+            : "\(nowPlaying.surahName) · Ayah \(nowPlaying.ayahNumber)"
+    }
+
+    /// A thin cream paper strip laid along the felt as the ayah plays.
+    private var progressStrip: some View {
+        GeometryReader { geo in
+            let fraction = service.duration > 0 ? min(1, max(0, service.currentTime / service.duration)) : 0
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.black.opacity(0.18))
+                Capsule()
+                    .fill(Color.islamicGold)
+                    .frame(width: max(3, geo.size.width * fraction))
+                    .shadow(color: .black.opacity(0.25), radius: 0.5, y: 0.5)
+            }
+        }
+        .frame(height: 3)
+        .accessibilityElement()
+        .accessibilityLabel("Playback progress")
+        .accessibilityValue("\(Int((service.duration > 0 ? service.currentTime / service.duration : 0) * 100)) percent")
     }
 
     // MARK: - Transport controls
@@ -92,59 +98,51 @@ struct PlayerBar: View {
         switch service.playerState {
         case .loading:
             ProgressView()
+                .tint(ink)
                 .scaleEffect(0.85)
                 .frame(width: 44, height: 44)
                 .accessibilityLabel("Loading audio")
 
         case .failed(let message):
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.caption)
-                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                    .accessibilityLabel("Playback error: \(message)")
-
-                Button {
-                    Task { await service.retry() }
-                } label: {
-                    Text("Retry")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Retry audio playback")
-                .accessibilityIdentifier("playerRetryButton")
+            Button {
+                Task { await service.retry() }
+            } label: {
+                Text("Retry")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.lightBodyText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .paperPiece(.islamicGold, material: .construction, depth: 0.6, edge: .torn, radius: 3, seed: 74, padding: nil)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(PaperPressStyle())
+            .accessibilityLabel("Retry audio playback. Playback error: \(message)")
+            .accessibilityIdentifier("playerRetryButton")
 
         case .playing:
-            playPauseButton(isPlaying: true, nowPlaying: nowPlaying)
+            playPauseButton(isPlaying: true)
 
         case .paused, .idle:
-            playPauseButton(isPlaying: false, nowPlaying: nowPlaying)
+            playPauseButton(isPlaying: false)
         }
     }
 
     // MARK: - Play / Pause button
 
-    private func playPauseButton(isPlaying: Bool, nowPlaying: NowPlayingInfo) -> some View {
+    private func playPauseButton(isPlaying: Bool) -> some View {
         Button {
             if isPlaying {
                 service.pause()
             } else {
-                // Alpha's contract exposes resume(). The current AudioPlayerService.swift
-                // already has a synchronous resume() at line 68 that calls player?.play().
-                // Use that directly; no need to restart the stream.
                 service.resume()
             }
         } label: {
-            Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                .font(.title2)
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
+            PaperIconView(isPlaying ? .pause : .play, size: 24)
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PaperPressStyle())
         .accessibilityLabel(isPlaying ? "Pause" : "Resume")
         .accessibilityIdentifier("playerPlayPauseButton")
     }

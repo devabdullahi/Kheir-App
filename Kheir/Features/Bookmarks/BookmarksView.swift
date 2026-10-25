@@ -8,110 +8,105 @@ struct BookmarksView: View {
     @State private var showShareSheet = false
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                tabSelector
+        VStack(spacing: 0) {
+            tabSelector
 
-                TabView(selection: $viewModel.selectedTab) {
-                    ayahsList
-                        .tag(BookmarksViewModel.BookmarkTab.ayahs)
-                    hadithsList
-                        .tag(BookmarksViewModel.BookmarkTab.hadiths)
+            TabView(selection: $viewModel.selectedTab) {
+                ayahsList
+                    .tag(BookmarksViewModel.BookmarkTab.ayahs)
+                hadithsList
+                    .tag(BookmarksViewModel.BookmarkTab.hadiths)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .animation(.travel(0.25), value: viewModel.selectedTab)
+        }
+        .accessibilityIdentifier("bookmarksView")
+        .paperBackground()
+        .navigationTitle("Bookmarks")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showJournal = true
+                } label: {
+                    PaperIconView(.pen, size: 22)
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
-                .animation(.easeInOut(duration: 0.25), value: viewModel.selectedTab)
+                .accessibilityLabel("Open Journal")
             }
-            .accessibilityIdentifier("bookmarksView")
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
-            .navigationTitle("Bookmarks")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showJournal = true
-                    } label: {
-                        Image(systemName: "book.closed")
-                            .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    }
-                    .accessibilityLabel("Open Journal")
-                }
-            }
-            .onAppear { viewModel.onAppear() }
-            .sheet(isPresented: $showJournal) {
-                JournalView()
-            }
-            .sheet(isPresented: $showShareSheet) {
-                ShareSheet(text: shareText)
-            }
+        }
+        .onAppear { viewModel.onAppear() }
+        .sheet(isPresented: $showJournal) {
+            JournalView()
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(text: shareText)
         }
     }
 
-    // MARK: - Tab Selector
+    // MARK: - Tab Selector (two paper tags; the selected one sits on top)
+
     private var tabSelector: some View {
-        HStack(spacing: 0) {
-            ForEach(BookmarksViewModel.BookmarkTab.allCases, id: \.self) { tab in
+        HStack(spacing: -4) {
+            ForEach(Array(BookmarksViewModel.BookmarkTab.allCases.enumerated()), id: \.element) { index, tab in
                 let isSelected = viewModel.selectedTab == tab
                 let count = tab == .ayahs ? viewModel.ayahBookmarks.count : viewModel.hadithBookmarks.count
 
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(.open(0.2)) {
                         viewModel.selectedTab = tab
                     }
                 } label: {
-                    VStack(spacing: 6) {
-                        HStack(spacing: 6) {
-                            Text(tab.rawValue)
-                                .font(.subheadline.weight(isSelected ? .semibold : .regular))
-                            if count > 0 {
-                                Text("\(count)")
-                                    .font(.caption2.weight(.bold))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        isSelected
-                                        ? Color.adaptivePrimary(colorScheme)
-                                        : Color.adaptiveSecondaryText(colorScheme).opacity(0.2)
-                                    )
-                                    .foregroundStyle(isSelected ? .white : Color.adaptiveSecondaryText(colorScheme))
-                                    .clipShape(Capsule())
-                            }
-                        }
-
-                        Rectangle()
-                            .fill(isSelected ? Color.adaptivePrimary(colorScheme) : .clear)
-                            .frame(height: 2)
-                    }
+                    Text("\(tab.rawValue) · \(count)")
+                        .font(.system(size: 13, weight: .heavy, design: .rounded))
+                        .tracking(0.8)
+                        .textCase(.uppercase)
+                        .foregroundStyle(isSelected ? Color.lightBodyText : Color.adaptiveSecondaryText(colorScheme))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .paperPiece(
+                            isSelected ? PaperInk.mustard : Color.adaptiveCardElevated(colorScheme),
+                            material: .construction,
+                            depth: isSelected ? 1.2 : 0.4,
+                            edge: .torn,
+                            radius: 3,
+                            seed: 81 + index,
+                            padding: nil
+                        )
+                        .rotationEffect(.degrees(index == 0 ? -2 : 1.5))
                 }
-                .foregroundStyle(
-                    isSelected
-                    ? Color.adaptivePrimary(colorScheme)
-                    : Color.adaptiveSecondaryText(colorScheme)
-                )
-                .frame(maxWidth: .infinity)
+                .buttonStyle(PaperPressStyle())
+                .zIndex(isSelected ? 1 : 0)
                 .accessibilityLabel("\(tab.rawValue) tab, \(count) items")
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
+            Spacer()
         }
-        .padding(.horizontal)
+        .padding(.horizontal, 20)
         .padding(.top, 8)
+        .padding(.bottom, 6)
     }
 
     // MARK: - Ayahs List
+
     private var ayahsList: some View {
         Group {
             if viewModel.ayahBookmarks.isEmpty {
                 emptyState(
-                    icon: "book",
+                    icon: .book,
                     title: "No Bookmarked Ayahs",
                     message: "Bookmark verses from the Quran reader to see them here."
                 )
             } else {
                 List {
-                    ForEach(viewModel.ayahBookmarks) { bookmark in
-                        NavigationLink(destination: ReadingView(surahNumber: bookmark.surahNumber, scrollToAyah: bookmark.ayahNumber)) {
-                            ayahRow(bookmark)
+                    ForEach(Array(viewModel.ayahBookmarks.enumerated()), id: \.element.id) { index, bookmark in
+                        ZStack {
+                            NavigationLink(destination: ReadingView(surahNumber: bookmark.surahNumber, scrollToAyah: bookmark.ayahNumber)) {
+                                EmptyView()
+                            }
+                            .opacity(0)
+                            ayahRow(bookmark, index: index)
                         }
-                        .listRowBackground(Color.adaptiveCardSurface(colorScheme))
-                        .listRowSeparatorTint(Color.adaptiveSecondaryText(colorScheme).opacity(0.15))
+                        .paperListRow()
+                        .quickPlace(min(index, 8))
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
                                 shareText = "\(bookmark.arabicText)\n\(bookmark.translationText)\n\n— \(bookmark.surahName) \(bookmark.surahNumber):\(bookmark.ayahNumber)"
@@ -125,59 +120,61 @@ struct BookmarksView: View {
                     .onDelete { viewModel.deleteAyahBookmark(at: $0) }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .contentMargins(.bottom, 100, for: .scrollContent)
             }
         }
     }
 
-    private func ayahRow(_ bookmark: BookmarkedAyah) -> some View {
+    /// An index card: reference and paper bookmark on top, Arabic, then meaning.
+    private func ayahRow(_ bookmark: BookmarkedAyah, index: Int) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label(
-                    "\(bookmark.surahName) \(bookmark.surahNumber):\(bookmark.ayahNumber)",
-                    systemImage: "book"
-                )
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-
+                Text("\(bookmark.surahName) \(bookmark.surahNumber):\(bookmark.ayahNumber)")
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
                 Spacer()
-
                 Text(bookmark.savedDate, style: .date)
-                    .font(.caption2)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                PaperIconView(.bookmark, size: 20)
             }
 
             Text(bookmark.arabicText)
-                .arabicFont(size: 20)
+                .arabicFont(size: 21)
                 .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .trailing)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
                 .accessibilityLabel("Arabic text")
                 .accessibilityValue(bookmark.arabicText)
 
             Text(bookmark.translationText)
-                .font(.subheadline)
+                .font(.system(size: 14.5, design: .serif))
                 .lineLimit(2)
                 .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
         }
-        .padding(.vertical, 6)
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1, radius: 16, seed: 83 + index, padding: 16)
+        .paperTilt(83 + index, max: 0.8)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Bookmarked ayah from \(bookmark.surahName), verse \(bookmark.ayahNumber)")
     }
 
     // MARK: - Hadiths List
+
     private var hadithsList: some View {
         Group {
             if viewModel.hadithBookmarks.isEmpty {
                 emptyState(
-                    icon: "text.book.closed",
+                    icon: .beads,
                     title: "No Bookmarked Hadiths",
                     message: "Bookmark hadiths from the home screen to save them here."
                 )
             } else {
                 List {
-                    ForEach(viewModel.hadithBookmarks) { bookmark in
-                        hadithRow(bookmark)
-                            .listRowBackground(Color.adaptiveCardSurface(colorScheme))
-                            .listRowSeparatorTint(Color.adaptiveSecondaryText(colorScheme).opacity(0.15))
+                    ForEach(Array(viewModel.hadithBookmarks.enumerated()), id: \.element.id) { index, bookmark in
+                        hadithRow(bookmark, index: index)
+                            .paperListRow()
+                            .quickPlace(min(index, 8))
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
                                     shareText = "\(bookmark.text)\n\n— \(bookmark.source)"
@@ -194,67 +191,82 @@ struct BookmarksView: View {
                     .onDelete { viewModel.deleteHadithBookmark(at: $0) }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .contentMargins(.bottom, 100, for: .scrollContent)
             }
         }
     }
 
-    private func hadithRow(_ bookmark: BookmarkedHadith) -> some View {
+    private func hadithRow(_ bookmark: BookmarkedHadith, index: Int) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(bookmark.source)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
                 Spacer()
                 Text(bookmark.savedDate, style: .date)
-                    .font(.caption2)
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                PaperIconView(.bookmark, size: 20)
             }
 
             Text(bookmark.text)
-                .font(.body)
+                .font(.system(size: 15, design: .serif))
                 .lineLimit(3)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
 
             HStack(spacing: 8) {
                 if !bookmark.narrator.isEmpty {
                     Text(bookmark.narrator)
-                        .font(.caption2)
+                        .font(.system(size: 11.5, weight: .medium, design: .rounded))
                         .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                 }
-                Text(bookmark.grade)
-                    .font(.caption2)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.adaptivePrimary(colorScheme).opacity(0.12))
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                    .clipShape(Capsule())
+                Spacer()
+                if !bookmark.grade.isEmpty {
+                    PaperTag(text: bookmark.grade, color: PaperInk.kraftLabel, ink: .lightBodyText, seed: 90 + index)
+                }
             }
         }
-        .padding(.vertical, 6)
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1, radius: 16, seed: 86 + index, padding: 16)
+        .paperTilt(86 + index, max: 0.8)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Bookmarked hadith from \(bookmark.source)")
     }
 
     // MARK: - Empty State
-    private func emptyState(icon: String, title: String, message: String) -> some View {
-        VStack(spacing: 16) {
+
+    private func emptyState(icon: PaperIcon, title: String, message: String) -> some View {
+        VStack(spacing: 14) {
             Spacer()
-            Image(systemName: icon)
-                .font(.system(size: 48))
-                .foregroundStyle(Color.adaptivePrimary(colorScheme).opacity(0.3))
-                .accessibilityHidden(true)
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(Color.adaptiveText(colorScheme))
-            Text(message)
-                .font(.subheadline)
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+            VStack(spacing: 12) {
+                PaperIconView(icon, size: 44)
+                Text(title)
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                Text(message)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1, seed: 89)
+            .paperTilt(89)
+            .padding(.horizontal, 32)
+            .quickPlace(0)
             Spacer()
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("bookmarksEmptyState")
+    }
+}
+
+private extension View {
+    /// A List row that shows only the paper card: no system background or separator.
+    func paperListRow() -> some View {
+        self
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 6, trailing: 20))
     }
 }

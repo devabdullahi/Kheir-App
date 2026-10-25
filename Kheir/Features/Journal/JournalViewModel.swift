@@ -26,21 +26,27 @@ final class JournalViewModel {
     }
 
     func refresh() async {
-        entries = await cache.loadJournalEntries()
+        entries = await cache.loadJournalEntries().sorted { $0.date > $1.date }
         ayahBookmarks = await cache.loadAyahBookmarks()
         hadithBookmarks = await cache.loadHadithBookmarks()
     }
 
     func addEntry(_ entry: JournalEntry) {
         entries.insert(entry, at: 0)
-        Task { await cache.saveJournalEntry(entry) }
+        Task {
+            await cache.saveJournalEntry(entry)
+            CloudBackupService.shared.scheduleUpload()
+        }
     }
 
     func updateEntry(_ entry: JournalEntry) {
         if let index = entries.firstIndex(where: { $0.id == entry.id }) {
             entries[index] = entry
         }
-        Task { await cache.updateJournalEntry(entry) }
+        Task {
+            await cache.updateJournalEntry(entry)
+            CloudBackupService.shared.scheduleUpload()
+        }
     }
 
     func deleteEntry(at offsets: IndexSet) {
@@ -49,13 +55,17 @@ final class JournalViewModel {
         Task {
             for id in idsToRemove {
                 await cache.removeJournalEntry(id: id)
+                CloudBackupService.shared.noteJournalDeleted(id)
             }
         }
     }
 
     func deleteEntry(_ entry: JournalEntry) {
         entries.removeAll { $0.id == entry.id }
-        Task { await cache.removeJournalEntry(id: entry.id) }
+        Task {
+            await cache.removeJournalEntry(id: entry.id)
+            CloudBackupService.shared.noteJournalDeleted(entry.id)
+        }
     }
 
     var entriesByDate: [(String, [JournalEntry])] {

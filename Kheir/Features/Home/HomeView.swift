@@ -53,6 +53,10 @@ struct HomeView: View {
         }
         .paperBackground()
         .toolbar(.hidden, for: .navigationBar)
+        #if DEBUG
+        // Screenshots: `-openSettings` opens Settings on launch.
+        .navigationDestination(isPresented: .constant(ProcessInfo.processInfo.arguments.contains("-openSettings"))) { SettingsView() }
+        #endif
         .onAppear {
             viewModel.onAppear()
             viewModel.checkBookmarkStates()

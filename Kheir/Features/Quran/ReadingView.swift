@@ -5,7 +5,6 @@ struct ReadingView: View {
     private var audioPlayer = AudioPlayerService.shared
     @Bindable private var settings = AppSettings.shared
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showQariPicker = false
     @State private var copiedAyahID: Int?
@@ -15,49 +14,42 @@ struct ReadingView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Subtle Islamic geometric pattern background
-            IslamicPatternBackground(colorScheme: colorScheme)
-                .ignoresSafeArea()
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 14) {
+                    surahHeaderCard
+                        .quickPlace(0)
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        // Surah header card
-                        surahHeaderCard
-                            .scrollReveal(delay: reduceMotion ? 0 : 0.1)
-
-                        ForEach(Array(viewModel.displayAyahs.enumerated()), id: \.element.id) { index, ayah in
-                            ayahCard(ayah, index: index)
-                                .id(ayah.numberInSurah)
-                                .onAppear {
-                                    viewModel.saveReadingPosition(ayah: ayah.numberInSurah)
-                                }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
-                }
-                .onAppear {
-                    if let scrollTo = viewModel.scrollToAyah {
-                        Task {
-                            try? await Task.sleep(for: .milliseconds(500))
-                            withAnimation(reduceMotion ? .none : .easeOut(duration: 0.4)) {
-                                proxy.scrollTo(scrollTo, anchor: .top)
+                    ForEach(Array(viewModel.displayAyahs.enumerated()), id: \.element.id) { index, ayah in
+                        ayahCard(ayah, index: index)
+                            .id(ayah.numberInSurah)
+                            .quickPlace(index < 8 ? index + 1 : 0)
+                            .onAppear {
+                                viewModel.saveReadingPosition(ayah: ayah.numberInSurah)
                             }
-                        }
                     }
                 }
-                .onChange(of: audioPlayer.currentAyahIndex) { _, newIndex in
-                    withAnimation(reduceMotion ? .none : .easeInOut(duration: 0.35)) {
-                        proxy.scrollTo(newIndex + 1, anchor: .center)
+                .padding(.horizontal, 18)
+                .padding(.top, 8)
+                .padding(.bottom, 110)
+            }
+            .onAppear {
+                if let scrollTo = viewModel.scrollToAyah {
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(500))
+                        withAnimation(reduceMotion ? .none : .travel(0.4)) {
+                            proxy.scrollTo(scrollTo, anchor: .top)
+                        }
                     }
                 }
             }
-
+            .onChange(of: audioPlayer.currentAyahIndex) { _, newIndex in
+                withAnimation(reduceMotion ? .none : .travel(0.35)) {
+                    proxy.scrollTo(newIndex + 1, anchor: .center)
+                }
+            }
         }
-        .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+        .paperBackground()
         .navigationTitle(viewModel.surahEnglishName)
         .toolbarTitleDisplayMode(.inline)
         .toolbar {
@@ -73,9 +65,7 @@ struct ReadingView: View {
                         Label("Transliteration", systemImage: "character.textbox")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.body.weight(.medium))
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    PaperIconView(.aa, size: 22)
                         .accessibilityLabel("Reading options")
                 }
             }
@@ -91,13 +81,12 @@ struct ReadingView: View {
         .sheet(isPresented: $showQariPicker) {
             qariPickerSheet
         }
-        // PlayerBar floats above the tab bar / scroll content without overlapping
+        // The felt player strip floats above the content without covering it.
         .safeAreaInset(edge: .bottom) {
-            PlayerBar()
-                .animation(
-                    reduceMotion ? .none : .easeInOut(duration: 0.25),
-                    value: audioPlayer.nowPlaying != nil
-                )
+            PlayerBar(totalAyahs: viewModel.displayAyahs.count)
+                // The app's tab bar floats over the bottom ~110pt; sit above it.
+                .padding(.bottom, audioPlayer.nowPlaying != nil ? 104 : 0)
+                .animation(reduceMotion ? .none : .open(0.25), value: audioPlayer.nowPlaying != nil)
         }
     }
 
@@ -106,51 +95,39 @@ struct ReadingView: View {
     private var surahHeaderCard: some View {
         VStack(spacing: 8) {
             Text(viewModel.surahName)
-                .arabicFont(size: 32)
+                .arabicFont(size: 30)
                 .foregroundStyle(Color.adaptivePrimary(colorScheme))
                 .accessibilityLabel("Surah \(viewModel.surahEnglishName) in Arabic")
 
-            Text(viewModel.surahEnglishName)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-
-            // Decorative divider
-            HStack(spacing: 12) {
-                capsuleDivider
-                Image(systemName: "star.fill")
-                    .font(.caption2)
-                    .foregroundStyle(Color.adaptivePrimary(colorScheme).opacity(0.6))
-                    .accessibilityHidden(true)
-                capsuleDivider
+            if viewModel.surahNumber != 1 && viewModel.surahNumber != 9 {
+                Text("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ")
+                    .arabicFont(size: 22)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                    .accessibilityLabel("Bismillah")
             }
-            .padding(.top, 4)
+
+            Text(viewModel.surahEnglishName)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .tracking(1.2)
+                .textCase(.uppercase)
+                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
         }
-        .padding(.vertical, 20)
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity)
-        .cardStyle(colorScheme)
+        .paperPiece(Color.adaptiveCardElevated(colorScheme), material: .card, depth: 0.7, edge: .torn, seed: 70)
         .accessibilityElement(children: .combine)
     }
 
-    private var capsuleDivider: some View {
-        Rectangle()
-            .fill(Color.adaptivePrimary(colorScheme).opacity(0.2))
-            .frame(height: 1)
-    }
-
-    // MARK: - Ayah Card
+    // MARK: - Ayah Sheet
 
     private func ayahCard(_ ayah: DisplayAyah, index: Int) -> some View {
-        let isHighlighted = audioPlayer.isPlaying && audioPlayer.currentAyahIndex == ayah.numberInSurah - 1
+        let isActive = isPlaying(ayah)
         let isCopied = copiedAyahID == ayah.id
+        let seed = 71 + ayah.numberInSurah
 
         return VStack(alignment: .leading, spacing: 12) {
-            // Ayah number badge
-            HStack {
-                Spacer()
-                ayahBadge(ayah.numberInSurah)
-            }
+            ayahActions(ayah, isCopied: isCopied, isPlaying: isActive)
 
-            // Arabic text
             Text(ayah.arabicText)
                 .arabicFont(size: CGFloat(settings.arabicFontSize))
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -160,115 +137,83 @@ struct ReadingView: View {
                 .accessibilityLabel(Text("Ayah \(ayah.numberInSurah)"))
                 .accessibilityValue(Text(ayah.arabicText))
 
-            // Transliteration
             if settings.showTransliteration && !ayah.transliteration.isEmpty {
                 Text(ayah.transliteration)
-                    .font(.subheadline)
+                    .font(.system(size: 14, design: .rounded))
                     .italic()
                     .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityLabel("Transliteration: \(ayah.transliteration)")
             }
 
-            // Translation
             Text(ayah.translationText)
-                .font(.body)
+                .font(.system(size: 15.5, design: .serif))
                 .foregroundStyle(Color.adaptiveText(colorScheme))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .lineSpacing(4)
                 .accessibilityLabel("Translation: \(ayah.translationText)")
-
-            // Action buttons row
-            ayahActions(ayah, isCopied: isCopied)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(isHighlighted
-                      ? Color.adaptivePrimary(colorScheme).opacity(0.12)
-                      : Color.adaptiveCardSurface(colorScheme))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(
-                    isHighlighted ? Color.adaptivePrimary(colorScheme).opacity(0.3) : .clear,
-                    lineWidth: 1.5
-                )
-        )
-        .shadow(color: .black.opacity(colorScheme == .dark ? 0.25 : 0.06), radius: 6, y: 3)
-        .scrollReveal(delay: (reduceMotion || index >= 15) ? 0 : min(Double(index) * 0.03, 0.3))
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: isActive ? 2.2 : 0.9, radius: 18, seed: seed, padding: 16)
+        .rotationEffect(.degrees(isActive ? -0.6 : (seeded(seed, salt: 5) - 0.5) * 0.8))
+        .scaleEffect(isActive ? 1.012 : 1)
+        .animation(reduceMotion ? nil : .open(0.28), value: isActive)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Ayah \(ayah.numberInSurah)")
     }
 
-    private func ayahBadge(_ number: Int) -> some View {
-        Text("\(number)")
-            .font(.caption.weight(.bold).monospacedDigit())
-            .foregroundStyle(Color.adaptivePrimary(colorScheme))
-            .frame(width: 32, height: 32)
-            .background(
-                Circle()
-                    .fill(Color.adaptivePrimary(colorScheme).opacity(0.1))
-            )
-            .overlay(
-                Circle()
-                    .stroke(Color.adaptivePrimary(colorScheme).opacity(0.3), lineWidth: 1)
-            )
-            .accessibilityHidden(true)
+    /// Whether this ayah is the one being recited right now.
+    private func isPlaying(_ ayah: DisplayAyah) -> Bool {
+        if let nowPlaying = audioPlayer.nowPlaying {
+            return nowPlaying.surahNumber == viewModel.surahNumber
+                && nowPlaying.ayahNumber == ayah.numberInSurah
+                && audioPlayer.playerState == .playing
+        }
+        return audioPlayer.isPlaying && audioPlayer.currentAyahIndex == ayah.numberInSurah - 1
     }
 
-    private func ayahActions(_ ayah: DisplayAyah, isCopied: Bool) -> some View {
+    private func ayahActions(_ ayah: DisplayAyah, isCopied: Bool, isPlaying: Bool) -> some View {
         let isBookmarked = viewModel.isAyahBookmarked(ayah.numberInSurah)
 
-        // Determine whether this specific ayah is currently playing via Alpha's new API.
-        // Falls back to the legacy isPlaying + currentAyahIndex check when nowPlaying is nil
-        // (i.e., before Alpha's contract is merged).
-        let isThisAyahPlaying: Bool = {
-            if let nowPlaying = audioPlayer.nowPlaying {
-                return nowPlaying.surahNumber == viewModel.surahNumber
-                    && nowPlaying.ayahNumber == ayah.numberInSurah
-                    && audioPlayer.playerState == .playing
-            }
-            // Legacy fallback
-            return audioPlayer.isPlaying && audioPlayer.currentAyahIndex == ayah.numberInSurah - 1
-        }()
-
         return HStack(spacing: 0) {
-            actionButton(
-                icon: isBookmarked ? "bookmark.fill" : "bookmark",
-                label: isBookmarked ? "Remove Bookmark" : "Bookmark"
-            ) {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    viewModel.toggleBookmark(ayah)
-                }
+            StarBadge(
+                number: ayah.numberInSurah,
+                color: ayah.numberInSurah.isMultiple(of: 2) ? .paperRose : .islamicGold,
+                size: 34,
+                seed: 71 + ayah.numberInSurah
+            )
+
+            Spacer(minLength: 0)
+
+            ayahPlayButton(ayah: ayah, isPlaying: isPlaying)
+
+            iconButton(label: isBookmarked ? "Remove Bookmark" : "Bookmark") {
+                withAnimation(.open(0.2)) { viewModel.toggleBookmark(ayah) }
+            } icon: {
+                PaperIconView(.bookmark, size: 19)
+                    .opacity(isBookmarked ? 1 : 0.4)
+                    .scaleEffect(isBookmarked ? 1.08 : 1)
             }
 
-            actionButton(
-                icon: isCopied ? "checkmark" : "doc.on.doc",
-                label: isCopied ? "Copied" : "Copy"
-            ) {
+            iconButton(label: isCopied ? "Copied" : "Copy") {
                 copyAyahText(ayah)
+            } icon: {
+                Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                    .contentTransition(.symbolEffect(.replace))
             }
 
-            actionButton(
-                icon: "square.and.arrow.up",
-                label: "Share"
-            ) {
+            iconButton(label: "Share") {
                 shareAyah(ayah)
+            } icon: {
+                PaperIconView(.share, size: 18)
             }
-
-            // Per-ayah play button — uses Alpha's new async play(surahNumber:ayahNumber:surahName:qari:)
-            // when available. Falls back to the existing synchronous viewModel.playFromAyah(_:).
-            ayahPlayButton(ayah: ayah, isPlaying: isThisAyahPlaying)
-
-            Spacer()
         }
-        .padding(.top, 4)
     }
 
     private func ayahPlayButton(ayah: DisplayAyah, isPlaying: Bool) -> some View {
         let resolved = resolvedQari()
-        return Button {
+        return iconButton(label: isPlaying ? "Pause ayah \(ayah.numberInSurah)" : "Play ayah \(ayah.numberInSurah)") {
             if isPlaying {
                 audioPlayer.pause()
             } else {
@@ -281,19 +226,19 @@ struct ReadingView: View {
                     )
                 }
             }
-        } label: {
-            Image(systemName: isPlaying ? "pause.circle" : "play.circle")
-                .font(.caption)
-                .foregroundStyle(
-                    isPlaying
-                        ? Color.adaptivePrimary(colorScheme)
-                        : Color.adaptiveSecondaryText(colorScheme)
-                )
-                .frame(width: 44, height: 44)
+        } icon: {
+            PaperIconView(isPlaying ? .pause : .play, size: 19)
+        }
+    }
+
+    private func iconButton<Icon: View>(label: String, action: @escaping () -> Void, @ViewBuilder icon: () -> Icon) -> some View {
+        Button(action: action) {
+            icon()
+                .frame(width: 40, height: 40)
                 .contentShape(Rectangle())
         }
-        .accessibilityLabel(isPlaying ? "Pause ayah \(ayah.numberInSurah)" : "Play ayah \(ayah.numberInSurah)")
-        .buttonStyle(.plain)
+        .buttonStyle(PaperPressStyle())
+        .accessibilityLabel(label)
     }
 
     /// Resolves the user's currently selected `Qari` from AppSettings.
@@ -301,18 +246,6 @@ struct ReadingView: View {
     private func resolvedQari() -> Qari {
         Qari.defaults.first { $0.identifier == AppSettings.shared.selectedQari }
             ?? Qari.defaults[0]
-    }
-
-    private func actionButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: icon)
-                .font(.caption)
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .accessibilityLabel(label)
-        .buttonStyle(.plain)
     }
 
     // MARK: - Copy & Share
@@ -323,12 +256,12 @@ struct ReadingView: View {
             [[UIPasteboard.typeAutomatic: text]],
             options: [.expirationDate: Date().addingTimeInterval(120)]
         )
-        withAnimation {
+        withAnimation(.open(0.2)) {
             copiedAyahID = ayah.id
         }
         Task {
             try? await Task.sleep(for: .seconds(2))
-            withAnimation {
+            withAnimation(.open(0.2)) {
                 if copiedAyahID == ayah.id {
                     copiedAyahID = nil
                 }
@@ -341,12 +274,10 @@ struct ReadingView: View {
         let activityVC = UIActivityViewController(activityItems: [text], applicationActivities: nil)
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
            let rootVC = windowScene.windows.first?.rootViewController {
-            // Find the topmost presented controller
             var topVC = rootVC
             while let presented = topVC.presentedViewController {
                 topVC = presented
             }
-            // iPad popover support
             if let popover = activityVC.popoverPresentationController {
                 popover.sourceView = topVC.view
                 popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
@@ -359,16 +290,13 @@ struct ReadingView: View {
     // MARK: - Loading Overlay
 
     private var loadingOverlay: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.2)
-                .tint(Color.adaptivePrimary(colorScheme))
+        VStack(spacing: 14) {
+            PaperIconView(.book, size: 40)
             Text("Loading Surah...")
-                .font(.subheadline.weight(.medium))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.adaptiveBackground(colorScheme).opacity(0.9))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Loading surah, please wait")
     }
@@ -376,32 +304,30 @@ struct ReadingView: View {
     // MARK: - Error Overlay
 
     private func errorOverlay(_ message: String) -> some View {
-        VStack(spacing: 16) {
-            Image(systemName: "wifi.exclamationmark")
-                .font(.largeTitle)
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+        VStack(spacing: 14) {
+            PaperIconView(.book, size: 36)
 
             Text(message)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.adaptiveText(colorScheme))
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
 
             Button {
                 viewModel.retry()
             } label: {
                 Text("Retry")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(Color.lightCardSurface)
+                    .padding(.horizontal, 26)
                     .padding(.vertical, 10)
-                    .background(Color.adaptivePrimary(colorScheme))
-                    .clipShape(Capsule())
+                    .paperPiece(.lightPrimary, material: .construction, depth: 1, radius: 12, seed: 79, padding: nil)
             }
+            .buttonStyle(PaperPressStyle())
             .accessibilityLabel("Retry loading surah")
         }
+        .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.2, seed: 78)
+        .padding(.horizontal, 32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.adaptiveBackground(colorScheme).opacity(0.9))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Error: \(message). Tap retry to try again.")
     }
@@ -410,48 +336,42 @@ struct ReadingView: View {
 
     private var qariPickerSheet: some View {
         NavigationStack {
-            List(Qari.defaults) { qari in
-                let isSelected = audioPlayer.selectedQari == qari.identifier
-
-                Button {
-                    audioPlayer.setQari(qari.identifier)
-                    showQariPicker = false
-                } label: {
-                    HStack(spacing: 12) {
-                        // Reciter avatar circle
-                        Circle()
-                            .fill(Color.adaptivePrimary(colorScheme).opacity(0.15))
-                            .frame(width: 40, height: 40)
-                            .overlay(
-                                Image(systemName: "person.fill")
-                                    .font(.body)
-                                    .foregroundStyle(Color.adaptivePrimary(colorScheme))
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(Array(Qari.defaults.enumerated()), id: \.element.id) { index, qari in
+                        let isSelected = audioPlayer.selectedQari == qari.identifier
+                        Button {
+                            audioPlayer.setQari(qari.identifier)
+                            showQariPicker = false
+                        } label: {
+                            HStack(spacing: 12) {
+                                PaperIconView(isSelected ? .pause : .play, size: 22)
+                                Text(qari.name)
+                                    .font(.system(size: 16, weight: isSelected ? .heavy : .semibold, design: .rounded))
+                                    .foregroundStyle(Color.adaptiveText(colorScheme))
+                                Spacer()
+                                if isSelected {
+                                    PaperCheckbox(isOn: true, size: 22, seed: 500 + index)
+                                        .accessibilityLabel("Currently selected")
+                                }
+                            }
+                            .paperPiece(
+                                isSelected ? Color.adaptiveCardSurface(colorScheme) : Color.adaptiveCardElevated(colorScheme),
+                                material: .card,
+                                depth: isSelected ? 1.6 : 0.5,
+                                radius: 14,
+                                seed: 500 + index,
+                                padding: 14
                             )
-
-                        Text(qari.name)
-                            .font(.body.weight(isSelected ? .semibold : .regular))
-                            .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                        Spacer()
-
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.title3)
-                                .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                                .accessibilityLabel("Currently selected")
                         }
+                        .buttonStyle(PaperPressStyle())
+                        .accessibilityLabel("\(qari.name)\(isSelected ? ", currently selected" : "")")
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
                     }
-                    .padding(.vertical, 4)
                 }
-                .listRowBackground(
-                    isSelected
-                    ? Color.adaptivePrimary(colorScheme).opacity(0.08)
-                    : Color.clear
-                )
-                .accessibilityLabel("\(qari.name)\(isSelected ? ", currently selected" : "")")
-                .accessibilityAddTraits(isSelected ? .isSelected : [])
+                .padding(20)
             }
-            .listStyle(.insetGrouped)
+            .paperBackground()
             .navigationTitle("Select Reciter")
             .toolbarTitleDisplayMode(.inline)
             .toolbar {

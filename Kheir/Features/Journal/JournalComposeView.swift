@@ -30,7 +30,7 @@ struct JournalComposeView: View {
                 }
                 .padding()
             }
-            .background(Color.adaptiveBackground(colorScheme).ignoresSafeArea())
+            .paperBackground()
             .navigationTitle(isEditing ? "Edit Entry" : "New Entry")
             .toolbarTitleDisplayMode(.inline)
             .toolbar {
@@ -73,23 +73,25 @@ struct JournalComposeView: View {
     // MARK: - Text Editor
     private var textEditor: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Your Reflection")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+            PaperSectionTag(title: "Your Reflection", seed: 301)
 
             TextEditor(text: $text)
                 .focused($isTextFocused)
-                .font(.body)
+                .font(.system(size: 16, design: .serif))
+                .lineSpacing(5)
                 .foregroundStyle(Color.adaptiveText(colorScheme))
                 .scrollContentBackground(.hidden)
-                .frame(minHeight: 150)
-                .padding(12)
-                .background(Color.adaptiveCardSurface(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.adaptiveSecondaryText(colorScheme).opacity(0.15), lineWidth: 1)
-                )
+                .frame(minHeight: 180)
+                .padding(.leading, 28)
+                .padding(.trailing, 12)
+                .padding(.vertical, 12)
+                .background {
+                    NotepaperLines(lineHeight: 24, topInset: 8)
+                        .clipShape(CutShape(cornerRadius: 6, seed: 302))
+                }
+                .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.1, radius: 6, seed: 302, padding: nil)
+                .overlay(alignment: .top) { PaperTape(seed: 302).offset(y: -10) }
+                .padding(.top, 6)
                 .accessibilityLabel("Journal entry text")
         }
     }
@@ -97,16 +99,12 @@ struct JournalComposeView: View {
     // MARK: - Linked Content
     private var linkedContentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Link to Bookmark (Optional)")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+            PaperSectionTag(title: "Link to Bookmark (Optional)", seed: 303)
 
             // Ayah Link
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(systemName: "book")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    PaperIconView(.book, size: 18)
                     Text("Ayah")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
@@ -126,12 +124,11 @@ struct JournalComposeView: View {
                 if let index = selectedAyahIndex, index < viewModel.ayahBookmarks.count {
                     let ayah = viewModel.ayahBookmarks[index]
                     Text("\(ayah.surahName) \(ayah.surahNumber):\(ayah.ayahNumber)")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                        .padding(.horizontal, 8)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.lightBodyText)
+                        .padding(.horizontal, 9)
                         .padding(.vertical, 4)
-                        .background(Color.adaptivePrimary(colorScheme).opacity(0.1))
-                        .clipShape(Capsule())
+                        .paperPiece(PaperInk.kraftLabel, material: .kraft, depth: 0.6, edge: .torn, radius: 3, seed: 306, padding: nil)
                 } else {
                     Button {
                         showAyahPicker = true
@@ -146,16 +143,12 @@ struct JournalComposeView: View {
                     }
                 }
             }
-            .padding(12)
-            .background(Color.adaptiveCardSurface(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 0.9, radius: 14, seed: 304, padding: 14)
 
             // Hadith Link
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Image(systemName: "text.book.closed")
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                    PaperIconView(.beads, size: 18)
                     Text("Hadith")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.adaptiveText(colorScheme))
@@ -175,12 +168,11 @@ struct JournalComposeView: View {
                 if let index = selectedHadithIndex, index < viewModel.hadithBookmarks.count {
                     let hadith = viewModel.hadithBookmarks[index]
                     Text(hadith.source)
-                        .font(.caption)
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                        .padding(.horizontal, 8)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.lightBodyText)
+                        .padding(.horizontal, 9)
                         .padding(.vertical, 4)
-                        .background(Color.adaptivePrimary(colorScheme).opacity(0.1))
-                        .clipShape(Capsule())
+                        .paperPiece(PaperInk.kraftLabel, material: .kraft, depth: 0.6, edge: .torn, radius: 3, seed: 306, padding: nil)
                 } else {
                     Button {
                         showHadithPicker = true
@@ -195,9 +187,7 @@ struct JournalComposeView: View {
                     }
                 }
             }
-            .padding(12)
-            .background(Color.adaptiveCardSurface(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 0.9, radius: 14, seed: 305, padding: 14)
         }
     }
 

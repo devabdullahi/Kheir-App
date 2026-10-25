@@ -1,6 +1,7 @@
 import Foundation
 import MapKit
 import SwiftUI
+import UIKit
 import os
 
 @MainActor
@@ -137,9 +138,29 @@ final class MasjidFinderViewModel {
     }
 
     func openInMaps(_ masjid: MasjidItem) {
-        masjid.mapItem?.openInMaps(launchOptions: [
+        let item = masjid.mapItem ?? MKMapItem(
+            location: CLLocation(latitude: masjid.coordinate.latitude, longitude: masjid.coordinate.longitude),
+            address: nil
+        )
+        if masjid.mapItem == nil { item.name = masjid.name }
+        item.openInMaps(launchOptions: [
             MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDefault
         ])
+    }
+
+    /// Opens directions in the Google Maps app when it is installed, otherwise in
+    /// Google Maps on the web. `UIApplication.open` reports whether the app could
+    /// handle the `comgooglemaps://` URL, so no `LSApplicationQueriesSchemes`
+    /// entry (needed only for `canOpenURL`) is required.
+    func openInGoogleMaps(_ masjid: MasjidItem) {
+        let lat = masjid.coordinate.latitude
+        let lng = masjid.coordinate.longitude
+        let appURL = URL(string: "comgooglemaps://?daddr=\(lat),\(lng)&directionsmode=driving")
+        let webURL = URL(string: "https://www.google.com/maps/dir/?api=1&destination=\(lat),\(lng)")
+        Task { @MainActor in
+            if let appURL, await UIApplication.shared.open(appURL) { return }
+            if let webURL { await UIApplication.shared.open(webURL) }
+        }
     }
 }
 
