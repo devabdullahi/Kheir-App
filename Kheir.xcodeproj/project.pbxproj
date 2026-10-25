@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9A0C0DE100000000000000A3 /* KheirNotificationContent.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9A0C0DE100000000000000A2 /* KheirNotificationContent.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		960AF5362F8D9A4900670759 /* Adhan in Frameworks */ = {isa = PBXBuildFile; productRef = 960AF5352F8D9A4900670759 /* Adhan */; };
 		960AF5492F8DAC9C00670759 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 960AF5482F8DAC9C00670759 /* WidgetKit.framework */; };
 		960AF54B2F8DAC9C00670759 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 960AF54A2F8DAC9C00670759 /* SwiftUI.framework */; };
@@ -15,6 +16,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		9A0C0DE100000000000000A4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 963A93762F33A02500BB5584 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9A0C0DE100000000000000A1;
+			remoteInfo = KheirNotificationContent;
+		};
 		960AF55E2F8DAF0000670759 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 963A93762F33A02500BB5584 /* Project object */;
@@ -46,6 +54,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				960AF55D2F8DAF0000670759 /* KheirWidgetExtension.appex in Embed Foundation Extensions */,
+				9A0C0DE100000000000000A3 /* KheirNotificationContent.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -53,6 +62,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		9A0C0DE100000000000000A2 /* KheirNotificationContent.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KheirNotificationContent.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		960AF5462F8DAC9C00670759 /* KheirWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KheirWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		960AF5482F8DAC9C00670759 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		960AF54A2F8DAC9C00670759 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -64,6 +74,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		9A0C0DE100000000000000A7 /* Exceptions for "KheirNotificationContent" folder in "KheirNotificationContent" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 9A0C0DE100000000000000A1 /* KheirNotificationContent */;
+		};
 		960AF5562F8DAC9D00670759 /* Exceptions for "KheirWidget" folder in "KheirWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -74,6 +91,14 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		9A0C0DE100000000000000A6 /* KheirNotificationContent */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9A0C0DE100000000000000A7 /* Exceptions for "KheirNotificationContent" folder in "KheirNotificationContent" target */,
+			);
+			path = KheirNotificationContent;
+			sourceTree = "<group>";
+		};
 		960AF54C2F8DAC9C00670759 /* KheirWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -100,6 +125,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		9A0C0DE100000000000000A9 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		960AF5432F8DAC9C00670759 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -152,6 +184,7 @@
 				963A93982F33A02700BB5584 /* KheirUITests */,
 				960AF54C2F8DAC9C00670759 /* KheirWidget */,
 				960AF5472F8DAC9C00670759 /* Frameworks */,
+				9A0C0DE100000000000000A6 /* KheirNotificationContent */,
 				968B36A33021D217006E74D7 /* PROJECT_OVERVIEW.md */,
 				963A937F2F33A02500BB5584 /* Products */,
 			);
@@ -164,6 +197,7 @@
 				963A938B2F33A02700BB5584 /* KheirTests.xctest */,
 				963A93952F33A02700BB5584 /* KheirUITests.xctest */,
 				960AF5462F8DAC9C00670759 /* KheirWidgetExtension.appex */,
+				9A0C0DE100000000000000A2 /* KheirNotificationContent.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -171,6 +205,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		9A0C0DE100000000000000A1 /* KheirNotificationContent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9A0C0DE100000000000000AB /* Build configuration list for PBXNativeTarget "KheirNotificationContent" */;
+			buildPhases = (
+				9A0C0DE100000000000000A8 /* Sources */,
+				9A0C0DE100000000000000A9 /* Frameworks */,
+				9A0C0DE100000000000000AA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9A0C0DE100000000000000A6 /* KheirNotificationContent */,
+			);
+			name = KheirNotificationContent;
+			packageProductDependencies = (
+			);
+			productName = KheirNotificationContent;
+			productReference = 9A0C0DE100000000000000A2 /* KheirNotificationContent.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		960AF5452F8DAC9C00670759 /* KheirWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 960AF5572F8DAC9D00670759 /* Build configuration list for PBXNativeTarget "KheirWidgetExtension" */;
@@ -206,6 +262,7 @@
 			);
 			dependencies = (
 				960AF55F2F8DAF0000670759 /* PBXTargetDependency */,
+				9A0C0DE100000000000000A5 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				963A93802F33A02500BB5584 /* Kheir */,
@@ -311,11 +368,19 @@
 				963A938A2F33A02700BB5584 /* KheirTests */,
 				963A93942F33A02700BB5584 /* KheirUITests */,
 				960AF5452F8DAC9C00670759 /* KheirWidgetExtension */,
+				9A0C0DE100000000000000A1 /* KheirNotificationContent */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		9A0C0DE100000000000000AA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		960AF5442F8DAC9C00670759 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -348,6 +413,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		9A0C0DE100000000000000A8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		960AF5422F8DAC9C00670759 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -379,6 +451,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		9A0C0DE100000000000000A5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9A0C0DE100000000000000A1 /* KheirNotificationContent */;
+			targetProxy = 9A0C0DE100000000000000A4 /* PBXContainerItemProxy */;
+		};
 		960AF55F2F8DAF0000670759 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 960AF5452F8DAC9C00670759 /* KheirWidgetExtension */;
@@ -397,6 +474,60 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		9A0C0DE100000000000000AC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5FVTJZXNS5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KheirNotificationContent/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = KheirNotificationContent;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.Kheir.NotificationContent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9A0C0DE100000000000000AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5FVTJZXNS5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = KheirNotificationContent/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = KheirNotificationContent;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = f.Kheir.NotificationContent;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		960AF5582F8DAC9D00670759 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -587,9 +718,9 @@
 		963A93A02F33A02700BB5584 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Kheir;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				ASSETCATALOG_COMPILER_APPICON_NAME = Kheir;
 				CODE_SIGN_ENTITLEMENTS = Kheir/Kheir.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -627,9 +758,9 @@
 		963A93A12F33A02700BB5584 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Kheir;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				ASSETCATALOG_COMPILER_APPICON_NAME = Kheir;
 				CODE_SIGN_ENTITLEMENTS = Kheir/Kheir.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -747,6 +878,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		9A0C0DE100000000000000AB /* Build configuration list for PBXNativeTarget "KheirNotificationContent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A0C0DE100000000000000AC /* Debug */,
+				9A0C0DE100000000000000AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		960AF5572F8DAC9D00670759 /* Build configuration list for PBXNativeTarget "KheirWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
