@@ -86,7 +86,8 @@ struct DynamicSkyView: View {
         static let starTwinkle: Double = 0.18         // scale dip
         static let cloudPeriods: [Double] = [120_000, 60_000, 40_000] // far → near
         static let hillHeight: CGFloat = 0.2          // fraction of the canvas
-        static let skyTopInset: CGFloat = 0.16        // keep sun, moon and clouds below the status bar
+        static let skyTop: CGFloat = 62               // pt: just below the status bar / Dynamic Island
+        static let skyBand: CGFloat = 210             // pt of sky the sun, moon and clouds move within
     }
 }
 
@@ -107,11 +108,13 @@ private struct PaperSkyScene {
     /// Loose pieces used to be nudged per photo (stop motion); motion is smooth now.
     func nudge(_ key: Int) -> CGSize { .zero }
 
-    /// Maps a 0…1 sky height to points, below the status bar and Dynamic Island:
-    /// the top `T.skyTopInset` of the canvas is kept clear of the sun, moon and clouds.
+    /// Maps a 0…1 sky height to points measured from the top of the screen: a fixed
+    /// band starting just below the status bar and Dynamic Island. Fixed points (not a
+    /// fraction of the canvas) so the sun, moon and clouds sit in the same place on
+    /// Home's short sky and Prayer Times' full-screen sky.
     func skyY(_ fraction: CGFloat) -> CGFloat {
-        let top = size.height * T.skyTopInset
-        return top + fraction * (size.height - top)
+        let band = min(size.height - T.skyTop, T.skyBand)
+        return T.skyTop + fraction * band
     }
 
     // MARK: Shadow helper

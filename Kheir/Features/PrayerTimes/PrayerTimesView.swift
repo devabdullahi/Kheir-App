@@ -14,7 +14,7 @@ struct PrayerTimesView: View {
             ScrollView {
                 VStack(spacing: DesignTokens.spacingLG) {
                     dateHeader
-                        .padding(.top, 8)
+                        .padding(.top, 26)
                         .quickPlace(0)
 
                     if let next = viewModel.nextPrayer {
@@ -53,6 +53,8 @@ struct PrayerTimesView: View {
         }
         .navigationTitle("Prayer Times")
         .toolbarTitleDisplayMode(.inline)
+        // The title lives on the plaque; the bar keeps only the back button when pushed.
+        .toolbar { ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) } }
         .toolbarColorScheme(.dark, for: .navigationBar)
         .onAppear {
             viewModel.onAppear()
@@ -64,17 +66,27 @@ struct PrayerTimesView: View {
 
     // MARK: - Header
 
+    /// Same indigo tissue plaque as Home's countdown, so text stays readable with the
+    /// sun and clouds at the same height behind it on both screens.
     private var dateHeader: some View {
         VStack(spacing: 3) {
+            Text("PRAYER TIMES")
+                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .tracking(2)
+                .foregroundStyle(.white.opacity(0.8))
+            Text(HijriLabel.string())
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
             Text(viewModel.gregorianDate)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.85))
-            Text(viewModel.hijriDate)
-                .font(.system(size: 17, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
         }
-        .shadow(color: .black.opacity(0.3), radius: 0, x: 0, y: 1)
+        .shadow(color: .black.opacity(0.28), radius: 0, x: 0, y: 1)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 9)
+        .paperPiece(Color(hex: "#141A33").opacity(0.78), material: .tissue, depth: 0.8, radius: 16, seed: 46, padding: nil)
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 
     private func countdownCard(_ next: PrayerTime) -> some View {

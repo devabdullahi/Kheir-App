@@ -57,6 +57,12 @@ struct ContentView: View {
         // Screenshots: `-openSettings` opens Settings on launch.
         .task {
             if ProcessInfo.processInfo.arguments.contains("-openSettings") { paths[.home] = NavigationPath([AppRoute.settings]) }
+            // `-tab prayer|quran|saved|qibla` opens that tab.
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-tab"), i + 1 < args.count,
+               let tab = TabItem.allCases.first(where: { $0.title.lowercased() == args[i + 1] }) {
+                selectedTab = tab
+            }
         }
         // Screenshots: `-startLiveActivity` starts the prayer countdown a few seconds in.
         .task {
