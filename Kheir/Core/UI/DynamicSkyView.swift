@@ -27,18 +27,35 @@ struct DynamicSkyView: View {
     var showsHills = true
 
     @State private var isVisible = false
+    @State private var isOnScreen = true
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
-        LoopClock(period: Tokens.loop, paused: !isVisible || scenePhase != .active) { t in
+        let paused = !isVisible || !isOnScreen || scenePhase != .active
+        // Only the pieces that move are redrawn on the clock. The torn sky bands, the
+        // hills, the masjid and the back garden rows are drawn once per sky state.
+        ZStack {
             Canvas { context, size in
-                let scene = PaperSkyScene(state: skyState, size: size, t: t)
-                scene.drawBands(context)
-                scene.drawStars(context)
-                scene.drawMoon(context)
-                scene.drawSun(context)
-                scene.drawClouds(context)
-                if showsHills { scene.drawHills(context) }
+                PaperSkyScene(state: skyState, size: size, t: 0).drawBands(context)
+            }
+            LoopClock(period: Tokens.loop, paused: paused, fps: 24) { t in
+                Canvas { context, size in
+                    let scene = PaperSkyScene(state: skyState, size: size, t: t, moving: true)
+                    scene.drawStars(context)
+                    scene.drawMoon(context)
+                    scene.drawSun(context)
+                    scene.drawClouds(context)
+                }
+            }
+            if showsHills {
+                Canvas { context, size in
+                    PaperSkyScene(state: skyState, size: size, t: 0).drawHills(context)
+                }
+                LoopClock(period: Tokens.loop, paused: paused, fps: 24) { t in
+                    Canvas { context, size in
+                        PaperSkyScene(state: skyState, size: size, t: t, moving: true).drawFrontGarden(context)
+                    }
+                }
             }
         }
         .overlay {
@@ -49,6 +66,8 @@ struct DynamicSkyView: View {
         .clipped()
         .onAppear { isVisible = true }
         .onDisappear { isVisible = false }
+        // Scrolled out of view (e.g. Home scrolled down): stop the clock.
+        .onScrollVisibilityChange(threshold: 0.01) { isOnScreen = $0 }
         .accessibilityHidden(true)  // purely decorative — screen readers skip this
     }
 
@@ -79,6 +98,8 @@ private struct PaperSkyScene {
     let state: SkyState
     let size: CGSize
     let t: Double
+    /// Pieces redrawn every frame get one combined soft shadow instead of two blurs.
+    var moving = false
 
     /// 0 at noon, 1 deep at night. Tints clouds and hills.
     var night: Double { min(1, max(0, state.starOpacity)) }
@@ -89,6 +110,13 @@ private struct PaperSkyScene {
 
     /// Draws `body` on its own layer with a two-part paper shadow scaled by `depth`.
     func piece(_ ctx: GraphicsContext, depth: CGFloat, _ body: (inout GraphicsContext) -> Void) {
+        if moving {
+            ctx.drawLayer { layer in
+                layer.addFilter(.shadow(color: Color(red: 0.11, green: 0.05, blue: 0.02).opacity(0.32), radius: 1.4 + 1.6 * depth, x: 0.9 * depth, y: 1.8 * depth))
+                body(&layer)
+            }
+            return
+        }
         ctx.drawLayer { layer in
             layer.addFilter(.shadow(color: Color(red: 0.12, green: 0.06, blue: 0.02).opacity(0.28), radius: 0.8 + 0.5 * depth, x: 0.5 * depth, y: 1 * depth))
             layer.addFilter(.shadow(color: Color(red: 0.10, green: 0.05, blue: 0.02).opacity(0.18), radius: 2.5 + 2.5 * depth, x: 1.4 * depth, y: 2.6 * depth))
@@ -233,7 +261,8 @@ private struct PaperSkyScene {
             let w = (54 + CGFloat(i) * 22) * (0.9 + CGFloat(seeded(i, salt: 21)) * 0.2)
             let travel = size.width + w * 2
             let x = CGFloat(loop(t, period: period, phase: seeded(i, salt: 22))) * travel - w
-            let y = (0.16 + CGFloat(i) * 0.15 + CGFloat(seeded(i, salt: 23)) * 0.06) * size.height
+            // Clouds keep to the upper sky, clear of the greeting and countdown below.
+            let y = (0.08 + CGFloat(i) * 0.08 + CGFloat(seeded(i, salt: 23)) * 0.04) * size.height
             let n = nudge(30 + i)
             let cloud = Self.cloud(center: CGPoint(x: x + n.width, y: y + n.height), width: w, seed: i)
             var layer = ctx
@@ -265,6 +294,12 @@ private struct PaperSkyScene {
 
         let near = Self.hill(size: size, top: hillTop + size.height * 0.08, amplitude: 7, seed: 301)
         piece(ctx, depth: 1.0) { l in l.fill(near, with: .color(nearGreen)) }
+    }
+
+    /// The front row of flowers: the only part of the hills that sways, so it is the
+    /// only part redrawn on the clock.
+    func drawFrontGarden(_ ctx: GraphicsContext) {
+        let hillTop = size.height * (1 - T.hillHeight)
         plantRow(ctx, top: hillTop + size.height * 0.08, amplitude: 7, seed: 301, spacing: 19, size: 20, depth: 1.0, avoid: nil, dayOffset: 0)
     }
 

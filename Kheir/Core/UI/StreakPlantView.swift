@@ -27,16 +27,20 @@ struct StreakPlantView: View {
     /// The sway loop: 5200 (trunk), 3600 and 2340 (fronds), 2600 (dates) all fit 46.8 s.
     private static let period: Double = 46_800
 
+    /// Paused while scrolled out of view.
+    @State private var isOnScreen = true
+
     var body: some View {
         Group {
             if animated {
-                LoopClock(period: Self.period) { t in art(t) }
+                LoopClock(period: Self.period, paused: !isOnScreen, fps: 20) { t in art(t) }
             } else {
                 art(0)
             }
         }
         .frame(width: size, height: size)
         .paperShadow(depth: 0.6)
+        .onScrollVisibilityChange(threshold: 0.01) { isOnScreen = $0 }
         .accessibilityElement()
         .accessibilityLabel(Self.accessibilityText(days: days, wilted: isWilted))
     }

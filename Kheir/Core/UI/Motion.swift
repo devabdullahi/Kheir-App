@@ -122,15 +122,20 @@ public struct LoopClock<Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var start = Date()
 
-    public init(period: Double, paused: Bool = false, @ViewBuilder content: @escaping (Double) -> Content) {
+    /// Frames per second. Idle loops are slow and calm, so 30 fps reads as smooth and
+    /// costs half of a 60 Hz (or a quarter of a 120 Hz) redraw.
+    var fps: Double
+
+    public init(period: Double, paused: Bool = false, fps: Double = 30, @ViewBuilder content: @escaping (Double) -> Content) {
         self.period = period
         self.paused = paused
+        self.fps = fps
         self.content = content
     }
 
     public var body: some View {
         let still = paused || reduceMotion
-        TimelineView(.animation(minimumInterval: nil, paused: still)) { context in
+        TimelineView(.animation(minimumInterval: 1 / fps, paused: still)) { context in
             let t = still ? 0 : (context.date.timeIntervalSince(start) * 1000).truncatingRemainder(dividingBy: period)
             content(t)
         }

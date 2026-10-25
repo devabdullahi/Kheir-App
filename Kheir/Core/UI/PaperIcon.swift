@@ -115,16 +115,20 @@ struct PaperIconView: View {
         self.animated = animated
     }
 
+    /// Paused while scrolled out of view, so off-screen icons cost nothing.
+    @State private var isOnScreen = true
+
     var body: some View {
         Group {
             if animated, let period = icon.motionPeriod {
-                LoopClock(period: period) { t in art(t) }
+                LoopClock(period: period, paused: !isOnScreen, fps: 20) { t in art(t) }
             } else {
                 art(0)
             }
         }
         .frame(width: size, height: size)
         .modifier(PIconOuterShadow(dark: colorScheme == .dark))
+        .onScrollVisibilityChange(threshold: 0.01) { isOnScreen = $0 }
         .accessibilityHidden(true)
     }
 

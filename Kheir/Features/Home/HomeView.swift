@@ -18,7 +18,7 @@ struct HomeView: View {
 
     /// The order of the cards on the table.
     private enum Slot: Hashable {
-        case date, journey, streak, intention(Intention), offline, ayah, hadith
+        case dateRow, journey, prayers, routine, tiles([Intention]), offline, ayah, hadith
     }
 
     var body: some View {
@@ -78,16 +78,24 @@ struct HomeView: View {
     // MARK: - Order
 
     private var slots: [Slot] {
-        let all = Intention.allCases
-        let picked = all.filter { settings.intentions.contains($0) }
-        let rest = all.filter { !settings.intentions.contains($0) }
-        var out: [Slot] = [.date]
+        // Picked intentions come before the ayah, the rest after it. Prayer times and the
+        // adhkar routine are full-width cards; the smaller ones share two-up tiles.
+        let picked = Intention.allCases.filter { settings.intentions.contains($0) }
+        let rest = Intention.allCases.filter { !settings.intentions.contains($0) }
+        func group(_ list: [Intention]) -> [Slot] {
+            var out: [Slot] = []
+            if list.contains(.prayOnTime) { out.append(.prayers) }
+            if list.contains(.adhkar) { out.append(.routine) }
+            let small = list.filter { $0 == .readQuran || $0 == .journal || $0 == .masjids }
+            if !small.isEmpty { out.append(.tiles(small)) }
+            return out
+        }
+        var out: [Slot] = [.dateRow]
         if hasJourneyCard { out.append(.journey) }
-        if viewModel.streakData != nil { out.append(.streak) }
-        out += picked.map(Slot.intention)
+        out += group(picked)
         if viewModel.ayahState == .offline || viewModel.hadithState == .offline { out.append(.offline) }
         out += [.ayah, .hadith]
-        out += rest.map(Slot.intention)
+        out += group(rest)
         return out
     }
 
@@ -102,50 +110,30 @@ struct HomeView: View {
     @ViewBuilder
     private func card(for slot: Slot) -> some View {
         switch slot {
-        case .date:
-            dateCard
+        case .dateRow:
+            DayStrip(streakData: viewModel.streakData)
         case .journey:
             if settings.journey == .newToIslam {
                 StartHereCard()
             } else if let ayah = viewModel.dailyAyah {
                 TafsirCard(ayah: ayah)
             }
-        case .streak:
-            if let streakData = viewModel.streakData {
-                StreakCardView(streakData: streakData)
-            }
-        case .intention(let intention):
-            intentionCard(intention)
+        case .prayers:
+            TodayPrayersStrip(viewModel: prayerCountdownVM)
+        case .routine:
+            RoutineCardView(
+                routineType: viewModel.currentRoutineType,
+                progress: viewModel.routineProgress
+            )
+            .task { await viewModel.refreshRoutineProgress() }
+        case .tiles(let intentions):
+            IntentionTiles(intentions: intentions)
         case .offline:
             offlineBanner
         case .ayah:
             ayahSection
         case .hadith:
             hadithSection
-        }
-    }
-
-    @ViewBuilder
-    private func intentionCard(_ intention: Intention) -> some View {
-        switch intention {
-        case .prayOnTime:
-            NextPrayerCard(
-                prayerName: prayerCountdownVM.nextPrayerName,
-                prayerTime: prayerCountdownVM.nextPrayerTime,
-                countdown: countdown
-            )
-        case .readQuran:
-            QuranGoalCard(goal: settings.quranGoal, lastSurah: settings.lastReadSurah, lastAyah: settings.lastReadAyah)
-        case .adhkar:
-            RoutineCardView(
-                routineType: viewModel.currentRoutineType,
-                progress: viewModel.routineProgress
-            )
-            .task { await viewModel.refreshRoutineProgress() }
-        case .journal:
-            ReflectCard()
-        case .masjids:
-            MasjidCard()
         }
     }
 
@@ -163,10 +151,8 @@ struct HomeView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 if prayerCountdownVM.nextPrayerTime != nil {
-                    Text(countdown)
-                        .font(.system(size: 36, weight: .black, design: .rounded))
-                        .monospacedDigit()
-                        .contentTransition(.numericText(countsDown: true))
+                    // Its own view: the per-second tick redraws only this label, not Home.
+                    SkyCountdownLabel(viewModel: prayerCountdownVM)
                 }
                 if !prayerCountdownVM.nextPrayerName.isEmpty {
                     Text(untilLine)
@@ -176,9 +162,13 @@ struct HomeView: View {
             }
             .foregroundStyle(.white)
             .shadow(color: .black.opacity(0.28), radius: 0, x: 0, y: 1)
-            .shadow(color: .black.opacity(0.35), radius: 4)
-            .padding(.horizontal, 60)
-            .padding(.bottom, 44)
+            // A translucent indigo tissue plaque keeps the one number on this screen
+            // readable over the sun, the masjid and the flowers.
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
+            .paperPiece(Color(hex: "#141A33").opacity(0.78), material: .tissue, depth: 0.8, radius: 16, seed: 46, padding: nil)
+            .padding(.horizontal, 40)
+            .padding(.bottom, 38)
             .accessibilityElement(children: .combine)
         }
         .frame(height: topInset + 210)
@@ -214,48 +204,16 @@ struct HomeView: View {
         return name.isEmpty ? hello : "\(hello), \(name)"
     }
 
-    /// Re-read every second because `countdownText` ticks on the view model's timer.
-    private var countdown: String {
-        _ = prayerCountdownVM.countdownText
-        return HomeFormat.countdown(to: prayerCountdownVM.nextPrayerTime)
-    }
 
     private var untilLine: String {
-        let name = prayerCountdownVM.nextPrayerName
-        guard let time = prayerCountdownVM.nextPrayerTime else { return "until \(name)" }
-        return "until \(name) · \(HomeFormat.time(time))"
+        PrayerWindow.caption(
+            times: prayerCountdownVM.todayPrayerTimes,
+            nextName: prayerCountdownVM.nextPrayerName,
+            nextTime: prayerCountdownVM.nextPrayerTime
+        )
     }
 
     // MARK: - Date card
-
-    private var dateCard: some View {
-        let flower = DailyFlower.forDate(.now)
-        return HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(viewModel.gregorianDate)
-                    .font(.system(size: 17, weight: .black, design: .rounded))
-                    .foregroundStyle(Color.adaptiveText(colorScheme))
-                Text(viewModel.hijriDate)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-            }
-            Spacer(minLength: 8)
-            VStack(spacing: -2) {
-                DailyFlowerView(date: .now, size: 40)
-                    .frame(width: 44, height: 48)
-                Text(flower.species.name)
-                    .font(.system(size: 8.5, weight: .heavy, design: .rounded))
-                    .tracking(0.8)
-                    .textCase(.uppercase)
-                    .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-            }
-            .padding(.vertical, -10)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Today's flower: \(flower.species.name)")
-        }
-        .cardStyle(colorScheme, seed: 41)
-        .rotationEffect(.degrees(-0.3))
-    }
 
     // MARK: - Daily Ayah
 
@@ -542,5 +500,19 @@ private extension View {
             .offset(y: lifted ? -6 : 0)
             .scaleEffect(lifted ? 1.015 : 1)
             .animation(reduceMotion ? nil : .open(0.3).delay(Double(min(index, 8)) * 0.035), value: entered)
+    }
+}
+
+/// The live countdown in the sky. Reads the view model's per-second tick here, so
+/// only this label is invalidated each second.
+private struct SkyCountdownLabel: View {
+    let viewModel: PrayerCountdownViewModel
+
+    var body: some View {
+        let _ = viewModel.countdownText
+        Text(HomeFormat.countdown(to: viewModel.nextPrayerTime))
+            .font(.system(size: 36, weight: .black, design: .rounded))
+            .monospacedDigit()
+            .contentTransition(.numericText(countsDown: true))
     }
 }

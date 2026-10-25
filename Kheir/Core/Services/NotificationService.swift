@@ -536,6 +536,14 @@ enum PrayerLog {
         defaults.set(log, forKey: key)
     }
 
+    /// Undo a mark made by mistake (Home lets people tap a prayer again to un-tick it).
+    static func unmarkPrayed(_ prayer: String, on date: Date) {
+        guard let defaults else { return }
+        var log = defaults.dictionary(forKey: key) as? [String: [String]] ?? [:]
+        log[date.dayKey] = (log[date.dayKey] ?? []).filter { $0 != prayer }
+        defaults.set(log, forKey: key)
+    }
+
     static func prayed(on date: Date) -> Set<String> {
         Set((defaults?.dictionary(forKey: key) as? [String: [String]])?[date.dayKey] ?? [])
     }

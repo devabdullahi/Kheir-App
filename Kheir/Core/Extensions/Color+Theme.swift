@@ -24,7 +24,7 @@ extension Color {
     static let darkSecondaryTextColor = Color(red: 0.953, green: 0.914, blue: 0.824).opacity(0.6)
 
     // MARK: - Light Mode Palette (daylight kraft and cardstock)
-    static let lightBackground = Color(red: 0.914, green: 0.851, blue: 0.737)   // #E9D9BC — Kraft-cream sheet
+    static let lightBackground = Color(red: 0.894, green: 0.812, blue: 0.671)   // #E4CFAB — Kraft-cream sheet
     static let lightCardSurface = Color(red: 0.984, green: 0.961, blue: 0.910)  // #FBF5E8 — Cream cardstock
     static let lightCardElevated = Color(red: 0.953, green: 0.910, blue: 0.824) // #F3E8D2 — Raised card
     static let lightPrimary = Color(red: 0.243, green: 0.451, blue: 0.314)      // #3E7350 — Leaf paper

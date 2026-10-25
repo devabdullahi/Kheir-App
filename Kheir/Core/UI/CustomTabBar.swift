@@ -84,9 +84,9 @@ private struct TabButton: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 2) {
-                PaperIconView(tab.paperIcon, size: isSelected ? 22 : 19)
-                    .saturation(isSelected ? 1 : 0.7)
-                    .opacity(isSelected ? 1 : 0.85)
+                PaperIconView(tab.paperIcon, size: isSelected ? 22 : 19, animated: false)
+                    .saturation(isSelected ? 1 : 0.9)
+                    .opacity(isSelected ? 1 : 0.95)
                     .frame(height: 23)
 
                 Text(tab.title)
@@ -95,7 +95,7 @@ private struct TabButton: View {
                     .minimumScaleFactor(0.7)
             }
             .foregroundStyle(isSelected ? TabPaper.selectedInk : TabPaper.ink(scheme))
-            .opacity(isSelected ? 1 : 0.72)
+            .opacity(isSelected ? 1 : 0.88)
             .padding(.horizontal, 7)
             .padding(.vertical, 5)
             .background {
@@ -136,17 +136,40 @@ struct CustomTabBar: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 4)
-        .paperPiece(TabPaper.strip(scheme), material: .kraft, depth: 1.4, edge: .torn, radius: 3, seed: 77, padding: nil)
-        .overlay(alignment: .leading) { BrassBrad(size: 8).padding(.leading, 5) }
-        .overlay(alignment: .trailing) { BrassBrad(size: 8).padding(.trailing, 5) }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 28)
+        .padding(.horizontal, 18)
+        .padding(.top, 10)
+        .padding(.bottom, 2)
+        // A full-width strip of kraft torn along its top edge, laid along the bottom of
+        // the screen and running under the home indicator, so nothing shows beneath it.
+        .background {
+            TornTopStrip(seed: 77)
+                .fill(TabPaper.strip(scheme))
+                .overlay { PaperGrain(material: .kraft, seed: 77, dark: scheme == .dark).clipShape(TornTopStrip(seed: 77)) }
+                .shadow(color: Color(red: 0.12, green: 0.07, blue: 0.02).opacity(0.22), radius: 6, x: 0, y: -2)
+                .overlay(alignment: .topLeading) { BrassBrad(size: 8).padding(.leading, 10).padding(.top, 12) }
+                .overlay(alignment: .topTrailing) { BrassBrad(size: 8).padding(.trailing, 10).padding(.top, 12) }
+                .ignoresSafeArea(edges: .bottom)
+        }
         // Scroll-reactive visibility
         .opacity(isVisible ? 1 : 0)
         .offset(y: isVisible ? 0 : 80)
         .animation(.open(0.3), value: isVisible)
+    }
+}
+
+/// A rectangle whose top edge is hand-torn.
+struct TornTopStrip: Shape {
+    var seed: Int = 0
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        for point in PaperNoise.tornLine(width: rect.width, y: rect.minY + 4, amplitude: 2.5, seed: seed) {
+            p.addLine(to: CGPoint(x: rect.minX + point.x, y: point.y))
+        }
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.closeSubpath()
+        return p
     }
 }
 
