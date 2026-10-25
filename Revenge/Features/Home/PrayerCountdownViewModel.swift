@@ -8,6 +8,8 @@ final class PrayerCountdownViewModel {
     var nextPrayerName: String = ""
     var nextPrayerTime: Date?
     var countdownText: String = "--:--:--"
+    /// Today's schedule once loaded, so the sky header can follow the real prayer periods.
+    private(set) var todayPrayerTimes: DayPrayerTimes?
 
     private static let locationWaitNanoseconds: UInt64 = 2_000_000_000
 
@@ -59,6 +61,7 @@ final class PrayerCountdownViewModel {
             madhab: settings.madhab
         ) else { return }
 
+        todayPrayerTimes = times
         let now = Date()
         let allTimes = times.all
         if let nextIndex = allTimes.firstIndex(where: { $0.time > now }) {

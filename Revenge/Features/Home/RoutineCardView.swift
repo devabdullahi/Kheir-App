@@ -14,58 +14,37 @@ struct RoutineCardView: View {
     let progress: Double               // 0.0–1.0, supplied by HomeViewModel
 
     @Environment(\.colorScheme) private var colorScheme
-    @State private var isNavigating = false
 
     var body: some View {
         NavigationLink(destination: RoutineView(routineType: routineType)) {
-            HStack(spacing: 16) {
-                // Progress ring
+            HStack(spacing: 14) {
+                // Progress ring: a thick paper band on a faint pencil track.
                 ZStack {
                     Circle()
-                        .stroke(Color.adaptivePrimary(colorScheme).opacity(0.2), lineWidth: 4)
-                        .frame(width: 52, height: 52)
-
+                        .stroke(Color.adaptiveText(colorScheme).opacity(0.08), lineWidth: 7)
                     Circle()
                         .trim(from: 0, to: progress)
-                        .stroke(Color.adaptivePrimary(colorScheme), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                        .frame(width: 52, height: 52)
+                        .stroke(Color.adaptivePrimary(colorScheme), style: StrokeStyle(lineWidth: 7, lineCap: .butt))
                         .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.4), value: progress)
-
-                    Image(systemName: routineType.systemImage)
-                        .font(.system(size: 20))
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                        .paperShadow(depth: 0.4)
+                        .animation(.open(0.4), value: progress)
+                    PaperIconView(routineType == .morning ? .sunrise : .beads, size: 20)
                 }
+                .frame(width: 48, height: 48)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(routineType.displayName)
-                        .font(.headline)
-                        .foregroundStyle(Color.adaptiveText(colorScheme))
-
-                    Text(progressLabel)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
-                }
-
-                Spacer()
+                HomeCardLabel(
+                    overline: routineType == .morning ? "Morning adhkar" : "Evening adhkar",
+                    title: routineType.displayName,
+                    note: progressLabel
+                )
 
                 Image(systemName: "chevron.right")
-                    .font(.caption)
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
             }
-            .padding(16)
-            .background {
-                ZStack {
-                    Color.adaptiveCardSurface(colorScheme)
-                    if progress >= 1.0 {
-                        completedBackground
-                    }
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, y: 4)
+            .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1, seed: 43)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PaperPressStyle())
         .accessibilityLabel("\(routineType.displayName). \(progressLabel). Tap to open.")
         .accessibilityIdentifier("routineCard_\(routineType.rawValue)")
     }
@@ -77,14 +56,6 @@ struct RoutineCardView: View {
         if progress == 0    { return routineType.subtitle }
         let pct = Int(progress * 100)
         return "\(pct)% complete"
-    }
-
-    private var completedBackground: some View {
-        LinearGradient(
-            colors: [Color.adaptivePrimary(colorScheme).opacity(0.08), Color.clear],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
     }
 }
 

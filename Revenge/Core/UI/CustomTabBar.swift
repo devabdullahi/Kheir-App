@@ -38,19 +38,38 @@ enum TabItem: Int, CaseIterable {
     }
 }
 
-// MARK: - Design Constants (local aliases for clarity)
+extension TabItem {
+    /// The paper icon for this tab.
+    var paperIcon: PaperIcon {
+        switch self {
+        case .home:   return .house
+        case .quran:  return .book
+        case .saved:  return .bookmark
+        case .qibla:  return .compass
+        case .prayer: return .clock
+        }
+    }
+}
 
-private extension Color {
-    /// Dark emerald — tab bar background overlay.
-    static let tabBarOverlay = Color(red: 0.051, green: 0.122, blue: 0.102)
-    /// Sacred garden primary green — active pill + border.
-    static let tabBarBorder   = Color(red: 0.133, green: 0.341, blue: 0.235)
-    /// Active pill fill.
-    static let tabActivePill  = Color(red: 0.133, green: 0.341, blue: 0.235)
-    /// Gold label for active tab.
-    static let tabActiveLabel = Color(red: 0.831, green: 0.659, blue: 0.278)
-    /// Warm cream label for inactive tabs.
-    static let tabInactiveLabel = Color(red: 0.910, green: 0.863, blue: 0.784)
+// MARK: - Palette
+
+private enum TabPaper {
+    static func strip(_ scheme: ColorScheme) -> Color { scheme == .dark ? Color(hex: "#5A3E36") : .paperKraft }
+    static func ink(_ scheme: ColorScheme) -> Color { scheme == .dark ? .darkBodyText : Color(hex: "#3A2A1A") }
+    static let selectedInk = Color(hex: "#2B2118")
+}
+
+// MARK: - Selected tag
+
+/// The torn mustard tag the selected tab sits on. One tag slides between tabs.
+private struct SelectedTag: View {
+    var body: some View {
+        Color.clear
+            .paperPiece(.islamicGold, material: .construction, depth: 0.5, edge: .torn, radius: 2, seed: 5, padding: nil)
+            .rotationEffect(.degrees(-2))
+            .padding(.horizontal, -3)
+            .padding(.vertical, -1)
+    }
 }
 
 // MARK: - Individual Tab Button
@@ -58,111 +77,76 @@ private extension Color {
 private struct TabButton: View {
     let tab: TabItem
     let isSelected: Bool
+    let tagNamespace: Namespace.ID
     let action: () -> Void
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: isSelected ? tab.iconFilled : tab.icon)
-                    .font(.system(size: 18, weight: isSelected ? .semibold : .regular))
-                    .symbolRenderingMode(.hierarchical)
+            VStack(spacing: 2) {
+                PaperIconView(tab.paperIcon, size: isSelected ? 22 : 19)
+                    .saturation(isSelected ? 1 : 0.7)
+                    .opacity(isSelected ? 1 : 0.85)
+                    .frame(height: 23)
 
                 Text(tab.title)
-                    .font(.system(size: 10, weight: isSelected ? .semibold : .regular, design: .rounded))
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
-            .foregroundStyle(
-                isSelected
-                    ? Color.tabActiveLabel
-                    : Color.tabInactiveLabel.opacity(0.5)
-            )
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(minWidth: 44, minHeight: 44)
+            .foregroundStyle(isSelected ? TabPaper.selectedInk : TabPaper.ink(scheme))
+            .opacity(isSelected ? 1 : 0.72)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
             .background {
                 if isSelected {
-                    Capsule()
-                        .fill(Color.tabActivePill.opacity(0.40))
+                    SelectedTag()
+                        .matchedGeometryEffect(id: "selectedTabTag", in: tagNamespace)
                 }
             }
+            .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }
-        .buttonStyle(TabPressStyle())
+        .buttonStyle(PaperPressStyle())
         .accessibilityLabel(tab.title)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
-// MARK: - Press Animation Button Style
-
-private struct TabPressStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? DesignTokens.pressScaleTab : 1.0)
-            .animation(
-                .spring(
-                    response: DesignTokens.springResponse,
-                    dampingFraction: DesignTokens.springDamping
-                ),
-                value: configuration.isPressed
-            )
-    }
-}
-
 // MARK: - Custom Tab Bar
 
+/// A torn strip of kraft paper pinned to the table with a brass brad at each end.
 struct CustomTabBar: View {
     @Binding var selectedTab: TabItem
     @Binding var isVisible: Bool
+    @Namespace private var tagNamespace
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(TabItem.allCases, id: \.rawValue) { tab in
-                TabButton(tab: tab, isSelected: selectedTab == tab) {
+                TabButton(tab: tab, isSelected: selectedTab == tab, tagNamespace: tagNamespace) {
                     guard selectedTab != tab else { return }
                     HapticManager.shared.lightTap()
-                    withAnimation(
-                        .spring(
-                            response: DesignTokens.springResponse,
-                            dampingFraction: DesignTokens.springDamping
-                        )
-                    ) {
+                    // The tag slides to the new tab: ease-out, no bounce.
+                    withAnimation(.open(0.25)) {
                         selectedTab = tab
                     }
                 }
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        // Pill container
-        .background {
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .overlay {
-                    Capsule()
-                        .fill(Color.tabBarOverlay.opacity(0.85))
-                }
-                .overlay {
-                    Capsule()
-                        .strokeBorder(Color.tabBarBorder.opacity(0.25), lineWidth: 1)
-                }
-        }
-        .clipShape(Capsule())
-        .shadow(color: .black.opacity(0.30), radius: 12, x: 0, y: 6)
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 4)
+        .paperPiece(TabPaper.strip(scheme), material: .kraft, depth: 1.4, edge: .torn, radius: 3, seed: 77, padding: nil)
+        .overlay(alignment: .leading) { BrassBrad(size: 8).padding(.leading, 5) }
+        .overlay(alignment: .trailing) { BrassBrad(size: 8).padding(.trailing, 5) }
+        .padding(.horizontal, 12)
         .padding(.bottom, 28)
         // Scroll-reactive visibility
         .opacity(isVisible ? 1 : 0)
         .offset(y: isVisible ? 0 : 80)
-        .animation(
-            .spring(
-                response: DesignTokens.springResponse,
-                dampingFraction: DesignTokens.springDamping
-            ),
-            value: isVisible
-        )
+        .animation(.open(0.3), value: isVisible)
     }
 }
 
