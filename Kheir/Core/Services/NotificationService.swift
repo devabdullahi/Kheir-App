@@ -2,6 +2,7 @@ import Foundation
 import UserNotifications
 import CoreLocation
 import SwiftUI
+import WidgetKit
 import os
 
 // MARK: - Notification names the app can observe
@@ -534,6 +535,8 @@ enum PrayerLog {
             for old in log.keys.sorted().prefix(log.count - 40) { log[old] = nil }
         }
         defaults.set(log, forKey: key)
+        // The prayer flower and next-prayer widgets show the prayed log.
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Undo a mark made by mistake (Home lets people tap a prayer again to un-tick it).
@@ -542,6 +545,7 @@ enum PrayerLog {
         var log = defaults.dictionary(forKey: key) as? [String: [String]] ?? [:]
         log[date.dayKey] = (log[date.dayKey] ?? []).filter { $0 != prayer }
         defaults.set(log, forKey: key)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     static func prayed(on date: Date) -> Set<String> {

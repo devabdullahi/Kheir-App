@@ -281,6 +281,7 @@ struct WPaperSheet: View {
 struct WPaperTag: View {
     let text: String
     var seed: Int = 0
+    var color: Color = WPalette.mustard
     @Environment(\.widgetRenderingMode) private var mode
 
     var body: some View {
@@ -292,7 +293,7 @@ struct WPaperTag: View {
             .foregroundStyle(mode.isMonochrome ? Color.white : WPalette.ink)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .wPaper(WPalette.mustard, depth: 0.6, edge: .torn, radius: 3, seed: seed)
+            .wPaper(color, depth: 0.6, edge: .torn, radius: 3, seed: seed)
             .rotationEffect(.degrees((wSeeded(seed, salt: 9) - 0.5) * 4))
             .widgetAccentable()
     }
@@ -439,85 +440,5 @@ struct Needle: Shape {
         p.addLine(to: CGPoint(x: rect.minX, y: rect.midY))
         p.closeSubpath()
         return p
-    }
-}
-
-// MARK: Static paper sky
-
-/// A still frame of the paper sky for the time of day, with torn hills.
-struct WPaperSky: View {
-    let date: Date
-    var height: CGFloat = 110
-
-    enum Phase { case night, dawn, morning, noon, afternoon, sunset }
-
-    static func phase(for date: Date) -> Phase {
-        let h = Calendar.current.component(.hour, from: date)
-        switch h {
-        case 4..<6: return .dawn
-        case 6..<10: return .morning
-        case 10..<15: return .noon
-        case 15..<17: return .afternoon
-        case 17..<19: return .sunset
-        default: return .night
-        }
-    }
-
-    private var colors: [Color] {
-        switch Self.phase(for: date) {
-        case .night: return [0x050A14, 0x0D1A2A, 0x1A2744].map { WPalette.hex($0) }
-        case .dawn: return [0x1A2744, 0x3A5A7A, 0xD4926B, 0xE8B87A].map { WPalette.hex($0) }
-        case .morning: return [0x4A7FA5, 0x7AB5D4, 0xC4D8E0, 0xF5D5A0].map { WPalette.hex($0) }
-        case .noon: return [0x1976A8, 0x2E98C4, 0x5AB8D4, 0x8AD0E0].map { WPalette.hex($0) }
-        case .afternoon: return [0x3A7A9A, 0x5A9AB4, 0x8ABAC4, 0xD4A86B].map { WPalette.hex($0) }
-        case .sunset: return [0x2A1A3A, 0x8B2E1A, 0xD4694A, 0xF0C88A].map { WPalette.hex($0) }
-        }
-    }
-
-    private var hills: (Color, Color) {
-        switch Self.phase(for: date) {
-        case .night: return (WPalette.hex(0x1F2A44), WPalette.hex(0x141C30))
-        case .dawn: return (WPalette.hex(0x3A4A5A), WPalette.hex(0x2A3442))
-        case .sunset: return (WPalette.hex(0x5A2A2A), WPalette.hex(0x2A1A2A))
-        default: return (WPalette.hex(0x7FAE7A), WPalette.hex(0x3E7350))
-        }
-    }
-
-    var body: some View {
-        GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-            let phase = Self.phase(for: date)
-            ZStack(alignment: .topLeading) {
-                LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
-                if phase == .night {
-                    ForEach(0..<9, id: \.self) { k in
-                        Star5()
-                            .fill(k % 3 == 0 ? WPalette.mustard : WPalette.creamInk)
-                            .frame(width: 5 + wSeeded(k, salt: 3) * 3, height: 5 + wSeeded(k, salt: 3) * 3)
-                            .opacity(0.75)
-                            .position(x: w * wSeeded(k, salt: 1), y: h * 0.55 * wSeeded(k, salt: 2) + 6)
-                    }
-                    WPaperIcon(.moon, size: 30).position(x: w * 0.78, y: h * 0.30)
-                } else {
-                    let (sx, sy): (CGFloat, CGFloat) = switch phase {
-                    case .dawn: (0.20, 0.62)
-                    case .morning: (0.30, 0.34)
-                    case .noon: (0.55, 0.22)
-                    case .afternoon: (0.72, 0.36)
-                    default: (0.80, 0.60)
-                    }
-                    Circle()
-                        .fill(phase == .sunset ? WPalette.terracotta : WPalette.mustard)
-                        .frame(width: 30, height: 30)
-                        .wPaperShadow(depth: 0.8)
-                        .position(x: w * sx, y: h * sy)
-                }
-                WTornHill(baseline: 0.66, amplitude: 5, seed: 21).fill(hills.0).wPaperShadow(depth: 0.6)
-                WTornHill(baseline: 0.82, amplitude: 4, seed: 22).fill(hills.1).wPaperShadow(depth: 0.8)
-            }
-        }
-        .frame(height: height)
-        .clipped()
     }
 }

@@ -82,6 +82,7 @@ final class HomeViewModel {
         if data.currentStreak > 0 {
             streakData = data
         }
+        syncStreakToWidget(data.currentStreak)
     }
 
     func onDisappear() {
@@ -336,6 +337,15 @@ final class HomeViewModel {
     }
 
     // MARK: - Widget Sync
+
+    /// The "Your garden" widget plants one flower per streak day. The day is
+    /// stored too, so the widget can tell a lapsed streak from today's.
+    private func syncStreakToWidget(_ days: Int) {
+        guard let defaults = UserDefaults(suiteName: "group.com.kheir.shared") else { return }
+        defaults.set(days, forKey: "widget_streak_days")
+        defaults.set(currentDayKey(), forKey: "widget_streak_day")
+        WidgetCenter.shared.reloadTimelines(ofKind: "GardenWidget")
+    }
 
     private func syncAyahToWidget(_ ayah: DailyAyah) {
         guard let defaults = UserDefaults(suiteName: "group.com.kheir.shared") else { return }
