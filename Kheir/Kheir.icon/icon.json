@@ -1,0 +1,115 @@
+{
+  "groups": [
+    {
+      "layers": [
+        {
+          "glass": false,
+          "image-name-specializations": [
+            {
+              "value": "heart-light.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "heart-dark.png"
+            }
+          ],
+          "name": "heart"
+        }
+      ],
+      "name": "Heart",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.4
+      },
+      "specular": true,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "layers": [
+        {
+          "glass": false,
+          "image-name-specializations": [
+            {
+              "value": "inner-light.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "inner-dark.png"
+            }
+          ],
+          "name": "inner"
+        }
+      ],
+      "name": "Inner petals",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "layers": [
+        {
+          "glass": false,
+          "image-name-specializations": [
+            {
+              "value": "outer-light.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "outer-dark.png"
+            }
+          ],
+          "name": "outer"
+        }
+      ],
+      "name": "Outer petals",
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    },
+    {
+      "layers": [
+        {
+          "glass": false,
+          "image-name-specializations": [
+            {
+              "value": "background-light.png"
+            },
+            {
+              "appearance": "dark",
+              "value": "background-dark.png"
+            }
+          ],
+          "name": "background"
+        }
+      ],
+      "name": "Background",
+      "shadow": {
+        "kind": "none",
+        "opacity": 0
+      },
+      "specular": false,
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}

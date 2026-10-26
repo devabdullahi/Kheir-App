@@ -28,7 +28,7 @@ A comprehensive Islamic spiritual companion app built with SwiftUI, offering Qur
 
 ## Project Overview
 
-Kheir (codenamed **Revenge**) is a native iOS app designed to support daily Islamic spiritual practice. It aggregates Quranic text, audio recitation, Hadith collections, prayer time calculations, and Qibla direction into a single, offline-aware experience with a polished dark/light theme system.
+Kheir (codenamed **Kheir**) is a native iOS app designed to support daily Islamic spiritual practice. It aggregates Quranic text, audio recitation, Hadith collections, prayer time calculations, and Qibla direction into a single, offline-aware experience with a polished dark/light theme system.
 
 The app is built entirely in **SwiftUI** with an **MVVM + Services** architecture, uses **async/await** structured concurrency throughout, and ships with a **WidgetKit** home-screen widget for daily Ayah reminders.
 
@@ -67,8 +67,8 @@ The app is built entirely in **SwiftUI** with an **MVVM + Services** architectur
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/devabdullahi/Revenge.git
-   cd Revenge
+   git clone https://github.com/devabdullahi/Kheir.git
+   cd Kheir
    ```
 
 2. **Resolve Swift Package Manager dependencies**
@@ -79,20 +79,20 @@ The app is built entirely in **SwiftUI** with an **MVVM + Services** architectur
 
 3. **Signing & capabilities**
 
-   - Select your development team under **Signing & Capabilities** for both the `Revenge` app target and the `KheirWidgetExtension` target.
+   - Select your development team under **Signing & Capabilities** for both the `Kheir` app target and the `KheirWidgetExtension` target.
    - Both targets require the **App Groups** capability with the group identifier `group.com.kheir.shared`.
 
 ### Build & Run
 
 ```bash
 # Command-line build (iPhone simulator)
-xcodebuild -project Revenge.xcodeproj \
-  -scheme Revenge \
+xcodebuild -project Kheir.xcodeproj \
+  -scheme Kheir \
   -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
   build
 
 # Or simply open in Xcode and press ⌘R
-open Revenge.xcodeproj
+open Kheir.xcodeproj
 ```
 
 ---
@@ -123,8 +123,8 @@ The app launches with a splash screen, then presents a five-tab interface:
 ### Project Structure
 
 ```
-Revenge/
-├── RevengeApp.swift              # @main SwiftUI App entry point
+Kheir/
+├── KheirApp.swift              # @main SwiftUI App entry point
 ├── SplashScreenView.swift        # Animated launch screen
 ├── ContentView.swift             # Root TabView (5 tabs)
 │
@@ -202,16 +202,16 @@ The `KheirWidgetExtension` shares data with the main app via **App Groups** (`gr
 
 ```bash
 # Unit tests
-xcodebuild test -project Revenge.xcodeproj \
-  -scheme Revenge \
+xcodebuild test -project Kheir.xcodeproj \
+  -scheme Kheir \
   -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
-  -only-testing:RevengeTests
+  -only-testing:KheirTests
 
 # UI tests
-xcodebuild test -project Revenge.xcodeproj \
-  -scheme Revenge \
+xcodebuild test -project Kheir.xcodeproj \
+  -scheme Kheir \
   -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
-  -only-testing:RevengeUITests
+  -only-testing:KheirUITests
 ```
 
 Or run from Xcode: **⌘U** to execute all tests.

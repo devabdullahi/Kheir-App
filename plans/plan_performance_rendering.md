@@ -1,6 +1,6 @@
 # Performance & Rendering Implementation Plan
 
-**Kheir (Revenge) iOS App**  
+**Kheir (Kheir) iOS App**  
 **Department:** Performance & Rendering  
 **Plan Date:** April 26, 2026  
 **Target Sprint:** Sprint 2-3  
@@ -53,7 +53,7 @@ The Performance & Rendering department is responsible for delivering a fast, smo
 ### PR-01: Cache DateFormatter Instances
 
 **Priority:** P0  
-**Files:** `Revenge/Core/Extensions/Date+Extensions.swift`  
+**Files:** `Kheir/Core/Extensions/Date+Extensions.swift`  
 **Current Behavior:**  
 ```
 Every call to gregorianString, hijriString, dayKey, timeString, and currentDayKey() 
@@ -72,7 +72,7 @@ formatter per thread if needed. No allocation overhead per call.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Core/Extensions/Date+Extensions.swift`
+1. Open `Kheir/Core/Extensions/Date+Extensions.swift`
 2. Replace all DateFormatter allocations with static cached properties:
    - Create a static stored property `gregorianFormatter: DateFormatter` with format `"EEEE, MMMM d, yyyy"`
    - Create a static stored property `hijriFormatter: DateFormatter` with format `"d MMMM yyyy"` using Islamic calendar
@@ -102,7 +102,7 @@ formatter per thread if needed. No allocation overhead per call.
 ### PR-02: Cache JSONDecoder/JSONEncoder Instances
 
 **Priority:** P0  
-**Files:** `Revenge/Core/Services/APIService.swift` (line 32), `Revenge/Core/Services/CacheManager.swift` (line 152)  
+**Files:** `Kheir/Core/Services/APIService.swift` (line 32), `Kheir/Core/Services/CacheManager.swift` (line 152)  
 **Current Behavior:**  
 ```
 APIService.fetch() creates a fresh JSONDecoder on every API call (line 32).
@@ -121,14 +121,14 @@ All calls reuse the same instance; no allocation overhead.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Core/Services/APIService.swift`
+1. Open `Kheir/Core/Services/APIService.swift`
 2. Add two static properties to the APIService class:
    ```
    private static let decoder = JSONDecoder()
    private static let encoder = JSONEncoder()
    ```
 3. In the `fetch<T>()` method at line 32, replace `JSONDecoder().decode(...)` with `Self.decoder.decode(...)`
-4. Open `Revenge/Core/Services/CacheManager.swift`
+4. Open `Kheir/Core/Services/CacheManager.swift`
 5. Add a static property to the CacheManager class:
    ```
    private static let encoder = JSONEncoder()
@@ -157,7 +157,7 @@ All calls reuse the same instance; no allocation overhead.
 ### PR-03: Extract PrayerCountdownViewModel and Subview
 
 **Priority:** P0  
-**Files:** `Revenge/Features/Home/HomeView.swift`, `Revenge/Features/Home/HomeViewModel.swift`, and new file: `Revenge/Features/Home/PrayerCountdownViewModel.swift` + `Revenge/Features/Home/PrayerCountdownView.swift`  
+**Files:** `Kheir/Features/Home/HomeView.swift`, `Kheir/Features/Home/HomeViewModel.swift`, and new file: `Kheir/Features/Home/PrayerCountdownViewModel.swift` + `Kheir/Features/Home/PrayerCountdownView.swift`  
 **Current Behavior:**  
 ```
 HomeViewModel publishes @Published var countdownText: String. Every second, the timer 
@@ -178,7 +178,7 @@ separately. When countdownText mutates, only PrayerCountdownView.body re-evaluat
 
 **Step-by-Step Instructions:**
 
-1. Create new file `Revenge/Features/Home/PrayerCountdownViewModel.swift`
+1. Create new file `Kheir/Features/Home/PrayerCountdownViewModel.swift`
 2. Copy the following methods/properties from HomeViewModel:
    - `@Published var nextPrayerName: String`
    - `@Published var nextPrayerTime: Date?`
@@ -227,7 +227,7 @@ separately. When countdownText mutates, only PrayerCountdownView.body re-evaluat
        private func startCountdownTimer() { ... }
    }
    ```
-4. Create new file `Revenge/Features/Home/PrayerCountdownView.swift`:
+4. Create new file `Kheir/Features/Home/PrayerCountdownView.swift`:
    ```swift
    struct PrayerCountdownView: View {
        @ObservedObject var viewModel: PrayerCountdownViewModel
@@ -295,7 +295,7 @@ separately. When countdownText mutates, only PrayerCountdownView.body re-evaluat
 ### PR-04: Schedule Timer on .common RunLoop Mode
 
 **Priority:** P0  
-**Files:** `Revenge/Features/Home/PrayerCountdownViewModel.swift` (new, from PR-03), `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift` (line 99-107)  
+**Files:** `Kheir/Features/Home/PrayerCountdownViewModel.swift` (new, from PR-03), `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift` (line 99-107)  
 **Current Behavior:**  
 ```
 Timer.scheduledTimer uses default RunLoop mode (.default). When user scrolls HomeView,
@@ -311,7 +311,7 @@ Countdown animates smoothly while scrolling without visible pauses.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Features/Home/PrayerCountdownViewModel.swift` (created in PR-03)
+1. Open `Kheir/Features/Home/PrayerCountdownViewModel.swift` (created in PR-03)
 2. In the `startCountdownTimer()` method, change:
    ```swift
    timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -324,7 +324,7 @@ Countdown animates smoothly while scrolling without visible pauses.
    RunLoop.main.add(timer, forMode: .common)
    self.timer = timer
    ```
-3. Open `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift`
+3. Open `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift`
 4. In the `startTimer()` method at line 99-107, apply the same change:
    ```swift
    private func startTimer() {
@@ -356,7 +356,7 @@ Countdown animates smoothly while scrolling without visible pauses.
 ### PR-05: Invalidate Stale Timers Before Creating New Ones
 
 **Priority:** P0  
-**Files:** `Revenge/Features/Home/PrayerCountdownViewModel.swift` (new, from PR-03), `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift` (line 99-107)  
+**Files:** `Kheir/Features/Home/PrayerCountdownViewModel.swift` (new, from PR-03), `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift` (line 99-107)  
 **Current Behavior:**  
 ```
 If onAppear fires multiple times (tab switching, app backgrounding), new Timer objects 
@@ -372,7 +372,7 @@ existing timer. Only one timer ever exists at a time.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Features/Home/PrayerCountdownViewModel.swift`
+1. Open `Kheir/Features/Home/PrayerCountdownViewModel.swift`
 2. In `startCountdownTimer()`, add this line at the very beginning:
    ```swift
    private func startCountdownTimer() {
@@ -384,7 +384,7 @@ existing timer. Only one timer ever exists at a time.
        self.timer = timer
    }
    ```
-3. Open `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift`
+3. Open `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift`
 4. In `startTimer()`, add the same invalidation:
    ```swift
    private func startTimer() {
@@ -413,7 +413,7 @@ existing timer. Only one timer ever exists at a time.
 ### PR-06: Add .drawingGroup() to IslamicPatternBackground Canvas
 
 **Priority:** P1  
-**Files:** `Revenge/Core/Extensions/View+Extensions.swift` (line 40-80)  
+**Files:** `Kheir/Core/Extensions/View+Extensions.swift` (line 40-80)  
 **Current Behavior:**  
 ```
 IslamicPatternBackground renders an 8-pointed star grid using Canvas. Every time 
@@ -433,7 +433,7 @@ paths. Or: pre-render background as a static Image asset instead of Canvas.
 
 **Option A: Add .drawingGroup() (simpler, backward-compatible)**
 
-1. Open `Revenge/Core/Extensions/View+Extensions.swift`
+1. Open `Kheir/Core/Extensions/View+Extensions.swift`
 2. In the `IslamicPatternBackground.body` computed property, wrap the Canvas in `.drawingGroup()`:
    ```swift
    struct IslamicPatternBackground: View {
@@ -491,7 +491,7 @@ paths. Or: pre-render background as a static Image asset instead of Canvas.
 ### PR-07: Cap scrollReveal State Nodes to Visible Items Only
 
 **Priority:** P1  
-**Files:** `Revenge/Features/Quran/ReadingView.swift` (line 30-35), `Revenge/Core/Extensions/View+Extensions.swift` (line 4-19)  
+**Files:** `Kheir/Features/Quran/ReadingView.swift` (line 30-35), `Kheir/Core/Extensions/View+Extensions.swift` (line 4-19)  
 **Current Behavior:**  
 ```
 Each ayah rendered in ReadingView gets a ScrollRevealModifier with @State var hasAppeared.
@@ -510,7 +510,7 @@ doesn't require @State. Reduces state nodes from 286 to ~20 per surah.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Features/Quran/ReadingView.swift`
+1. Open `Kheir/Features/Quran/ReadingView.swift`
 2. Find the ForEach loop at line 30-35:
    ```swift
    ForEach(Array(viewModel.displayAyahs.enumerated()), id: \.element.id) { index, ayah in
@@ -566,7 +566,7 @@ doesn't require @State. Reduces state nodes from 286 to ~20 per surah.
 ### PR-08: Replace PlayerBar AnyView Type Erasure
 
 **Priority:** P1  
-**Files:** `Revenge/Features/Quran/PlayerBar.swift` (line 14-17)  
+**Files:** `Kheir/Features/Quran/PlayerBar.swift` (line 14-17)  
 **Current Behavior:**  
 ```
 PlayerBar.body returns AnyView(EmptyView()) or AnyView(playerContent(...)).
@@ -583,7 +583,7 @@ SwiftUI preserves identity, reuses views, and eliminates unnecessary recreations
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Features/Quran/PlayerBar.swift`
+1. Open `Kheir/Features/Quran/PlayerBar.swift`
 2. Replace the body property (line 12-18):
    ```swift
    var body: some View {
@@ -621,7 +621,7 @@ SwiftUI preserves identity, reuses views, and eliminates unnecessary recreations
 ### PR-09: Add @ObservedObject AppSettings in HomeView
 
 **Priority:** P1  
-**Files:** `Revenge/Features/Home/HomeView.swift` (line 165-167)  
+**Files:** `Kheir/Features/Home/HomeView.swift` (line 165-167)  
 **Current Behavior:**  
 ```
 HomeView reads AppSettings.shared.arabicFontSize directly in dailyAyahCard() (line 166) 
@@ -639,7 +639,7 @@ When user changes font size, HomeView.body re-evaluates and applies new size.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Features/Home/HomeView.swift`
+1. Open `Kheir/Features/Home/HomeView.swift`
 2. Add @ObservedObject at the top of HomeView struct (after line 4):
    ```swift
    struct HomeView: View {
@@ -673,7 +673,7 @@ When user changes font size, HomeView.body re-evaluates and applies new size.
 ### PR-10: Cache routineProgress On-Demand Instead of .onAppear
 
 **Priority:** P1  
-**Files:** `Revenge/Features/Home/HomeView.swift` (line 31), `Revenge/Features/Home/HomeViewModel.swift` (line 79-87)  
+**Files:** `Kheir/Features/Home/HomeView.swift` (line 31), `Kheir/Features/Home/HomeViewModel.swift` (line 79-87)  
 **Current Behavior:**  
 ```
 RoutineCardView.onAppear calls viewModel.refreshRoutineProgress(), which loads routine 
@@ -696,7 +696,7 @@ Otherwise, reuse cached value in memory.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Features/Home/HomeViewModel.swift`
+1. Open `Kheir/Features/Home/HomeViewModel.swift`
 2. Add a new @Published flag and timestamp:
    ```swift
    @Published var lastRoutineRefreshTime: Date?
@@ -766,7 +766,7 @@ Otherwise, reuse cached value in memory.
 ### PR-11: Add accessibilityReduceMotion Check to ScrollRevealModifier
 
 **Priority:** P2  
-**Files:** `Revenge/Core/Extensions/View+Extensions.swift` (line 4-19)  
+**Files:** `Kheir/Core/Extensions/View+Extensions.swift` (line 4-19)  
 **Current Behavior:**  
 ```
 ScrollRevealModifier always applies 0.45s .easeOut animation regardless of user's 
@@ -783,7 +783,7 @@ If disabled, apply normal animation.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Core/Extensions/View+Extensions.swift`
+1. Open `Kheir/Core/Extensions/View+Extensions.swift`
 2. Update ScrollRevealModifier:
    ```swift
    struct ScrollRevealModifier: ViewModifier {
@@ -824,7 +824,7 @@ If disabled, apply normal animation.
 ### PR-12: Remove Task Wrapper from Timer Closure
 
 **Priority:** P2  
-**Files:** `Revenge/Features/Home/PrayerCountdownViewModel.swift` (from PR-03), `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift` (line 100-107)  
+**Files:** `Kheir/Features/Home/PrayerCountdownViewModel.swift` (from PR-03), `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift` (line 100-107)  
 **Current Behavior:**  
 ```
 Timer closure wraps work in Task { @MainActor in ... }. Timer.scheduledTimer already 
@@ -843,7 +843,7 @@ main-thread assignment.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Features/Home/PrayerCountdownViewModel.swift` (created in PR-03)
+1. Open `Kheir/Features/Home/PrayerCountdownViewModel.swift` (created in PR-03)
 2. In `startCountdownTimer()`, change from:
    ```swift
    timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
@@ -866,7 +866,7 @@ main-thread assignment.
        }
    }
    ```
-3. Open `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift`
+3. Open `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift`
 4. In `startTimer()`, change from:
    ```swift
    timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -905,7 +905,7 @@ main-thread assignment.
 ### PR-13: Move AVAudioSession.setCategory Off Main Thread
 
 **Priority:** P2  
-**Files:** `Revenge/Features/Quran/AudioPlayerService.swift` (line 106-111)  
+**Files:** `Kheir/Features/Quran/AudioPlayerService.swift` (line 106-111)  
 **Current Behavior:**  
 ```
 AudioPlayerService.init() calls AVAudioSession.sharedInstance().setCategory(...) on 
@@ -924,7 +924,7 @@ Main thread unblocked on app launch.
 
 **Step-by-Step Instructions:**
 
-1. Open `Revenge/Features/Quran/AudioPlayerService.swift`
+1. Open `Kheir/Features/Quran/AudioPlayerService.swift`
 2. Find the init() method (line 106-111)
 3. Wrap the AVAudioSession setup in a background task:
    ```swift
@@ -957,7 +957,7 @@ Main thread unblocked on app launch.
 ### PR-14: Remove Duplicate App Icon from Asset Catalog
 
 **Priority:** P2  
-**Files:** `Revenge/Assets.xcassets/AppIcon.appiconset/`  
+**Files:** `Kheir/Assets.xcassets/AppIcon.appiconset/`  
 **Current Behavior:**  
 ```
 Asset catalog contains two identical 84KB PNG files for the same app icon slot 
@@ -981,9 +981,9 @@ Remove one of the duplicate PNG files. Retain only one copy per icon slot.
 6. Build and verify app icon displays correctly on simulator and device
 
 **Verification:**
-- Run `ls -la Revenge/Assets.xcassets/AppIcon.appiconset/` to confirm only one of each icon size remains
+- Run `ls -la Kheir/Assets.xcassets/AppIcon.appiconset/` to confirm only one of each icon size remains
 - Launch app: confirm app icon displays correctly on home screen
-- Check file size: `du -h Revenge/Assets.xcassets/AppIcon.appiconset/` should be ~42KB instead of ~84KB (rough estimate)
+- Check file size: `du -h Kheir/Assets.xcassets/AppIcon.appiconset/` should be ~42KB instead of ~84KB (rough estimate)
 - Build app and verify binary size reduced slightly
 
 **Dependencies:** None  

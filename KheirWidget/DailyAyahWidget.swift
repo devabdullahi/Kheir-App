@@ -1,250 +1,116 @@
 import WidgetKit
 import SwiftUI
 
-// MARK: - Theme Colors (matching app's Color+Theme.swift)
-
-private extension Color {
-    // Dark mode
-    static let darkBackground = Color(red: 0.08, green: 0.09, blue: 0.18)
-    static let darkCardSurface = Color(red: 0.08, green: 0.16, blue: 0.14)
-    static let islamicGold = Color(red: 0.85, green: 0.68, blue: 0.32)
-    static let darkBodyText = Color(red: 0.93, green: 0.93, blue: 0.90)
-
-    // Light mode
-    static let lightBackground = Color(red: 0.97, green: 0.95, blue: 0.90)
-    static let lightPrimary = Color(red: 0.13, green: 0.37, blue: 0.27)
-    static let lightBodyText = Color(red: 0.08, green: 0.09, blue: 0.18)
-}
-
 // MARK: - Timeline Entry
 
 struct DailyAyahEntry: TimelineEntry {
     let date: Date
     let arabicText: String
     let translation: String
-    let surahName: String
     let verseRef: String
 
     static let placeholder = DailyAyahEntry(
         date: Date(),
         arabicText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
         translation: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
-        surahName: "الفاتحة",
         verseRef: "Al-Fatiha 1:1"
     )
 }
 
 // MARK: - Timeline Provider
+//
+// The app writes the ayah of the day to the App Group (`widget_ayah_arabic`,
+// `widget_ayah_translation`, `widget_ayah_ref`; HomeViewModel.syncAyahToWidget)
+// and reloads this kind. The pressed flowers follow the date, so refresh at midnight.
 
 struct DailyAyahProvider: TimelineProvider {
-
-    private static let appGroupID = "group.com.kheir.shared"
-
-    func placeholder(in context: Context) -> DailyAyahEntry {
-        .placeholder
-    }
+    func placeholder(in context: Context) -> DailyAyahEntry { .placeholder }
 
     func getSnapshot(in context: Context, completion: @escaping (DailyAyahEntry) -> Void) {
-        completion(entryForToday())
+        completion(Self.entry(at: Date()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<DailyAyahEntry>) -> Void) {
-        let entry = entryForToday()
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date().addingTimeInterval(86400)
-        let nextMidnight = Calendar.current.startOfDay(for: tomorrow)
-        let timeline = Timeline(entries: [entry], policy: .after(nextMidnight))
-        completion(timeline)
+        let now = Date()
+        completion(Timeline(entries: [Self.entry(at: now)], policy: .after(WidgetShared.nextMidnight(after: now))))
     }
 
-    private func entryForToday() -> DailyAyahEntry {
-        guard let defaults = UserDefaults(suiteName: Self.appGroupID) else {
-            return .placeholder
-        }
-
-        guard let arabicText = defaults.string(forKey: "widget_ayah_arabic"),
+    static func entry(at date: Date) -> DailyAyahEntry {
+        guard let defaults = WidgetShared.defaults,
+              let arabic = defaults.string(forKey: "widget_ayah_arabic"),
               let translation = defaults.string(forKey: "widget_ayah_translation"),
-              let verseRef = defaults.string(forKey: "widget_ayah_ref") else {
-            return .placeholder
+              let ref = defaults.string(forKey: "widget_ayah_ref") else {
+            return DailyAyahEntry(date: date, arabicText: DailyAyahEntry.placeholder.arabicText,
+                                  translation: DailyAyahEntry.placeholder.translation, verseRef: DailyAyahEntry.placeholder.verseRef)
         }
-
-        let surahName = defaults.string(forKey: "widget_ayah_surah") ?? ""
-
-        return DailyAyahEntry(
-            date: Date(),
-            arabicText: arabicText,
-            translation: translation,
-            surahName: surahName,
-            verseRef: verseRef
-        )
+        return DailyAyahEntry(date: date, arabicText: arabic, translation: translation, verseRef: ref)
     }
 }
 
-// MARK: - Entry View
+// MARK: - Entry View (large): a taped paper card on kraft, pressed flowers tucked around it
 
-struct DailyAyahWidgetEntryView: View {
+struct DailyAyahWidgetView: View {
     let entry: DailyAyahEntry
-
-    @Environment(\.widgetFamily) private var family
-    @Environment(\.colorScheme) private var colorScheme
-
-    // Adaptive colors matching the app
-    private var primaryColor: Color {
-        colorScheme == .dark ? .islamicGold : .lightPrimary
-    }
-    private var textColor: Color {
-        colorScheme == .dark ? .darkBodyText : .lightBodyText
-    }
-    private var secondaryTextColor: Color {
-        colorScheme == .dark ? .darkBodyText.opacity(0.7) : .lightBodyText.opacity(0.6)
-    }
-    private var cardSurface: Color {
-        colorScheme == .dark ? .darkCardSurface : .white
-    }
-    private var bgColor: Color {
-        colorScheme == .dark ? .darkBackground : .lightBackground
-    }
+    @Environment(\.widgetRenderingMode) private var mode
 
     var body: some View {
-        switch family {
-        case .systemSmall:
-            smallLayout
-        case .systemLarge:
-            largeLayout
-        default:
-            mediumLayout
-        }
-    }
+        let mono = mode.isMonochrome
+        let ink: Color = mono ? .white : WPalette.ink
+        let today = WDailyFlower.dayNumber(entry.date)
 
-    // MARK: Small (2x2)
+        ZStack(alignment: .topLeading) {
+            // The cream card, torn at the edges.
+            Color.clear
+                .wPaper(WPalette.cream, depth: 1.3, edge: .torn, radius: 6, seed: 470)
+                .padding(14)
 
-    private var smallLayout: some View {
-        VStack(alignment: .trailing, spacing: 6) {
-            Spacer(minLength: 0)
-
-            Text(entry.arabicText)
-                .font(.system(size: 15, weight: .regular, design: .serif))
-                .multilineTextAlignment(.trailing)
-                .lineLimit(3)
-                .foregroundStyle(textColor)
-                .environment(\.layoutDirection, .rightToLeft)
-
-            Spacer(minLength: 0)
-
-            HStack {
-                Spacer()
-                Text(entry.verseRef)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundStyle(primaryColor.opacity(0.8))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
-        .widgetURL(URL(string: "kheir://home/ayah"))
-    }
-
-    // MARK: Medium (4x2)
-
-    private var mediumLayout: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Header
-            HStack {
-                Text("Daily Ayah")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(primaryColor)
-                Spacer()
-                Image(systemName: "book.fill")
-                    .font(.caption)
-                    .foregroundStyle(primaryColor.opacity(0.6))
-            }
-
-            // Arabic text
-            Text(entry.arabicText)
-                .font(.system(size: 18, weight: .regular, design: .serif))
-                .multilineTextAlignment(.trailing)
-                .lineLimit(2)
-                .foregroundStyle(textColor)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .environment(\.layoutDirection, .rightToLeft)
-
-            // Translation
-            Text(entry.translation)
-                .font(.caption)
-                .multilineTextAlignment(.leading)
-                .lineLimit(2)
-                .foregroundStyle(secondaryTextColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 0)
-
-            // Surah reference
-            Text(entry.verseRef)
-                .font(.caption2)
-                .fontWeight(.medium)
-                .foregroundStyle(primaryColor.opacity(0.8))
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .widgetURL(URL(string: "kheir://home/ayah"))
-    }
-
-    // MARK: Large (4x4)
-
-    private var largeLayout: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack {
-                Text("Daily Ayah")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(primaryColor)
-                Spacer()
-                Image(systemName: "book.fill")
-                    .font(.caption)
-                    .foregroundStyle(primaryColor.opacity(0.6))
-            }
-
-            Spacer(minLength: 4)
-
-            // Arabic text — full display
-            Text(entry.arabicText)
-                .font(.system(size: 24, weight: .regular, design: .serif))
-                .multilineTextAlignment(.trailing)
-                .foregroundStyle(textColor)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .environment(\.layoutDirection, .rightToLeft)
-
-            // Divider line
+            // Washi tape holding the card.
             Rectangle()
-                .fill(primaryColor.opacity(0.2))
-                .frame(height: 1)
-                .padding(.vertical, 4)
+                .fill(mono ? Color.white.opacity(0.35) : WPalette.mustard.opacity(0.6))
+                .frame(width: 74, height: 22)
+                .overlay(WTornStrip(seed: 471).fill(Color.white.opacity(mono ? 0 : 0.12)))
+                .rotationEffect(.degrees(-3))
+                .frame(maxWidth: .infinity)
+                .padding(.top, 3)
 
-            // Translation — full display
-            Text(entry.translation)
-                .font(.body)
-                .multilineTextAlignment(.leading)
-                .foregroundStyle(textColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Spacer(minLength: 4)
-
-            // Surah reference
-            HStack {
-                Text(entry.verseRef)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(primaryColor.opacity(0.8))
-                Spacer()
-                Text("Kheir")
-                    .font(.caption2)
-                    .foregroundStyle(secondaryTextColor)
+            // Pressed flowers from the garden.
+            WFlowerView(day: today - 2, size: 50, extraTilt: -24)
+                .offset(x: 0, y: 18)
+            GeometryReader { geo in
+                WFlowerView(day: today - 5, size: 28, extraTilt: 30)
+                    .position(x: geo.size.width - 48, y: 54)
+                WFlowerView(day: today, size: 62, extraTilt: 18)
+                    .position(x: geo.size.width - 46, y: geo.size.height - 54)
             }
+
+            VStack(alignment: .leading, spacing: 10) {
+                WPaperTag(text: "Daily ayah", seed: 472)
+                Text(entry.arabicText)
+                    .font(.system(size: 25, weight: .regular, design: .serif))
+                    .lineSpacing(6)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(5)
+                    .minimumScaleFactor(0.4)
+                    .foregroundStyle(ink)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .environment(\.layoutDirection, .rightToLeft)
+                Text(entry.translation)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .lineSpacing(1.5)
+                    .lineLimit(6)
+                    .minimumScaleFactor(0.55)
+                    .foregroundStyle(ink.opacity(0.85))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(entry.verseRef)
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(ink.opacity(0.6))
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 36)
+            .padding(.top, 50)
+            .padding(.bottom, 64)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .widgetURL(URL(string: "kheir://home/ayah"))
     }
@@ -253,47 +119,30 @@ struct DailyAyahWidgetEntryView: View {
 // MARK: - Widget Declaration
 
 struct DailyAyahWidget: Widget {
+    /// HomeViewModel reloads this kind when it writes a new ayah.
     let kind: String = "DailyAyahWidget"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: DailyAyahProvider()) { entry in
-            DailyAyahWidgetEntryView(entry: entry)
+            DailyAyahWidgetView(entry: entry)
+                .wAlwaysLight()
                 .containerBackground(for: .widget) {
-                    AdaptiveWidgetBackground()
+                    WPaperSheet(color: WPalette.kraftSheet, seed: 473).wAlwaysLight()
                 }
         }
         .configurationDisplayName("Daily Ayah")
-        .description("The verse of the day from the Quran.")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-    }
-}
-
-// Adaptive background that matches the app's theme
-private struct AdaptiveWidgetBackground: View {
-    @Environment(\.colorScheme) private var colorScheme
-    var body: some View {
-        colorScheme == .dark
-            ? Color(red: 0.08, green: 0.09, blue: 0.18)
-            : Color(red: 0.97, green: 0.95, blue: 0.90)
+        .description("The ayah of the day on a taped paper card, with pressed flowers.")
+        .supportedFamilies([.systemLarge])
+        .contentMarginsDisabled()
     }
 }
 
 // MARK: - Previews
 
-#Preview("Small", as: .systemSmall) {
+#if DEBUG
+#Preview("Daily ayah", as: .systemLarge) {
     DailyAyahWidget()
 } timeline: {
     DailyAyahEntry.placeholder
 }
-
-#Preview("Medium", as: .systemMedium) {
-    DailyAyahWidget()
-} timeline: {
-    DailyAyahEntry.placeholder
-}
-
-#Preview("Large", as: .systemLarge) {
-    DailyAyahWidget()
-} timeline: {
-    DailyAyahEntry.placeholder
-}
+#endif

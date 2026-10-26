@@ -2,7 +2,7 @@
 
 ## Department Overview
 
-This plan addresses critical concurrency and thread-safety issues identified by a comprehensive audit of the Kheir (Revenge) codebase. The primary goals are to:
+This plan addresses critical concurrency and thread-safety issues identified by a comprehensive audit of the Kheir (Kheir) codebase. The primary goals are to:
 
 1. **Eliminate data races** in shared mutable state (CacheManager, AppSettings)
 2. **Fix main-thread violations** from background callbacks (LocationService, NotificationService)
@@ -76,7 +76,7 @@ CS-08 (Integration & Concurrency Tests)
 **Priority:** P0 (Critical — blocks all bookmark/journal operations)
 
 **Assigned Files:**
-- `Revenge/Core/Services/CacheManager.swift`
+- `Kheir/Core/Services/CacheManager.swift`
 
 **Current Behavior:**
 
@@ -204,7 +204,7 @@ Convert `CacheManager` to a Swift `actor`. All read/modify/write cycles will be 
 **Priority:** P0 (Follows CS-01)
 
 **Assigned Files:**
-- `Revenge/Core/Services/ServiceProtocols.swift`
+- `Kheir/Core/Services/ServiceProtocols.swift`
 
 **Current Behavior:**
 
@@ -289,7 +289,7 @@ Update all method signatures in the protocol to `async`. The protocol remains `A
 **Priority:** P1 (High)
 
 **Assigned Files:**
-- `Revenge/Core/Services/LocationService.swift`
+- `Kheir/Core/Services/LocationService.swift`
 
 **Current Behavior:**
 
@@ -393,7 +393,7 @@ Mark `LocationService` with `@MainActor` annotation to declare that all its muta
 **Priority:** P1 (High)
 
 **Assigned Files:**
-- `Revenge/Core/Services/PrayerTimesService.swift`
+- `Kheir/Core/Services/PrayerTimesService.swift`
 
 **Current Behavior:**
 
@@ -452,7 +452,7 @@ Declare `PrayerTimesService` as `@unchecked Sendable` because:
 **Priority:** P1 (High)
 
 **Assigned Files:**
-- `Revenge/Core/Services/NotificationService.swift`
+- `Kheir/Core/Services/NotificationService.swift`
 
 **Current Behavior:**
 
@@ -509,7 +509,7 @@ Declare `NotificationService` as `@unchecked Sendable` because:
 **Priority:** P1 (High)
 
 **Assigned Files:**
-- `Revenge/Core/Models/AppSettings.swift`
+- `Kheir/Core/Models/AppSettings.swift`
 
 **Current Behavior:**
 
@@ -587,14 +587,14 @@ Mark `AppSettings` as `@MainActor` to enforce that all access (reads and writes)
 **Priority:** P2 (Low, but required for strict concurrency)
 
 **Assigned Files:**
-- `Revenge/Core/Models/BookmarkModels.swift`
-- `Revenge/Core/Models/HadithModels.swift`
-- `Revenge/Core/Models/QuranModels.swift`
-- `Revenge/Core/Models/JournalModels.swift`
-- `Revenge/Core/Models/StreakModels.swift`
-- `Revenge/Core/Models/RoutineModels.swift`
-- `Revenge/Core/Models/ShareModels.swift`
-- `Revenge/Core/Models/PrayerModels.swift`
+- `Kheir/Core/Models/BookmarkModels.swift`
+- `Kheir/Core/Models/HadithModels.swift`
+- `Kheir/Core/Models/QuranModels.swift`
+- `Kheir/Core/Models/JournalModels.swift`
+- `Kheir/Core/Models/StreakModels.swift`
+- `Kheir/Core/Models/RoutineModels.swift`
+- `Kheir/Core/Models/ShareModels.swift`
+- `Kheir/Core/Models/PrayerModels.swift`
 
 **Current Behavior:**
 
@@ -678,9 +678,9 @@ Add explicit `Sendable` conformance to all model structs. This allows them to be
 **Priority:** P0 (Final validation after all other tasks)
 
 **Assigned Files:**
-- New file: `RevengeTests/ConcurrencyTests.swift`
-- New file: `RevengeTests/CacheActorTests.swift`
-- Updated: `RevengeTests/Mocks/ServiceMocks.swift`
+- New file: `KheirTests/ConcurrencyTests.swift`
+- New file: `KheirTests/CacheActorTests.swift`
+- Updated: `KheirTests/Mocks/ServiceMocks.swift`
 
 **Current Behavior:**
 
