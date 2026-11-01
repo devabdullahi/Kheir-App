@@ -88,6 +88,13 @@
 			);
 			target = 9A0C0DE100000000000000A1 /* KheirNotificationContent */;
 		};
+		9A0C0DE100000000000000B1 /* Exceptions for "Kheir" folder in "Kheir" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 963A937D2F33A02500BB5584 /* Kheir */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -101,6 +108,9 @@
 		};
 		963A93802F33A02500BB5584 /* Kheir */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9A0C0DE100000000000000B1 /* Exceptions for "Kheir" folder in "Kheir" target */,
+			);
 			path = Kheir;
 			sourceTree = "<group>";
 		};
@@ -673,15 +683,15 @@
 				DEVELOPMENT_TEAM = 5FVTJZXNS5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_BGTaskSchedulerPermittedIdentifiers = com.nurapp.prayerRefresh;
+				INFOPLIST_FILE = Kheir/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Kheir;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Kheir uses your location to provide prayer time notifications even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Kheir needs your location to calculate accurate prayer times, find the Qibla direction, and locate nearby mosques.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "Kheir uses device motion sensors to show the compass and Qibla direction accurately.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UIBackgroundModes = "audio fetch processing";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -713,15 +723,15 @@
 				DEVELOPMENT_TEAM = 5FVTJZXNS5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_BGTaskSchedulerPermittedIdentifiers = com.nurapp.prayerRefresh;
+				INFOPLIST_FILE = Kheir/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Kheir;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Kheir uses your location to provide prayer time notifications even when the app is in the background.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Kheir needs your location to calculate accurate prayer times, find the Qibla direction, and locate nearby mosques.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "Kheir uses device motion sensors to show the compass and Qibla direction accurately.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UIBackgroundModes = "audio fetch processing";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

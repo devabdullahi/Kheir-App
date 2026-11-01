@@ -8,12 +8,129 @@ struct ReadingView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showQariPicker = false
     @State private var copiedAyahID: Int?
+    /// The open mushaf page, in mushaf mode.
+    @State private var mushafPage: Int
+    /// The ayah to open the mushaf at once the surah's page numbers are known.
+    @State private var pendingMushafAyah: Int?
+    private var mushafLibrary = MushafLibrary.shared
 
     init(surahNumber: Int, scrollToAyah: Int? = nil) {
         _viewModel = State(wrappedValue: ReadingViewModel(surahNumber: surahNumber, scrollToAyah: scrollToAyah))
+        _mushafPage = State(initialValue: MushafIndex.startPage(ofSurah: surahNumber))
+        _pendingMushafAyah = State(initialValue: scrollToAyah)
     }
 
     var body: some View {
+        Group {
+            if settings.mushafMode {
+                MushafReaderView(page: $mushafPage, library: mushafLibrary)
+                    // Clear the floating tab bar; with the player open, its inset already does.
+                    .padding(.bottom, audioPlayer.nowPlaying == nil ? 80 : 0)
+            } else {
+                cardList
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            ReadingModeSwitch(isMushaf: $settings.mushafMode)
+                .padding(.top, 4)
+                .padding(.bottom, 6)
+        }
+        .paperBackground()
+        .navigationTitle(settings.mushafMode ? MushafIndex.name(mushafSurah) : viewModel.surahEnglishName)
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            if settings.mushafMode {
+                ToolbarItem(placement: .topBarTrailing) {
+                    mushafListenButton
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showQariPicker = true
+                    } label: {
+                        Label("Select Reciter", systemImage: "person.wave.2")
+                    }
+
+                    Toggle(isOn: $settings.showTransliteration) {
+                        Label("Transliteration", systemImage: "character.textbox")
+                    }
+                } label: {
+                    PaperIconView(.aa, size: 22)
+                        .accessibilityLabel("Reading options")
+                }
+            }
+        }
+        .onAppear { viewModel.onAppear() }
+        .overlay {
+            if !settings.mushafMode {
+                if viewModel.isLoading && viewModel.displayAyahs.isEmpty {
+                    loadingOverlay
+                } else if let error = viewModel.errorMessage, viewModel.displayAyahs.isEmpty {
+                    errorOverlay(error)
+                }
+            }
+        }
+        .sheet(isPresented: $showQariPicker) {
+            qariPickerSheet
+        }
+        // The felt player strip floats above the content without covering it.
+        .safeAreaInset(edge: .bottom) {
+            PlayerBar(totalAyahs: viewModel.displayAyahs.count)
+                // The app's tab bar floats over the bottom ~110pt; sit above it.
+                .padding(.bottom, audioPlayer.nowPlaying != nil ? 104 : 0)
+                .animation(reduceMotion ? .none : .open(0.25), value: audioPlayer.nowPlaying != nil)
+        }
+        // Open the mushaf at the ayah asked for (a bookmark, or where reading stopped).
+        .onChange(of: viewModel.ayahPages, initial: true) { _, pages in
+            if let ayah = pendingMushafAyah, let page = pages[ayah] {
+                var instant = Transaction()
+                instant.disablesAnimations = true
+                withTransaction(instant) { mushafPage = page }
+                pendingMushafAyah = nil
+            }
+        }
+        // Switching from cards: open the mushaf where the cards were.
+        .onChange(of: settings.mushafMode) { _, isMushaf in
+            guard isMushaf, settings.lastReadSurah == viewModel.surahNumber,
+                  let page = viewModel.ayahPages[settings.lastReadAyah] else { return }
+            var instant = Transaction()
+            instant.disablesAnimations = true
+            withTransaction(instant) { mushafPage = page }
+        }
+        .onChange(of: mushafPage) { _, page in
+            guard settings.mushafMode,
+                  let word = mushafLibrary.pages[page]?.lines.first(where: { $0.kind == .text })?.words.first else { return }
+            settings.lastReadSurah = word.surah
+            settings.lastReadAyah = word.ayah
+        }
+    }
+
+    /// The surah the open mushaf page ends in: on a page where a surah starts,
+    /// that new surah.
+    private var mushafSurah: Int {
+        mushafLibrary.pages[mushafPage]?.lines.last { $0.kind == .text }?.words.last?.surah
+            ?? MushafIndex.surah(onPage: mushafPage)
+    }
+
+    /// In the mushaf, listen mode plays the surah of the open page.
+    private var mushafListenButton: some View {
+        let surah = mushafSurah
+        let isListening = audioPlayer.isListenMode && audioPlayer.nowPlaying?.surahNumber == surah
+        return Button {
+            if isListening {
+                audioPlayer.isPlaying ? audioPlayer.pause() : audioPlayer.resume()
+            } else {
+                audioPlayer.playFullSurah(surah, surahName: MushafIndex.name(surah))
+            }
+        } label: {
+            PaperIconView(isListening && audioPlayer.isPlaying ? .pause : .play, size: 22)
+        }
+        .accessibilityLabel(isListening && audioPlayer.isPlaying ? "Pause listening" : "Listen to Surah \(MushafIndex.name(surah))")
+        .accessibilityIdentifier("mushafListenButton")
+    }
+
+    private var cardList: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 14) {
@@ -49,45 +166,6 @@ struct ReadingView: View {
                 }
             }
         }
-        .paperBackground()
-        .navigationTitle(viewModel.surahEnglishName)
-        .toolbarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        showQariPicker = true
-                    } label: {
-                        Label("Select Reciter", systemImage: "person.wave.2")
-                    }
-
-                    Toggle(isOn: $settings.showTransliteration) {
-                        Label("Transliteration", systemImage: "character.textbox")
-                    }
-                } label: {
-                    PaperIconView(.aa, size: 22)
-                        .accessibilityLabel("Reading options")
-                }
-            }
-        }
-        .onAppear { viewModel.onAppear() }
-        .overlay {
-            if viewModel.isLoading && viewModel.displayAyahs.isEmpty {
-                loadingOverlay
-            } else if let error = viewModel.errorMessage, viewModel.displayAyahs.isEmpty {
-                errorOverlay(error)
-            }
-        }
-        .sheet(isPresented: $showQariPicker) {
-            qariPickerSheet
-        }
-        // The felt player strip floats above the content without covering it.
-        .safeAreaInset(edge: .bottom) {
-            PlayerBar(totalAyahs: viewModel.displayAyahs.count)
-                // The app's tab bar floats over the bottom ~110pt; sit above it.
-                .padding(.bottom, audioPlayer.nowPlaying != nil ? 104 : 0)
-                .animation(reduceMotion ? .none : .open(0.25), value: audioPlayer.nowPlaying != nil)
-        }
     }
 
     // MARK: - Surah Header Card
@@ -111,11 +189,36 @@ struct ReadingView: View {
                 .tracking(1.2)
                 .textCase(.uppercase)
                 .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
+                .accessibilityElement(children: .combine)
+
+            listenButton
+                .padding(.top, 6)
         }
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity)
         .paperPiece(Color.adaptiveCardElevated(colorScheme), material: .card, depth: 0.7, edge: .torn, seed: 70)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+    }
+
+    /// Listen mode: the whole surah as one recording, without gaps between ayahs.
+    private var listenButton: some View {
+        let isListening = audioPlayer.isListenMode && audioPlayer.nowPlaying?.surahNumber == viewModel.surahNumber
+        return Button {
+            if isListening {
+                audioPlayer.isPlaying ? audioPlayer.pause() : audioPlayer.resume()
+            } else {
+                audioPlayer.playFullSurah(viewModel.surahNumber, surahName: viewModel.surahEnglishName)
+            }
+        } label: {
+            PaperButtonLabel(
+                title: isListening ? (audioPlayer.isPlaying ? "Pause listening" : "Keep listening") : "Listen to the whole surah",
+                icon: isListening && audioPlayer.isPlaying ? .pause : .play,
+                seed: 71
+            )
+        }
+        .buttonStyle(PaperPressStyle())
+        .accessibilityHint("Plays the full recitation without pauses between ayahs")
+        .accessibilityIdentifier("listenModeButton")
     }
 
     // MARK: - Ayah Sheet
@@ -168,7 +271,7 @@ struct ReadingView: View {
                 && nowPlaying.ayahNumber == ayah.numberInSurah
                 && audioPlayer.playerState == .playing
         }
-        return audioPlayer.isPlaying && audioPlayer.currentAyahIndex == ayah.numberInSurah - 1
+        return audioPlayer.isPlaying && !audioPlayer.isListenMode && audioPlayer.currentAyahIndex == ayah.numberInSurah - 1
     }
 
     private func ayahActions(_ ayah: DisplayAyah, isCopied: Bool, isPlaying: Bool) -> some View {

@@ -207,18 +207,19 @@ final class HomeViewModel {
             await cache.cacheDailyHadith(hadith)
         } catch {
             logger.error("Daily Hadith fetch error: \(error.localizedDescription). Using fallback.")
-            let fallbackHadiths = [
-                DailyHadith(text: "The best among you are those who have the best manners and character.", source: "Sahih al-Bukhari", chapter: "Good Manners", narrator: "Abdullah ibn Amr", grade: "Sahih", dateString: dateKey),
-                DailyHadith(text: "None of you truly believes until he loves for his brother what he loves for himself.", source: "Sahih al-Bukhari", chapter: "Faith", narrator: "Anas ibn Malik", grade: "Sahih", dateString: dateKey),
-                DailyHadith(text: "The strong man is not the one who can overpower others. Rather, the strong man is the one who controls himself when he is angry.", source: "Sahih al-Bukhari", chapter: "Good Manners", narrator: "Abu Hurairah", grade: "Sahih", dateString: dateKey),
-                DailyHadith(text: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.", source: "Sahih al-Bukhari", chapter: "Good Manners", narrator: "Abu Hurairah", grade: "Sahih", dateString: dateKey),
-                DailyHadith(text: "Make things easy and do not make them difficult, cheer the people up and do not put them off.", source: "Sahih al-Bukhari", chapter: "Knowledge", narrator: "Anas ibn Malik", grade: "Sahih", dateString: dateKey),
-            ]
             let dayOfYear = Calendar.current.ordinality(of: .day, in: .year, for: Date()) ?? 1
-            let hadith = fallbackHadiths[dayOfYear % fallbackHadiths.count]
-            dailyHadith = hadith
+            let curated = CuratedHadith.all[dayOfYear % CuratedHadith.all.count]
+            // Not cached: the next launch or pull-to-refresh tries the network again.
+            dailyHadith = DailyHadith(
+                text: curated.text,
+                arabicText: curated.arabicText,
+                source: curated.reference,
+                chapter: curated.chapter,
+                narrator: curated.narrator,
+                grade: "Sahih",
+                dateString: dateKey
+            )
             hadithState = .offline
-            await cache.cacheDailyHadith(hadith)
         }
     }
 
@@ -274,9 +275,10 @@ final class HomeViewModel {
 
     func toggleAyahBookmark() {
         guard let ayah = dailyAyah else { return }
-        isAyahBookmarked.toggle()
+        let shouldBookmark = !isAyahBookmarked
+        isAyahBookmarked = shouldBookmark
         Task {
-            if !isAyahBookmarked {
+            if !shouldBookmark {
                 await cache.removeAyahBookmark(surah: ayah.surahNumber, ayah: ayah.ayahNumber)
             } else {
                 let bookmark = BookmarkedAyah(
@@ -293,13 +295,15 @@ final class HomeViewModel {
 
     func toggleHadithBookmark() {
         guard let hadith = dailyHadith else { return }
-        isHadithBookmarked.toggle()
+        let shouldBookmark = !isHadithBookmarked
+        isHadithBookmarked = shouldBookmark
         Task {
-            if !isHadithBookmarked {
+            if !shouldBookmark {
                 await cache.removeHadithBookmark(text: hadith.text, source: hadith.source)
             } else {
                 let bookmark = BookmarkedHadith(
                     text: hadith.text,
+                    arabicText: hadith.arabicText,
                     source: hadith.source,
                     narrator: hadith.narrator,
                     grade: hadith.grade

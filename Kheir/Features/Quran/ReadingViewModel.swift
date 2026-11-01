@@ -11,6 +11,8 @@ final class ReadingViewModel {
     var isLoading = false
     var errorMessage: String?
     var bookmarkedAyahs: Set<Int> = []
+    /// Mushaf page of each ayah (by number in surah), for opening the mushaf at the right page.
+    private(set) var ayahPages: [Int: Int] = [:]
 
     let surahNumber: Int
     let scrollToAyah: Int?
@@ -98,6 +100,7 @@ final class ReadingViewModel {
     }
 
     private func buildDisplay(arabic: [Ayah], translation: [Ayah], transliteration: [Ayah]?) {
+        ayahPages = Dictionary(arabic.map { ($0.numberInSurah, $0.page) }, uniquingKeysWith: { first, _ in first })
         displayAyahs = arabic.enumerated().map { index, arabicAyah in
             DisplayAyah(
                 id: arabicAyah.number,
@@ -137,7 +140,8 @@ final class ReadingViewModel {
     }
 
     func toggleBookmark(_ ayah: DisplayAyah) {
-        if bookmarkedAyahs.contains(ayah.numberInSurah) {
+        let shouldBookmark = !bookmarkedAyahs.contains(ayah.numberInSurah)
+        if !shouldBookmark {
             bookmarkedAyahs.remove(ayah.numberInSurah)
             Task { await cache.removeAyahBookmark(surah: surahNumber, ayah: ayah.numberInSurah) }
         } else {

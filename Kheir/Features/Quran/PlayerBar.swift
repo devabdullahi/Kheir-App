@@ -10,6 +10,8 @@ struct PlayerBar: View {
     var totalAyahs: Int = 0
 
     private let ink = Color.lightCardSurface
+    /// While dragging the listen-mode strip: the fraction under the finger.
+    @State private var scrubFraction: Double?
 
     var body: some View {
         if let nowPlaying = service.nowPlaying {
@@ -68,15 +70,28 @@ struct PlayerBar: View {
     }
 
     private func subtitle(_ nowPlaying: NowPlayingInfo) -> String {
-        totalAyahs > 0
+        if service.isListenMode {
+            let shown = scrubFraction.map { $0 * service.duration } ?? service.currentTime
+            return service.duration > 0
+                ? "\(nowPlaying.surahName) · \(Self.clock(shown)) of \(Self.clock(service.duration))"
+                : "\(nowPlaying.surahName) · Whole surah"
+        }
+        return totalAyahs > 0
             ? "\(nowPlaying.surahName) · Ayah \(nowPlaying.ayahNumber) of \(totalAyahs)"
             : "\(nowPlaying.surahName) · Ayah \(nowPlaying.ayahNumber)"
     }
 
-    /// A thin cream paper strip laid along the felt as the ayah plays.
+    /// "3:05" or "1:02:40".
+    static func clock(_ seconds: TimeInterval) -> String {
+        Duration.seconds(max(0, seconds)).formatted(.time(pattern: seconds >= 3600 ? .hourMinuteSecond : .minuteSecond))
+    }
+
+    /// A thin cream paper strip laid along the felt as the ayah plays. In listen
+    /// mode it is a scrubber: drag along it to move through the surah.
     private var progressStrip: some View {
         GeometryReader { geo in
-            let fraction = service.duration > 0 ? min(1, max(0, service.currentTime / service.duration)) : 0
+            let live = service.duration > 0 ? min(1, max(0, service.currentTime / service.duration)) : 0
+            let fraction = scrubFraction ?? live
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.black.opacity(0.18))
                 Capsule()
@@ -84,11 +99,28 @@ struct PlayerBar: View {
                     .frame(width: max(3, geo.size.width * fraction))
                     .shadow(color: .black.opacity(0.25), radius: 0.5, y: 0.5)
             }
+            .frame(height: scrubFraction == nil ? 3 : 5)
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(service.isListenMode && service.duration > 0 ? scrub(width: geo.size.width) : nil)
         }
-        .frame(height: 3)
+        .frame(height: service.isListenMode ? 16 : 3)
         .accessibilityElement()
         .accessibilityLabel("Playback progress")
         .accessibilityValue("\(Int((service.duration > 0 ? service.currentTime / service.duration : 0) * 100)) percent")
+        .accessibilityAdjustableAction { direction in
+            guard service.isListenMode else { return }
+            service.seek(to: service.currentTime + (direction == .increment ? 30 : -30))
+        }
+    }
+
+    private func scrub(width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { scrubFraction = min(1, max(0, $0.location.x / max(width, 1))) }
+            .onEnded { _ in
+                if let scrubFraction { service.seek(to: scrubFraction * service.duration) }
+                scrubFraction = nil
+            }
     }
 
     // MARK: - Transport controls

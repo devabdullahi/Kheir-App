@@ -30,6 +30,7 @@ enum PlayerState: Equatable {
 /// MPNowPlayingInfoCenter.
 struct NowPlayingInfo {
     let surahNumber: Int
+    /// 0 in listen mode, where the whole surah plays as one recording.
     let ayahNumber: Int
     let surahName: String
     let qariName: String
@@ -74,6 +75,10 @@ final class AudioPlayerService {
 
     /// Metadata for the track currently loaded into the player.
     var nowPlaying: NowPlayingInfo?
+
+    /// True while a whole surah plays as one recording (no gaps, no per-ayah
+    /// highlight). Any per-ayah `play` call leaves listen mode.
+    private(set) var isListenMode = false
 
     // MARK: - Private State
 
@@ -254,7 +259,7 @@ final class AudioPlayerService {
         }
 
         var dict: [String: Any] = [
-            MPMediaItemPropertyTitle: "\(info.surahName) — Ayah \(info.ayahNumber)",
+            MPMediaItemPropertyTitle: isListenMode ? info.surahName : "\(info.surahName) — Ayah \(info.ayahNumber)",
             MPMediaItemPropertyArtist: info.qariName,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime
@@ -370,16 +375,57 @@ final class AudioPlayerService {
     /// Called when the current AVPlayerItem plays to its end.
     /// Mirrors the legacy `playerDidFinish` auto-advance behaviour.
     private func handleTrackEnd() {
-        if currentAyahIndex < totalAyahs - 1 {
+        if !isListenMode, currentAyahIndex < totalAyahs - 1 {
             currentAyahIndex += 1
             play(surah: surahNumber, ayah: currentAyahIndex + 1)
         } else {
             playerState = .idle
             nowPlaying = nil
+            isListenMode = false
             player?.seek(to: .zero)
             currentTime = 0
             updateNowPlayingInfo()
         }
+    }
+
+    // MARK: - Listen Mode
+
+    /// Plays the whole surah as one recording, start to finish without gaps.
+    /// `startAt` resumes part-way through (used when the reciter changes).
+    func playFullSurah(_ surah: Int, surahName: String, startAt: TimeInterval = 0) {
+        let qari = Qari.resolve(selectedQari)
+        guard let url = qari.fullSurahURL(surah) else {
+            playerState = .failed("Could not build audio URL for surah \(surah)")
+            return
+        }
+        tearDownPlayer()
+        activateSession()
+        isListenMode = true
+        playerState = .loading
+        surahNumber = surah
+        currentTime = startAt
+        duration = 0
+        nowPlaying = NowPlayingInfo(surahNumber: surah, ayahNumber: 0, surahName: surahName, qariName: qari.name)
+
+        let item = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: item)
+        wireObservers(to: item)
+        addTimeObserver()
+        if startAt > 0 {
+            player?.seek(to: CMTime(seconds: startAt, preferredTimescale: 600))
+        }
+        player?.play()
+        playerState = .playing
+        updateNowPlayingInfo()
+    }
+
+    /// Jumps to `seconds` in the current recording (listen mode's scrubber).
+    func seek(to seconds: TimeInterval) {
+        guard let player else { return }
+        let target = max(0, duration > 0 ? min(seconds, duration) : seconds)
+        currentTime = target
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero)
+        updateNowPlayingInfo()
     }
 
     // MARK: - Configuration (legacy, preserved)
@@ -418,6 +464,7 @@ final class AudioPlayerService {
         tearDownPlayer()
 
         activateSession()
+        isListenMode = false
         playerState = .loading
         surahNumber = surah
         currentAyahIndex = ayah - 1
@@ -473,6 +520,7 @@ final class AudioPlayerService {
 
         tearDownPlayer()
         activateSession()
+        isListenMode = false
 
         playerState = .loading
 
@@ -518,6 +566,7 @@ final class AudioPlayerService {
     func stop() {
         tearDownPlayer()
         playerState = .idle
+        isListenMode = false
         nowPlaying = nil
         currentTime = 0
         duration = 0
@@ -528,13 +577,13 @@ final class AudioPlayerService {
     // MARK: - Skip Controls (legacy, preserved)
 
     func skipForward() {
-        guard currentAyahIndex < totalAyahs - 1 else { return }
+        guard !isListenMode, currentAyahIndex < totalAyahs - 1 else { return }
         currentAyahIndex += 1
         play(surah: surahNumber, ayah: currentAyahIndex + 1)
     }
 
     func skipBackward() {
-        guard currentAyahIndex > 0 else { return }
+        guard !isListenMode, currentAyahIndex > 0 else { return }
         currentAyahIndex -= 1
         play(surah: surahNumber, ayah: currentAyahIndex + 1)
     }
@@ -544,7 +593,11 @@ final class AudioPlayerService {
     func setQari(_ qari: String) {
         selectedQari = qari
         AppSettings.shared.selectedQari = qari
-        if isPlaying {
+        guard isPlaying else { return }
+        if isListenMode, let info = nowPlaying {
+            // Recordings differ in pace, so the new reciter starts the surah over.
+            playFullSurah(info.surahNumber, surahName: info.surahName)
+        } else {
             play(surah: surahNumber, ayah: currentAyahIndex + 1)
         }
     }
@@ -555,6 +608,10 @@ final class AudioPlayerService {
     /// metadata is available. No-op otherwise.
     func retry() async {
         guard case .failed = playerState, let info = nowPlaying else { return }
+        if isListenMode {
+            playFullSurah(info.surahNumber, surahName: info.surahName, startAt: currentTime)
+            return
+        }
         // Reconstruct a minimal Qari from the stored identifier.
         let qari = Qari(identifier: selectedQari, name: info.qariName)
         await play(

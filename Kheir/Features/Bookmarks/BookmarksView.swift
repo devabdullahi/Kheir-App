@@ -177,7 +177,7 @@ struct BookmarksView: View {
                             .quickPlace(min(index, 8))
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
-                                    shareText = "\(bookmark.text)\n\n— \(bookmark.source)"
+                                    shareText = (bookmark.arabicText.isEmpty ? "" : "\(bookmark.arabicText)\n\n") + "\(bookmark.text)\n\n— \(bookmark.source)"
                                     if !bookmark.narrator.isEmpty {
                                         shareText += ", narrated by \(bookmark.narrator)"
                                     }
@@ -208,6 +208,15 @@ struct BookmarksView: View {
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(Color.adaptiveSecondaryText(colorScheme))
                 PaperIconView(.bookmark, size: 20)
+            }
+
+            if !bookmark.arabicText.isEmpty {
+                Text(bookmark.arabicText)
+                    .arabicFont(size: 20)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(3)
+                    .foregroundStyle(Color.adaptiveText(colorScheme))
             }
 
             Text(bookmark.text)

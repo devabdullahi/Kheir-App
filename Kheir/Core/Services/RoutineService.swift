@@ -246,43 +246,14 @@ private extension RoutineService {
     // MARK: Hadith Pool (evening)
 
     func eveningHadithStep(for idx: Int) -> RoutineStep {
-        let pool: [(text: String, ref: String)] = [
-            (
-                "The best among you are those who have the best manners and character.",
-                "Sahih al-Bukhari 3559"
-            ),
-            (
-                "None of you truly believes until he loves for his brother what he loves for himself.",
-                "Sahih al-Bukhari 13"
-            ),
-            (
-                "The strong man is not the one who can overpower others. Rather, the strong man is the one who controls himself when he is angry.",
-                "Sahih al-Bukhari 6114"
-            ),
-            (
-                "Whoever believes in Allah and the Last Day, let him speak good or remain silent.",
-                "Sahih al-Bukhari 6018"
-            ),
-            (
-                "Make things easy and do not make them difficult, cheer the people up and do not put them off.",
-                "Sahih al-Bukhari 69"
-            ),
-            (
-                "Every act of kindness is a charity.",
-                "Sahih al-Bukhari 2989"
-            ),
-            (
-                "A good word is a form of charity.",
-                "Sahih al-Bukhari 2989"
-            )
-        ]
+        let pool = CuratedHadith.all
         let item = pool[idx % pool.count]
         return RoutineStep(
             type: .hadith,
             title: "Evening Hadith",
             content: item.text,
-            arabicText: nil,
-            reference: item.ref
+            arabicText: item.arabicText,
+            reference: item.reference
         )
     }
 

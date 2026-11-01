@@ -172,17 +172,30 @@ struct WPrayerFlower: View {
             disc.fill(Path(ellipseIn: CGRect(x: 33, y: 33, width: 34, height: 34)),
                       with: .color(monochrome ? .white.opacity(0.22) : WPalette.leaf))
 
-            if let centerName {
-                let name = Text(centerName)
-                    .font(.system(size: 8.5 * u, weight: .black, design: .rounded))
-                    .foregroundStyle(monochrome ? .white : WPalette.cream)
-                ctx.draw(name, at: CGPoint(x: 54 * u, y: (centerTime == nil ? 54 : 50.5) * u))
+            // Name over time, measured and centred as one block on the disc
+            // (centre 54u); long names shrink to stay inside it.
+            let fit = 28 * u
+            func line(_ s: String, _ size: CGFloat, _ weight: Font.Weight, _ color: Color) -> (GraphicsContext.ResolvedText, CGSize) {
+                func make(_ pt: CGFloat) -> GraphicsContext.ResolvedText {
+                    ctx.resolve(Text(s).font(.system(size: pt, weight: weight, design: .rounded)).foregroundStyle(color))
+                }
+                var text = make(size)
+                var box = text.measure(in: CGSize(width: CGFloat.infinity, height: .infinity))
+                if box.width > fit {
+                    text = make(size * fit / box.width)
+                    box = text.measure(in: CGSize(width: CGFloat.infinity, height: .infinity))
+                }
+                return (text, box)
             }
-            if let centerTime {
-                let time = Text(centerTime)
-                    .font(.system(size: 7 * u, weight: .heavy, design: .rounded))
-                    .foregroundStyle(monochrome ? .white : WPalette.mustard)
-                ctx.draw(time, at: CGPoint(x: 54 * u, y: 60 * u))
+            let lines = [
+                centerName.map { line($0, 8.5 * u, .black, monochrome ? .white : WPalette.cream) },
+                centerTime.map { line($0, 7 * u, .heavy, monochrome ? .white : WPalette.mustard) },
+            ].compactMap { $0 }
+            let gap = -0.5 * u
+            var y = 54 * u - (lines.map(\.1.height).reduce(0, +) + gap * CGFloat(max(lines.count - 1, 0))) / 2
+            for (text, box) in lines {
+                ctx.draw(text, at: CGPoint(x: 54 * u, y: y), anchor: .top)
+                y += box.height + gap
             }
         }
         .frame(width: size, height: size)

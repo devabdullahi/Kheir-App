@@ -33,6 +33,10 @@ final class AppSettings {
     var selectedQari: String = "ar.alafasy" {
         didSet { defaults.set(selectedQari, forKey: "selectedQari") }
     }
+    /// Read the Quran as printed mushaf pages instead of ayah cards.
+    var mushafMode: Bool = false {
+        didSet { defaults.set(mushafMode, forKey: "mushafMode") }
+    }
 
     // MARK: - Prayer Times
     var calculationMethod: CalculationMethodOption = .muslimWorldLeague {
@@ -141,6 +145,7 @@ final class AppSettings {
         if defaults.object(forKey: "showTransliteration") != nil { showTransliteration = defaults.bool(forKey: "showTransliteration") }
         if let raw = defaults.string(forKey: "translationLanguage"), let value = TranslationLanguage(rawValue: raw) { translationLanguage = value }
         if let value = defaults.string(forKey: "selectedQari") { selectedQari = value }
+        if defaults.object(forKey: "mushafMode") != nil { mushafMode = defaults.bool(forKey: "mushafMode") }
         if let raw = defaults.string(forKey: "calculationMethod"), let value = CalculationMethodOption(rawValue: raw) { calculationMethod = value }
         if let raw = defaults.string(forKey: "madhab"), let value = MadhabOption(rawValue: raw) { madhab = value }
         if defaults.object(forKey: "fajrNotification") != nil { fajrNotification = defaults.bool(forKey: "fajrNotification") }

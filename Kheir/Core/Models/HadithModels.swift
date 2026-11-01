@@ -22,6 +22,57 @@ struct DailyHadith: Codable, Identifiable, Sendable {
     }
 }
 
+// MARK: - Built-in Hadiths
+
+/// Short hadiths that ship with the app: Home's offline fallback and the evening
+/// routine. The Arabic is the Prophet's words (ﷺ) as they appear in the
+/// fawazahmed0 `ara-bukhari` edition for each reference.
+struct CuratedHadith: Sendable {
+    let text: String
+    let arabicText: String
+    let reference: String
+    let chapter: String
+    let narrator: String
+
+    static let all: [CuratedHadith] = [
+        CuratedHadith(
+            text: "The best among you are those who have the best manners and character.",
+            arabicText: "إِنَّ خِيَارَكُمْ أَحَاسِنُكُمْ أَخْلاَقًا",
+            reference: "Sahih al-Bukhari 6035", chapter: "Good Manners", narrator: "Abdullah ibn Amr"
+        ),
+        CuratedHadith(
+            text: "None of you truly believes until he loves for his brother what he loves for himself.",
+            arabicText: "لا يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ",
+            reference: "Sahih al-Bukhari 13", chapter: "Faith", narrator: "Anas ibn Malik"
+        ),
+        CuratedHadith(
+            text: "The strong man is not the one who can overpower others. Rather, the strong man is the one who controls himself when he is angry.",
+            arabicText: "لَيْسَ الشَّدِيدُ بِالصُّرَعَةِ، إِنَّمَا الشَّدِيدُ الَّذِي يَمْلِكُ نَفْسَهُ عِنْدَ الْغَضَبِ",
+            reference: "Sahih al-Bukhari 6114", chapter: "Good Manners", narrator: "Abu Hurairah"
+        ),
+        CuratedHadith(
+            text: "Whoever believes in Allah and the Last Day, let him speak good or remain silent.",
+            arabicText: "مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ",
+            reference: "Sahih al-Bukhari 6018", chapter: "Good Manners", narrator: "Abu Hurairah"
+        ),
+        CuratedHadith(
+            text: "Make things easy and do not make them difficult, cheer the people up and do not put them off.",
+            arabicText: "يَسِّرُوا وَلاَ تُعَسِّرُوا، وَبَشِّرُوا وَلاَ تُنَفِّرُوا",
+            reference: "Sahih al-Bukhari 69", chapter: "Knowledge", narrator: "Anas ibn Malik"
+        ),
+        CuratedHadith(
+            text: "Every act of kindness is a charity.",
+            arabicText: "كُلُّ مَعْرُوفٍ صَدَقَةٌ",
+            reference: "Sahih al-Bukhari 6021", chapter: "Good Manners", narrator: "Jabir ibn Abdullah"
+        ),
+        CuratedHadith(
+            text: "A good word is a form of charity.",
+            arabicText: "الْكَلِمَةُ الطَّيِّبَةُ صَدَقَةٌ",
+            reference: "Sahih al-Bukhari 2989", chapter: "Charity", narrator: "Abu Hurairah"
+        ),
+    ]
+}
+
 // MARK: - fawazahmed0/hadith-api Response Models
 
 /// Response for a single hadith section: /editions/{edition}/{sectionNo}.json

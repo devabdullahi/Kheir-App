@@ -125,7 +125,8 @@ final class APIService {
             throw APIError.serverError(statusCode: -1)
         }
 
-        guard let hadith = response.hadiths.randomElement() else {
+        // A few English entries are blank in the source; never pick one of those.
+        guard let hadith = response.hadiths.filter({ !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }).randomElement() else {
             throw APIError.serverError(statusCode: -1)
         }
         let sectionName = response.metadata.section?["\(section)"] ?? "General"

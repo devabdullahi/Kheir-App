@@ -323,18 +323,21 @@ struct HomeView: View {
             HStack {
                 PaperTag(text: "Daily Hadith", color: .paperRose, ink: .lightBodyText, seed: 6)
                 Spacer()
-                Button {
-                    showArabicHadith.toggle()
-                } label: {
-                    Image(systemName: showArabicHadith ? "character.paragraph" : "globe")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.adaptivePrimary(colorScheme))
-                        .frame(width: 36, height: 36)
-                        .contentShape(Rectangle())
+                // Only offered when this hadith has Arabic to switch to.
+                if !hadith.arabicText.isEmpty {
+                    Button {
+                        showArabicHadith.toggle()
+                    } label: {
+                        Image(systemName: showArabicHadith ? "character.paragraph" : "globe")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.adaptivePrimary(colorScheme))
+                            .frame(width: 36, height: 36)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(PaperPressStyle())
+                    .accessibilityLabel(showArabicHadith ? "Show English Hadith" : "Show Arabic Hadith")
+                    .accessibilityIdentifier("toggleHadithLanguageButton")
                 }
-                .buttonStyle(PaperPressStyle())
-                .accessibilityLabel(showArabicHadith ? "Show English Hadith" : "Show Arabic Hadith")
-                .accessibilityIdentifier("toggleHadithLanguageButton")
             }
 
             // Capped so a long hadith never changes Home's layout; the full text

@@ -100,7 +100,8 @@ struct MasjidFinderView: View {
                 PaperMasjidMap(
                     center: viewModel.region.center,
                     masjids: Array(viewModel.masjids.prefix(7)),
-                    isLoading: viewModel.isLoading
+                    isLoading: viewModel.isLoading,
+                    onDirections: openDirections
                 )
                 .frame(height: viewModel.viewMode == .map ? 440 : 240)
                 .paperPiece(Color.adaptiveCardSurface(colorScheme), material: .card, depth: 1.2, radius: 18, seed: 121, padding: 6)
@@ -119,12 +120,7 @@ struct MasjidFinderView: View {
                         LazyVStack(spacing: 10) {
                             ForEach(Array(viewModel.masjids.enumerated()), id: \.element.id) { index, masjid in
                                 Button {
-                                    // After the first choice, open that app straight away.
-                                    switch preferredMaps {
-                                    case "apple": viewModel.openInMaps(masjid)
-                                    case "google": viewModel.openInGoogleMaps(masjid)
-                                    default: directionsTarget = masjid
-                                    }
+                                    openDirections(masjid)
                                 } label: {
                                     masjidCard(masjid, index: index)
                                 }
@@ -139,6 +135,15 @@ struct MasjidFinderView: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 100)
+        }
+    }
+
+    /// After the first choice, opens that maps app straight away.
+    private func openDirections(_ masjid: MasjidItem) {
+        switch preferredMaps {
+        case "apple": viewModel.openInMaps(masjid)
+        case "google": viewModel.openInGoogleMaps(masjid)
+        default: directionsTarget = masjid
         }
     }
 
@@ -292,7 +297,10 @@ struct PaperMasjidMap: View {
     let center: CLLocationCoordinate2D
     let masjids: [MasjidItem]
     var isLoading = false
+    var onDirections: (MasjidItem) -> Void = { _ in }
     @State private var position: MapCameraPosition = .automatic
+    /// The masjid whose details card is showing, picked by tapping its cut-out.
+    @State private var selectedID: UUID?
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
@@ -301,11 +309,21 @@ struct PaperMasjidMap: View {
                 UserAnnotation()
                 // Farthest first so the nearest cut-out stands in front.
                 ForEach(Array(masjids.enumerated()).reversed(), id: \.element.id) { index, masjid in
+                    let isSelected = masjid.id == selectedID
                     Annotation(masjid.name, coordinate: masjid.coordinate, anchor: .bottom) {
-                        MasjidCutout(isNearest: index == 0, seed: 150 + index)
-                            .scaleEffect(index == 0 ? 1.15 : 0.85, anchor: .bottom)
+                        Button {
+                            withAnimation(.open(0.25)) { selectedID = isSelected ? nil : masjid.id }
+                        } label: {
+                            MasjidCutout(isNearest: index == 0, seed: 150 + index)
+                                .scaleEffect((index == 0 ? 1.15 : 0.85) * (isSelected ? 1.25 : 1), anchor: .bottom)
+                                .padding(6)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(masjid.name)
+                        .accessibilityHint("Shows the masjid's details")
                     }
-                    .annotationTitles(index == 0 ? .automatic : .hidden)
+                    .annotationTitles(index == 0 || isSelected ? .automatic : .hidden)
                 }
             }
             .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
@@ -322,9 +340,23 @@ struct PaperMasjidMap: View {
                 PaperTag(text: "Looking for masjids…", color: Color.lightCardSurface, ink: .lightBodyText, seed: 126)
             }
         }
+        .overlay(alignment: .bottom) {
+            if let index = masjids.firstIndex(where: { $0.id == selectedID }) {
+                MasjidDetailCard(
+                    masjid: masjids[index],
+                    isNearest: index == 0,
+                    onDirections: { onDirections(masjids[index]) },
+                    onClose: { withAnimation(.open(0.25)) { selectedID = nil } }
+                )
+                .padding(10)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .id(masjids[index].id)
+            }
+        }
         .clipShape(CutShape(cornerRadius: 13, seed: 127))
         .onAppear { position = .region(fittingRegion) }
-        .onChange(of: masjids.map(\.id)) { _, _ in
+        .onChange(of: masjids.map(\.id)) { _, ids in
+            if let selectedID, !ids.contains(selectedID) { self.selectedID = nil }
             withAnimation(.open(0.4)) { position = .region(fittingRegion) }
         }
         .accessibilityElement(children: .contain)
@@ -344,6 +376,83 @@ struct PaperMasjidMap: View {
         )
         let mid = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2 + span.latitudeDelta * 0.06, longitude: (minLon + maxLon) / 2)
         return MKCoordinateRegion(center: mid, span: span)
+    }
+}
+
+/// A masjid's details on a paper card over the map: name, distance and address,
+/// call and website when Maps has them, and directions.
+private struct MasjidDetailCard: View {
+    let masjid: MasjidItem
+    let isNearest: Bool
+    let onDirections: () -> Void
+    let onClose: () -> Void
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                PaperIconView(.masjid, size: 28)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(masjid.name)
+                            .font(.system(size: 16, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Color.adaptiveText(scheme))
+                            .lineLimit(2)
+                        if isNearest {
+                            PaperTag(text: "Nearest", color: .paperTerracotta, ink: .lightCardSurface, seed: 131)
+                                .scaleEffect(0.85)
+                        }
+                    }
+                    Text(masjid.distanceString + " away")
+                        .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.adaptivePrimary(scheme))
+                    if !masjid.address.isEmpty {
+                        Text(masjid.address)
+                            .font(.system(size: 12.5, weight: .medium, design: .rounded))
+                            .foregroundStyle(Color.adaptiveSecondaryText(scheme))
+                            .lineLimit(2)
+                    }
+                }
+                Spacer(minLength: 0)
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 13, weight: .black))
+                        .foregroundStyle(Color.adaptiveSecondaryText(scheme))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PaperPressStyle())
+                .accessibilityLabel("Close details")
+            }
+
+            HStack(spacing: 8) {
+                Button(action: onDirections) {
+                    PaperButtonLabel(title: "Directions", seed: 132)
+                }
+                .buttonStyle(PaperPressStyle())
+                if let phone = masjid.phoneNumber,
+                   let url = URL(string: "tel:\(phone.filter { $0.isNumber || $0 == "+" })") {
+                    detailLink(url, systemImage: "phone.fill", label: "Call \(phone)")
+                }
+                if let url = masjid.url {
+                    detailLink(url, systemImage: "safari.fill", label: "Website")
+                }
+            }
+        }
+        .paperPiece(Color.adaptiveCardSurface(scheme), material: .card, depth: 1.4, radius: 16, seed: 133, padding: 14)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func detailLink(_ url: URL, systemImage: String, label: String) -> some View {
+        Link(destination: url) {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(Color.adaptivePrimary(scheme))
+                .frame(width: 50, height: 50)
+                .paperPiece(Color.adaptiveCardSurface(scheme), material: .card, depth: 1, radius: 14, seed: 134, padding: nil)
+        }
+        .buttonStyle(PaperPressStyle())
+        .accessibilityLabel(label)
     }
 }
 

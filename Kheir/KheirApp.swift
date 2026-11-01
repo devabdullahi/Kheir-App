@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct KheirApp: App {
     init() {
+        _ = AppFonts.registered
         // Notification delegate + PRAYER_TIME actions must exist before any
         // notification action can launch the app in the background.
         NotificationService.shared.configure()

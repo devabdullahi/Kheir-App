@@ -104,22 +104,31 @@ struct Qari: Identifiable, Codable, Sendable {
     let name: String
     /// CDN bitrate (kbps). Some reciters are only licensed at lower bitrates on cdn.islamic.network.
     let bitrate: Int
+    /// Folder on download.quranicaudio.com holding this reciter's whole-surah
+    /// recordings (001.mp3 … 114.mp3), used by listen mode.
+    let surahFolder: String
 
     var id: String { identifier }
 
-    init(identifier: String, name: String, bitrate: Int = 128) {
+    init(identifier: String, name: String, bitrate: Int = 128, surahFolder: String = "mishaari_raashid_al_3afaasee") {
         self.identifier = identifier
         self.name = name
         self.bitrate = bitrate
+        self.surahFolder = surahFolder
     }
 
     static let defaults: [Qari] = [
-        Qari(identifier: "ar.alafasy", name: "Mishary Rashid Alafasy", bitrate: 128),
-        Qari(identifier: "ar.abdurrahmaansudais", name: "Abdurrahmaan As-Sudais", bitrate: 64),
-        Qari(identifier: "ar.abdulsamad", name: "Abdul Basit Abdus-Samad", bitrate: 64),
-        Qari(identifier: "ar.husary", name: "Mahmoud Khalil Al-Husary", bitrate: 128),
-        Qari(identifier: "ar.minshawi", name: "Mohamed Siddiq El-Minshawi", bitrate: 128)
+        Qari(identifier: "ar.alafasy", name: "Mishary Rashid Alafasy", bitrate: 128, surahFolder: "mishaari_raashid_al_3afaasee"),
+        Qari(identifier: "ar.abdurrahmaansudais", name: "Abdurrahmaan As-Sudais", bitrate: 64, surahFolder: "abdurrahmaan_as-sudays"),
+        Qari(identifier: "ar.abdulsamad", name: "Abdul Basit Abdus-Samad", bitrate: 64, surahFolder: "abdul_basit_murattal"),
+        Qari(identifier: "ar.husary", name: "Mahmoud Khalil Al-Husary", bitrate: 128, surahFolder: "mahmood_khaleel_al-husaree"),
+        Qari(identifier: "ar.minshawi", name: "Mohamed Siddiq El-Minshawi", bitrate: 128, surahFolder: "muhammad_siddeeq_al-minshaawee")
     ]
+
+    /// The whole surah as one recording, so listen mode plays without gaps between ayahs.
+    func fullSurahURL(_ surah: Int) -> URL? {
+        URL(string: "https://download.quranicaudio.com/quran/\(surahFolder)/\(String(format: "%03d", surah)).mp3")
+    }
 
     /// Looks up a default reciter by identifier. Falls back to Alafasy if unknown.
     static func resolve(_ identifier: String) -> Qari {

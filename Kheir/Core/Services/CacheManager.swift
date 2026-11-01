@@ -47,6 +47,7 @@ actor CacheManager {
 
     /// O(1) lookup index for ayah bookmarks. Rebuilt from disk on first access.
     private var ayahBookmarkIndex: Set<AyahBookmarkKey> = []
+    private var ayahBookmarkIndexLoaded = false
 
     // MARK: - Filename Constants
 
@@ -308,13 +309,14 @@ extension CacheManager {
     /// Rebuilds the O(1) lookup index from the full bookmark list.
     private func rebuildAyahIndex(_ bookmarks: [BookmarkedAyah]) {
         ayahBookmarkIndex = Set(bookmarks.map { AyahBookmarkKey(surah: $0.surahNumber, ayah: $0.ayahNumber) })
+        ayahBookmarkIndexLoaded = true
     }
 
     /// Returns all saved Ayah bookmarks, newest first.
     /// Reads from the memory cache; hits disk only when NSCache has evicted the entry.
     func loadAyahBookmarks() -> [BookmarkedAyah] {
         let bookmarks = load([BookmarkedAyah].self, filename: ayahBookmarksFile) ?? []
-        if ayahBookmarkIndex.isEmpty && !bookmarks.isEmpty {
+        if !ayahBookmarkIndexLoaded {
             rebuildAyahIndex(bookmarks)
         }
         return bookmarks
@@ -323,6 +325,9 @@ extension CacheManager {
     /// Inserts `bookmark` at the front of the list and persists asynchronously.
     func saveAyahBookmark(_ bookmark: BookmarkedAyah) {
         var bookmarks = loadAyahBookmarks()
+        guard !bookmarks.contains(where: {
+            $0.surahNumber == bookmark.surahNumber && $0.ayahNumber == bookmark.ayahNumber
+        }) else { return }
         bookmarks.insert(bookmark, at: 0)
         save(bookmarks, filename: ayahBookmarksFile)
         ayahBookmarkIndex.insert(AyahBookmarkKey(surah: bookmark.surahNumber, ayah: bookmark.ayahNumber))
@@ -350,7 +355,10 @@ extension CacheManager {
     /// Returns `true` when an Ayah at the given position is in the bookmark list.
     /// Uses the in-memory bookmark index for O(1) lookup instead of scanning the full list.
     func isAyahBookmarked(surah: Int, ayah: Int) -> Bool {
-        ayahBookmarkIndex.contains(AyahBookmarkKey(surah: surah, ayah: ayah))
+        if !ayahBookmarkIndexLoaded {
+            _ = loadAyahBookmarks()
+        }
+        return ayahBookmarkIndex.contains(AyahBookmarkKey(surah: surah, ayah: ayah))
     }
 }
 
@@ -366,6 +374,7 @@ extension CacheManager {
     /// Inserts `bookmark` at the front of the list and persists asynchronously.
     func saveHadithBookmark(_ bookmark: BookmarkedHadith) {
         var bookmarks = loadHadithBookmarks()
+        guard !bookmarks.contains(where: { $0.text == bookmark.text && $0.source == bookmark.source }) else { return }
         bookmarks.insert(bookmark, at: 0)
         save(bookmarks, filename: hadithBookmarksFile)
     }
