@@ -1,7 +1,7 @@
 # QA & Accessibility Implementation Plan
 
 **Department:** QA & Accessibility  
-**Project:** Kheir (Revenge iOS App)  
+**Project:** Kheir (Kheir iOS App)  
 **Created:** April 26, 2026  
 **Status:** Ready for Engineering Team
 
@@ -47,7 +47,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P0 (HIGH — blocks release)  
 **Assigned Files:**
-- `RevengeUITests/RevengeUITests.swift` (Lines 31, 52, 115, 155)
+- `KheirUITests/KheirUITests.swift` (Lines 31, 52, 115, 155)
 
 **Current Behavior:**
 - 4 UI test failures in the test suite including:
@@ -64,7 +64,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 1. **Run the full UI test suite locally** to identify which specific tests are failing:
    ```
-   xcodebuild test -scheme RevengeUITests
+   xcodebuild test -scheme KheirUITests
    ```
    Document which tests fail and the failure messages.
 
@@ -125,7 +125,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P0 (HIGH — blocks CI/CD)  
 **Assigned Files:**
-- `RevengeTests/CacheManagerTests.swift` (Lines 82–89 in `removeHadithBookmarkByTextSource`)
+- `KheirTests/CacheManagerTests.swift` (Lines 82–89 in `removeHadithBookmarkByTextSource`)
 
 **Current Behavior:**
 - `CacheManager.shared` is a singleton used by all test suites
@@ -185,7 +185,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
    - Verify no references to `CacheManager.shared` remain in these test suites
 
 **Verification:**
-- Run `RevengeTests` 10 times consecutively without failure
+- Run `KheirTests` 10 times consecutively without failure
 - Run tests in reverse order (CacheManagerJournalTests first, then Hadith, then Ayah) — all pass
 - Run only `CacheManagerHadithTests` in isolation — all pass
 - Run test `removeHadithBookmarkByTextSource` 20 times — 100% pass rate
@@ -205,7 +205,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P0 (HIGH — thread-safety)  
 **Assigned Files:**
-- `RevengeTests/Mocks/ServiceMocks.swift` (Lines 6–84)
+- `KheirTests/Mocks/ServiceMocks.swift` (Lines 6–84)
 
 **Current Behavior:**
 - `MockAPIService` declares `@unchecked Sendable` but contains mutable `var` properties:
@@ -320,7 +320,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P1 (MEDIUM)  
 **Assigned Files:**
-- `Revenge/Features/Home/HomeView.swift` (Lines 212–215, 286–290)
+- `Kheir/Features/Home/HomeView.swift` (Lines 212–215, 286–290)
 
 **Current Behavior:**
 - Share button on ayah card (line 212–215) has no `.accessibilityLabel`
@@ -397,7 +397,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P1 (MEDIUM)  
 **Assigned Files:**
-- `Revenge/Core/Models/PrayerModels.swift` (Lines 3–15)
+- `Kheir/Core/Models/PrayerModels.swift` (Lines 3–15)
 
 **Current Behavior:**
 - `PrayerTime` has `let id = UUID()` which generates a new UUID on **each initialization**
@@ -507,7 +507,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P1 (MEDIUM)  
 **Assigned Files:**
-- `Revenge/Features/Masjid/MasjidFinderView.swift` (Line 57)
+- `Kheir/Features/Masjid/MasjidFinderView.swift` (Line 57)
 
 **Current Behavior:**
 - Uses deprecated `Map(coordinateRegion:annotationItems:)` API
@@ -596,8 +596,8 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P1 (MEDIUM)  
 **Assigned Files:**
-- `Revenge/Features/Masjid/MasjidFinderViewModel.swift` (Line 13)
-- `Revenge/Features/Masjid/MasjidFinderView.swift` (Line 7)
+- `Kheir/Features/Masjid/MasjidFinderViewModel.swift` (Line 13)
+- `Kheir/Features/Masjid/MasjidFinderView.swift` (Line 7)
 
 **Current Behavior:**
 - `selectedMasjid` is declared in both places:
@@ -666,7 +666,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P1 (MEDIUM)  
 **Assigned Files:**
-- `Revenge/Features/Home/RoutineCardView.swift` (Line 18)
+- `Kheir/Features/Home/RoutineCardView.swift` (Line 18)
 
 **Current Behavior:**
 - `@State private var isNavigating = false` is declared on line 18
@@ -729,7 +729,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P1 (MEDIUM)  
 **Assigned Files:**
-- `Revenge/Features/Qibla/QiblaViewModel.swift` (Lines 66–72)
+- `Kheir/Features/Qibla/QiblaViewModel.swift` (Lines 66–72)
 
 **Current Behavior:**
 - `searchCity()` function takes `manualCity` string input
@@ -945,7 +945,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P2 (LOW)  
 **Assigned Files:**
-- `Revenge/Core/Extensions/View+Extensions.swift` (Lines 4–19)
+- `Kheir/Core/Extensions/View+Extensions.swift` (Lines 4–19)
 
 **Current Behavior:**
 - `ScrollRevealModifier` applies animation and offset effects unconditionally
@@ -1045,7 +1045,7 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P2 (LOW)  
 **Assigned Files:**
-- `Revenge/Features/Quran/ReadingView.swift` (Lines 337–355)
+- `Kheir/Features/Quran/ReadingView.swift` (Lines 337–355)
 
 **Current Behavior:**
 - `shareAyah()` function uses UIKit imperative presentation:
@@ -1150,8 +1150,8 @@ The QA & Accessibility department is responsible for ensuring the Kheir app meet
 
 **Priority:** P2 (LOW)  
 **Assigned Files:**
-- `Revenge/Features/Quran/ReadingView.swift` (Lines 44, 328)
-- `Revenge/Features/Home/StreakCardView.swift` (Line 118)
+- `Kheir/Features/Quran/ReadingView.swift` (Lines 44, 328)
+- `Kheir/Features/Home/StreakCardView.swift` (Line 118)
 
 **Current Behavior:**
 - Uses `DispatchQueue.main.asyncAfter(deadline: .now() + X)` for delayed execution

@@ -44,9 +44,9 @@ The Architecture & Dependency Injection department is responsible for ensuring:
 ### AD-01: Refactor CacheManaging into Focused Protocols
 **Priority:** P0  
 **Files:**
-- `Revenge/Core/Services/ServiceProtocols.swift` (refactor)
-- `Revenge/Core/Services/CacheManager.swift` (add conformances)
-- `RevengeTests/Mocks/ServiceMocks.swift` (update mocks)
+- `Kheir/Core/Services/ServiceProtocols.swift` (refactor)
+- `Kheir/Core/Services/CacheManager.swift` (add conformances)
+- `KheirTests/Mocks/ServiceMocks.swift` (update mocks)
 
 **Current Behavior:**
 ```swift
@@ -145,7 +145,7 @@ Split into 6 focused protocols:
 ### AD-02: Fix ReadingViewModel Singleton Hardcoding
 **Priority:** P0  
 **Files:**
-- `Revenge/Features/Quran/ReadingViewModel.swift`
+- `Kheir/Features/Quran/ReadingViewModel.swift`
 
 **Current Behavior:**
 ```swift
@@ -221,10 +221,10 @@ private let audioPlayer: any AudioPlayerManaging      // ✅ Protocol (once abst
 ### AD-03: Fix Bookmark and Journal ViewModel Singleton Hardcoding
 **Priority:** P0  
 **Files:**
-- `Revenge/Features/Bookmarks/BookmarksViewModel.swift`
-- `Revenge/Features/Journal/JournalViewModel.swift`
-- `Revenge/Features/Quran/SurahListViewModel.swift`
-- `Revenge/Core/Services/ServiceProtocols.swift` (add missing protocols)
+- `Kheir/Features/Bookmarks/BookmarksViewModel.swift`
+- `Kheir/Features/Journal/JournalViewModel.swift`
+- `Kheir/Features/Quran/SurahListViewModel.swift`
+- `Kheir/Core/Services/ServiceProtocols.swift` (add missing protocols)
 
 **Current Behavior:**
 ```swift
@@ -305,9 +305,9 @@ Constructor injection with protocol types.
 ### AD-04: Fix PrayerTimesViewModel Singleton Hardcoding & LocationService Abstraction
 **Priority:** P0  
 **Files:**
-- `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift`
-- `Revenge/Core/Services/ServiceProtocols.swift` (add LocationManaging protocol)
-- `Revenge/Core/Services/LocationService.swift` (add conformance)
+- `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift`
+- `Kheir/Core/Services/ServiceProtocols.swift` (add LocationManaging protocol)
+- `Kheir/Core/Services/LocationService.swift` (add conformance)
 
 **Current Behavior:**
 ```swift
@@ -392,10 +392,10 @@ private let prayerTimesService: any PrayerTimesFetching
 ### AD-05: Extract PrayerCountdownManager (Eliminate Duplication)
 **Priority:** P1  
 **Files:**
-- `Revenge/Core/Services/PrayerCountdownManager.swift` (new file)
-- `Revenge/Core/Services/ServiceProtocols.swift` (add protocol)
-- `Revenge/Features/Home/HomeViewModel.swift` (refactor)
-- `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift` (refactor)
+- `Kheir/Core/Services/PrayerCountdownManager.swift` (new file)
+- `Kheir/Core/Services/ServiceProtocols.swift` (add protocol)
+- `Kheir/Features/Home/HomeViewModel.swift` (refactor)
+- `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift` (refactor)
 
 **Current Behavior:**
 Prayer countdown logic duplicated:
@@ -412,7 +412,7 @@ Single `PrayerCountdownManager` service handles:
 
 **Step-by-Step Instructions:**
 
-1. Create `Revenge/Core/Services/PrayerCountdownManager.swift`:
+1. Create `Kheir/Core/Services/PrayerCountdownManager.swift`:
    ```swift
    import Foundation
    import CoreLocation
@@ -541,9 +541,9 @@ Single `PrayerCountdownManager` service handles:
 ### AD-06: Extract BookmarkInteractor (Thin HomeViewModel)
 **Priority:** P1  
 **Files:**
-- `Revenge/Core/Services/BookmarkInteractor.swift` (new file)
-- `Revenge/Core/Services/ServiceProtocols.swift` (add protocol)
-- `Revenge/Features/Home/HomeViewModel.swift` (refactor)
+- `Kheir/Core/Services/BookmarkInteractor.swift` (new file)
+- `Kheir/Core/Services/ServiceProtocols.swift` (add protocol)
+- `Kheir/Features/Home/HomeViewModel.swift` (refactor)
 
 **Current Behavior:**
 HomeViewModel has bookmarking responsibility (6 methods):
@@ -568,7 +568,7 @@ HomeViewModel delegates to it, stays thin.
 
 **Step-by-Step Instructions:**
 
-1. Create `Revenge/Core/Services/BookmarkInteractor.swift`:
+1. Create `Kheir/Core/Services/BookmarkInteractor.swift`:
    ```swift
    import Foundation
    import Combine
@@ -644,8 +644,8 @@ HomeViewModel delegates to it, stays thin.
 ### AD-07: Make PrayerTimesService Injectable
 **Priority:** P1  
 **Files:**
-- `Revenge/Core/Services/PrayerTimesService.swift`
-- `Revenge/Core/Services/ServiceProtocols.swift`
+- `Kheir/Core/Services/PrayerTimesService.swift`
+- `Kheir/Core/Services/ServiceProtocols.swift`
 
 **Current Behavior:**
 ```swift
@@ -715,8 +715,8 @@ final class PrayerTimesService {
 ### AD-08: Move QuranAyahIndex to Domain Layer
 **Priority:** P2  
 **Files:**
-- `Revenge/Core/Models/QuranAyahIndex.swift` (new file)
-- `Revenge/Core/Services/APIService.swift` (remove lines 137-180, import from Models)
+- `Kheir/Core/Models/QuranAyahIndex.swift` (new file)
+- `Kheir/Core/Services/APIService.swift` (remove lines 137-180, import from Models)
 
 **Current Behavior:**
 ```swift
@@ -731,11 +731,11 @@ enum QuranAyahIndex {
 **Problem:** Domain logic (static lookup table) in a service file. Should be in Models.
 
 **Target Behavior:**
-Separate file: `Revenge/Core/Models/QuranAyahIndex.swift`
+Separate file: `Kheir/Core/Models/QuranAyahIndex.swift`
 
 **Step-by-Step Instructions:**
 
-1. Create `Revenge/Core/Models/QuranAyahIndex.swift`:
+1. Create `Kheir/Core/Models/QuranAyahIndex.swift`:
    - Copy entire `enum QuranAyahIndex` block from APIService (lines 137-180)
 
 2. In `APIService.swift`:
@@ -763,8 +763,8 @@ Separate file: `Revenge/Core/Models/QuranAyahIndex.swift`
 ### AD-09: Move Response Types to Models Layer
 **Priority:** P2  
 **Files:**
-- `Revenge/Core/Models/APIResponseTypes.swift` (new file)
-- `Revenge/Core/Services/APIService.swift` (remove, import)
+- `Kheir/Core/Models/APIResponseTypes.swift` (new file)
+- `Kheir/Core/Services/APIService.swift` (remove, import)
 
 **Current Behavior:**
 ```swift
@@ -778,11 +778,11 @@ struct HijriConvertResponse: Codable { ... }
 **Problem:** Response decodables are models, not service code. Belong in Models layer.
 
 **Target Behavior:**
-New file `Revenge/Core/Models/APIResponseTypes.swift` containing all response structs.
+New file `Kheir/Core/Models/APIResponseTypes.swift` containing all response structs.
 
 **Step-by-Step Instructions:**
 
-1. Create `Revenge/Core/Models/APIResponseTypes.swift`:
+1. Create `Kheir/Core/Models/APIResponseTypes.swift`:
    - Copy lines 198-230 from APIService.swift
 
 2. In `APIService.swift`:
@@ -809,8 +809,8 @@ New file `Revenge/Core/Models/APIResponseTypes.swift` containing all response st
 ### AD-10: Move ContentLoadState to Shared Location
 **Priority:** P2  
 **Files:**
-- `Revenge/Core/Models/LoadState.swift` (new file)
-- `Revenge/Features/Home/HomeViewModel.swift` (remove lines 10-15, import)
+- `Kheir/Core/Models/LoadState.swift` (new file)
+- `Kheir/Features/Home/HomeViewModel.swift` (remove lines 10-15, import)
 
 **Current Behavior:**
 ```swift
@@ -827,7 +827,7 @@ enum ContentLoadState {
 
 **Target Behavior:**
 ```
-// Revenge/Core/Models/LoadState.swift
+// Kheir/Core/Models/LoadState.swift
 enum ContentLoadState {
     case loading
     case loaded
@@ -840,7 +840,7 @@ HomeViewModel imports and uses it.
 
 **Step-by-Step Instructions:**
 
-1. Create `Revenge/Core/Models/LoadState.swift`:
+1. Create `Kheir/Core/Models/LoadState.swift`:
    ```swift
    import Foundation
    
@@ -876,8 +876,8 @@ HomeViewModel imports and uses it.
 ### AD-11: Move ShareSheet to Shared Components
 **Priority:** P2  
 **Files:**
-- `Revenge/Core/UI/Components/ShareSheet.swift` (new file)
-- `Revenge/Features/Home/HomeView.swift` (remove lines 418-426, import)
+- `Kheir/Core/UI/Components/ShareSheet.swift` (new file)
+- `Kheir/Features/Home/HomeView.swift` (remove lines 418-426, import)
 
 **Current Behavior:**
 ```swift
@@ -896,11 +896,11 @@ struct ShareSheet: UIViewControllerRepresentable {
 **Problem:** General-purpose component in feature-specific view file.
 
 **Target Behavior:**
-Shared `Revenge/Core/UI/Components/ShareSheet.swift` importable by any view.
+Shared `Kheir/Core/UI/Components/ShareSheet.swift` importable by any view.
 
 **Step-by-Step Instructions:**
 
-1. Create `Revenge/Core/UI/Components/ShareSheet.swift`:
+1. Create `Kheir/Core/UI/Components/ShareSheet.swift`:
    - Copy struct definition from HomeView
 
 2. In `HomeView.swift`:
@@ -927,8 +927,8 @@ Shared `Revenge/Core/UI/Components/ShareSheet.swift` importable by any view.
 ### AD-12: Remove Dead SettingsViewModel, Refactor SettingsView
 **Priority:** P2  
 **Files:**
-- `Revenge/Features/Settings/SettingsViewModel.swift` (delete)
-- `Revenge/Features/Settings/SettingsView.swift` (refactor)
+- `Kheir/Features/Settings/SettingsViewModel.swift` (delete)
+- `Kheir/Features/Settings/SettingsView.swift` (refactor)
 
 **Current Behavior:**
 ```swift
@@ -952,7 +952,7 @@ final class SettingsViewModel: ObservableObject {
 
 1. Search for imports/references to `SettingsViewModel`:
    ```bash
-   grep -r "SettingsViewModel" Revenge/Features/Settings/
+   grep -r "SettingsViewModel" Kheir/Features/Settings/
    ```
 
 2. If no references found, delete `SettingsViewModel.swift`
@@ -981,9 +981,9 @@ final class SettingsViewModel: ObservableObject {
 ### AD-13: Code Cleanup - Remove Commented Code & Update Documentation
 **Priority:** P2  
 **Files:**
-- `Revenge/Features/Settings/SettingsView.swift` (remove commented lines 161-163)
-- `Revenge/Core/Services/ServiceProtocols.swift` (add header documentation)
-- `Revenge/Features/Home/HomeViewModel.swift` (add class documentation)
+- `Kheir/Features/Settings/SettingsView.swift` (remove commented lines 161-163)
+- `Kheir/Core/Services/ServiceProtocols.swift` (add header documentation)
+- `Kheir/Features/Home/HomeViewModel.swift` (add class documentation)
 
 **Current Behavior:**
 ```swift
@@ -1152,31 +1152,31 @@ final class SettingsViewModel: ObservableObject {
 ## File Paths Summary
 
 ### New Files to Create
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Services/PrayerCountdownManager.swift`
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Services/BookmarkInteractor.swift`
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Models/QuranAyahIndex.swift`
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Models/APIResponseTypes.swift`
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Models/LoadState.swift`
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/UI/Components/ShareSheet.swift`
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Services/PrayerCountdownManager.swift`
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Services/BookmarkInteractor.swift`
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Models/QuranAyahIndex.swift`
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Models/APIResponseTypes.swift`
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Models/LoadState.swift`
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/UI/Components/ShareSheet.swift`
 
 ### Files to Modify
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Services/ServiceProtocols.swift` (refactor, add protocols)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Services/APIService.swift` (remove lines, restructure)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Services/CacheManager.swift` (update conformances)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Services/PrayerTimesService.swift` (add DI)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Core/Services/LocationService.swift` (add conformance)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/Home/HomeViewModel.swift` (DI, extract logic)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/Home/HomeView.swift` (remove ShareSheet)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/Quran/ReadingViewModel.swift` (add DI)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/Bookmarks/BookmarksViewModel.swift` (add DI)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/Journal/JournalViewModel.swift` (add DI)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/Quran/SurahListViewModel.swift` (add DI)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift` (add DI, extract logic)
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/Settings/SettingsView.swift` (remove comments)
-- `/Users/abdul/Documents/project_swift/Revenge/RevengeTests/Mocks/ServiceMocks.swift` (update mocks)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Services/ServiceProtocols.swift` (refactor, add protocols)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Services/APIService.swift` (remove lines, restructure)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Services/CacheManager.swift` (update conformances)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Services/PrayerTimesService.swift` (add DI)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Core/Services/LocationService.swift` (add conformance)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/Home/HomeViewModel.swift` (DI, extract logic)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/Home/HomeView.swift` (remove ShareSheet)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/Quran/ReadingViewModel.swift` (add DI)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/Bookmarks/BookmarksViewModel.swift` (add DI)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/Journal/JournalViewModel.swift` (add DI)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/Quran/SurahListViewModel.swift` (add DI)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift` (add DI, extract logic)
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/Settings/SettingsView.swift` (remove comments)
+- `/Users/abdul/Documents/project_swift/Kheir/KheirTests/Mocks/ServiceMocks.swift` (update mocks)
 
 ### Files to Delete
-- `/Users/abdul/Documents/project_swift/Revenge/Revenge/Features/Settings/SettingsViewModel.swift`
+- `/Users/abdul/Documents/project_swift/Kheir/Kheir/Features/Settings/SettingsViewModel.swift`
 
 ---
 

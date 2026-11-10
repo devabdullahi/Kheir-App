@@ -64,7 +64,7 @@ The API & Data Layer department owns all data fetching, caching, error handling,
 
 **Priority:** P0 (CRITICAL)  
 **Files:**
-- `Revenge/Core/Services/APIService.swift` (lines 109, 118)
+- `Kheir/Core/Services/APIService.swift` (lines 109, 118)
 
 **Current Behavior:**
 ```swift
@@ -131,7 +131,7 @@ Then the app crashes in production with no recovery.
 **Priority:** P0 (CRITICAL)  
 **Files:**
 - `KheirWidget/DailyAyahWidget.swift` (line 53)
-- `Revenge/Features/Home/HomeViewModel.swift` (line 268)
+- `Kheir/Features/Home/HomeViewModel.swift` (line 268)
 
 **Current Behavior:**
 ```swift
@@ -182,7 +182,7 @@ Widget crashes are unrecoverable without user reinstall. Widget extension runs o
 
 **Priority:** P0 (CRITICAL)  
 **Files:**
-- `Revenge/Features/Settings/SettingsView.swift` (line 402)
+- `Kheir/Features/Settings/SettingsView.swift` (line 402)
 
 **Current Behavior:**
 ```swift
@@ -236,7 +236,7 @@ In production, this URL is invalid. Tapping "Rate Kheir on the App Store" opens 
 
 **Priority:** P1 (HIGH)  
 **Files:**
-- `Revenge/Core/Services/APIService.swift` (lines 23-33, 183-195)
+- `Kheir/Core/Services/APIService.swift` (lines 23-33, 183-195)
 
 **Current Behavior:**
 ```swift
@@ -329,7 +329,7 @@ return try JSONDecoder().decode(type, from: data)  // Throws raw DecodingError, 
 
 **Priority:** P1 (HIGH)  
 **Files:**
-- `Revenge/Core/Services/CacheManager.swift` (lines 239-287, new cleanup method)
+- `Kheir/Core/Services/CacheManager.swift` (lines 239-287, new cleanup method)
 
 **Current Behavior:**
 ```swift
@@ -415,8 +415,8 @@ func saveRoutine(_ routine: DailyRoutine) {
 
 **Priority:** P1 (HIGH)  
 **Files:**
-- `Revenge/Core/Services/CacheManager.swift` (lines 289-361, extensions for bookmarks)
-- `Revenge/Core/Models/` (relevant bookmark models)
+- `Kheir/Core/Services/CacheManager.swift` (lines 289-361, extensions for bookmarks)
+- `Kheir/Core/Models/` (relevant bookmark models)
 
 **Current Behavior:**
 ```swift
@@ -500,7 +500,7 @@ func isHadithBookmarked(text: String, source: String) -> Bool {
 
 **Priority:** P1 (HIGH)  
 **Files:**
-- `Revenge/Core/Services/CacheManager.swift` (lines 59-81)
+- `Kheir/Core/Services/CacheManager.swift` (lines 59-81)
 
 **Current Behavior:**
 ```swift
@@ -584,7 +584,7 @@ private func warmMemoryCache<T: Decodable>(filename: String, type: T.Type) {
 
 **Priority:** P1 (HIGH)  
 **Files:**
-- `Revenge/Core/Services/CacheManager.swift` (lines 172-195)
+- `Kheir/Core/Services/CacheManager.swift` (lines 172-195)
 
 **Current Behavior:**
 ```swift
@@ -686,7 +686,7 @@ func load<T: Decodable>(_ type: T.Type, filename: String) -> T? {
 
 **Priority:** P2 (MEDIUM)  
 **Files:**
-- `Revenge/Features/Quran/SurahListViewModel.swift` (line 35)
+- `Kheir/Features/Quran/SurahListViewModel.swift` (line 35)
 
 **Current Behavior:**
 ```swift
@@ -763,7 +763,7 @@ private func fetchSurahs() async {
 
 **Priority:** P2 (MEDIUM)  
 **Files:**
-- `Revenge/Features/Home/HomeViewModel.swift` (lines 237-251)
+- `Kheir/Features/Home/HomeViewModel.swift` (lines 237-251)
 
 **Current Behavior:**
 ```swift
@@ -857,7 +857,7 @@ private func loadPrayerCountdown() {
 
 **Priority:** P2 (MEDIUM)  
 **Files:**
-- `Revenge/Features/PrayerTimes/PrayerTimesViewModel.swift` (lines 78-89)
+- `Kheir/Features/PrayerTimes/PrayerTimesViewModel.swift` (lines 78-89)
 
 **Current Behavior:**
 ```swift
@@ -935,7 +935,7 @@ private func loadPrayerCountdown() {
 
 **Priority:** P2 (MEDIUM)  
 **Files:**
-- `Revenge/Core/Services/APIService.swift` (lines 8-20)
+- `Kheir/Core/Services/APIService.swift` (lines 8-20)
 
 **Current Behavior:**
 ```swift
@@ -1018,7 +1018,7 @@ private init() {
 
 **Priority:** P3 (NICE TO HAVE)  
 **Files:**
-- `Revenge/Core/Services/CacheManager.swift` (lines 198-202)
+- `Kheir/Core/Services/CacheManager.swift` (lines 198-202)
 
 **Current Behavior:**
 ```swift
@@ -1072,7 +1072,7 @@ func exists(filename: String) -> Bool {
 
 **Priority:** P3 (NICE TO HAVE)  
 **Files:**
-- `Revenge/Core/Extensions/String+Extensions.swift` (lines 4-7)
+- `Kheir/Core/Extensions/String+Extensions.swift` (lines 4-7)
 
 **Current Behavior:**
 ```swift
@@ -1137,7 +1137,7 @@ var isArabic: Bool {
 
 **Priority:** P3 (NICE TO HAVE)  
 **Files:**
-- `Revenge/Core/Design/Color+Theme.swift` (inferred, likely exists)
+- `Kheir/Core/Design/Color+Theme.swift` (inferred, likely exists)
 - `KheirWidget/DailyAyahWidget.swift` (lines 6-17)
 
 **Current Behavior:**
@@ -1179,7 +1179,7 @@ private extension Color {
 
 3. **Option C: Duplicate with comment:**
    - If framework overhead undesirable, keep duplicate but add comment:
-     - "// SYNC WITH: Revenge/Core/Design/Color+Theme.swift line XXX"
+     - "// SYNC WITH: Kheir/Core/Design/Color+Theme.swift line XXX"
    - Add CI check to alert on mismatch
 
 4. **Recommended: Create shared framework (Option A):**

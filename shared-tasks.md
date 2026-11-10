@@ -1,5 +1,5 @@
 # Shared Tasks: Claude Code + Codex
-**Project:** Kheir (Revenge) iOS App  
+**Project:** Kheir (Kheir) iOS App  
 **Created:** 2026-05-08  
 **Branch:** `feature/sprint-1-engagement`  
 **Last Updated:** 2026-05-08 by Claude Code
@@ -53,7 +53,7 @@ CacheManager actor migration + async/await propagation across entire codebase (2
 | ID | Task | Plan Ref | Status | Agent | Notes |
 |----|------|----------|--------|-------|-------|
 | ST-01 | Commit CacheManager actor migration | — | DONE | Claude Code | Committed as 64f7e27 |
-| ST-02 | Fix 4 failing UI tests | QA-01 | IN PROGRESS [Codex] | Codex | Blocks release. See `RevengeUITests/RevengeUITests.swift` |
+| ST-02 | Fix 4 failing UI tests | QA-01 | IN PROGRESS [Codex] | Codex | Blocks release. See `KheirUITests/KheirUITests.swift` |
 | ST-03 | Fix CacheManagerTests flaky shared state | QA-02 | DONE | Claude Code | Already isolated: unique IDs, cleanup, .serialized |
 | ST-04 | Fix MockAPIService @unchecked Sendable sync | QA-03 | DONE | Claude Code | Already has NSLock synchronization |
 

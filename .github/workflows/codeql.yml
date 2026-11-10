@@ -36,8 +36,8 @@ jobs:
       - name: Build for analysis
         run: |
           xcodebuild build \
-            -project Revenge.xcodeproj \
-            -scheme Revenge \
+            -project Kheir.xcodeproj \
+            -scheme Kheir \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \

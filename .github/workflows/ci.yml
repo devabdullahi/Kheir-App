@@ -32,15 +32,15 @@ jobs:
       - name: Resolve packages
         run: |
           xcodebuild -resolvePackageDependencies \
-            -project Revenge.xcodeproj \
-            -scheme Revenge
+            -project Kheir.xcodeproj \
+            -scheme Kheir
 
       - name: Build
         run: |
           set -o pipefail
           xcodebuild build \
-            -project Revenge.xcodeproj \
-            -scheme Revenge \
+            -project Kheir.xcodeproj \
+            -scheme Kheir \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
@@ -60,10 +60,10 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -project Revenge.xcodeproj \
-            -scheme Revenge \
+            -project Kheir.xcodeproj \
+            -scheme Kheir \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
-            -only-testing:RevengeTests \
+            -only-testing:KheirTests \
             CODE_SIGNING_ALLOWED=NO \
             COMPILER_INDEX_STORE_ENABLE=NO \
             -resultBundlePath TestResults.xcresult \
